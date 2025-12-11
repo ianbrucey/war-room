@@ -5,13 +5,14 @@
  */
 
 import { getDatabase } from '@process/database/export';
-import type { IUser, IQueryResult } from '@process/database/types';
+import type { IQueryResult, IUser } from '@process/database/types';
 
 /**
  * 认证用户类型，仅包含必要的认证字段
  * Authentication user type containing only essential auth fields
  */
-export type AuthUser = Pick<IUser, 'id' | 'username' | 'password_hash' | 'jwt_secret' | 'created_at' | 'updated_at' | 'last_login'>;
+export type AuthUser = Pick<IUser, 'id' | 'username' | 'email' | 'password_hash' | 'role' | 'is_active' | 'jwt_secret' | 'created_at' | 'updated_at' | 'last_login'>;
+
 
 /**
  * 解包数据库查询结果，失败时抛出异常
@@ -37,7 +38,10 @@ function mapUser(row: IUser): AuthUser {
   return {
     id: row.id,
     username: row.username,
+    email: row.email,
     password_hash: row.password_hash,
+    role: row.role,
+    is_active: row.is_active,
     jwt_secret: row.jwt_secret ?? null,
     created_at: row.created_at,
     updated_at: row.updated_at,
@@ -192,4 +196,109 @@ export const UserRepository = {
       throw new Error(result.error || 'Failed to update JWT secret');
     }
   },
+
+  /**
+   * 创建用户（支持角色）
+   * Create user with role support
+   * @param username - 用户名 / Username
+   * @param email - 邮箱 / Email
+   * @param passwordHash - 密码哈希 / Password hash
+   * @param role - 用户角色 / User role
+   * @param createdBy - 创建者ID / Creator ID
+   * @returns 创建的用户 / Created user
+   */
+  create(username: string, email: string | undefined, passwordHash: string, role: string, createdBy?: string): AuthUser {
+    const db = getDatabase();
+    const result = db.createUser(username, email, passwordHash);
+    const user = unwrap(result, 'Failed to create user');
+    
+    // Update role if not default 'user'
+    if (role !== 'user') {
+      db.exec('UPDATE users SET role = ?, created_by = ? WHERE id = ?', role, createdBy || null, user.id);
+    } else if (createdBy) {
+      db.exec('UPDATE users SET created_by = ? WHERE id = ?', createdBy, user.id);
+    }
+    
+    // Fetch the updated user
+    const updatedUser = this.findById(user.id);
+    if (!updatedUser) {
+      throw new Error('Failed to fetch created user');
+    }
+    
+    return updatedUser;
+  },
+
+  /**
+   * 更新用户信息
+   * Update user information
+   * @param userId - 用户 ID / User ID
+   * @param updates - 更新的字段 / Fields to update
+   * @param updatedBy - 更新者ID / Updater ID
+   */
+  update(userId: string, updates: { email?: string; is_active?: number }, updatedBy?: string): void {
+    const db = getDatabase();
+    const now = Date.now();
+    
+    const fields: string[] = [];
+    const values: any[] = [];
+    
+    if (updates.email !== undefined) {
+      fields.push('email = ?');
+      values.push(updates.email);
+    }
+    
+    if (updates.is_active !== undefined) {
+      fields.push('is_active = ?');
+      values.push(updates.is_active);
+    }
+    
+    if (updatedBy) {
+      fields.push('updated_by = ?');
+      values.push(updatedBy);
+    }
+    
+    fields.push('updated_at = ?');
+    values.push(now);
+    
+    values.push(userId);
+    
+    const sql = `UPDATE users SET ${fields.join(', ')} WHERE id = ?`;
+    db.exec(sql, ...values);
+  },
+
+  /**
+   * 更新用户角色
+   * Update user role
+   * @param userId - 用户 ID / User ID
+   * @param role - 新角色 / New role
+   */
+  updateRole(userId: string, role: string): void {
+    const db = getDatabase();
+    const now = Date.now();
+    db.exec('UPDATE users SET role = ?, updated_at = ? WHERE id = ?', role, now, userId);
+  },
+
+  /**
+   * 停用用户（软删除）
+   * Deactivate user (soft delete)
+   * @param userId - 用户 ID / User ID
+   */
+  deactivate(userId: string): void {
+    const db = getDatabase();
+    const now = Date.now();
+    db.exec('UPDATE users SET is_active = 0, updated_at = ? WHERE id = ?', now, userId);
+  },
+
+  /**
+   * 根据角色查找用户
+   * Find users by role
+   * @param role - 用户角色 / User role
+   * @returns 用户数组 / Array of users
+   */
+  findByRole(role: string): AuthUser[] {
+    const db = getDatabase();
+    const users = db.query('SELECT * FROM users WHERE role = ?', role) as IUser[];
+    return users.map(mapUser);
+  },
 };
+

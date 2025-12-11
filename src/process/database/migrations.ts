@@ -162,9 +162,80 @@ const migration_v6: IMigration = {
 };
 
 /**
+ * Migration v6 -> v7: Add role-based access control fields
+ * Add role, is_active, created_by, updated_by columns for user management
+ */
+const migration_v7: IMigration = {
+  version: 7,
+  name: 'Add role-based access control fields',
+  up: (db) => {
+    // Check which columns already exist
+    const tableInfo = db.prepare('PRAGMA table_info(users)').all() as Array<{ name: string }>;
+    const existingColumns = new Set(tableInfo.map((col) => col.name));
+
+    // Add role column if it doesn't exist
+    if (!existingColumns.has('role')) {
+      db.exec(`ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user' CHECK(role IN ('super_admin', 'admin', 'user'));`);
+      console.log('[Migration v7] Added role column to users table');
+    }
+
+    // Add is_active column if it doesn't exist
+    if (!existingColumns.has('is_active')) {
+      db.exec(`ALTER TABLE users ADD COLUMN is_active INTEGER DEFAULT 1;`);
+      console.log('[Migration v7] Added is_active column to users table');
+    }
+
+    // Add created_by column if it doesn't exist
+    if (!existingColumns.has('created_by')) {
+      db.exec(`ALTER TABLE users ADD COLUMN created_by TEXT;`);
+      console.log('[Migration v7] Added created_by column to users table');
+    }
+
+    // Add updated_by column if it doesn't exist
+    if (!existingColumns.has('updated_by')) {
+      db.exec(`ALTER TABLE users ADD COLUMN updated_by TEXT;`);
+      console.log('[Migration v7] Added updated_by column to users table');
+    }
+
+    // Set existing admin user to super_admin role
+    db.exec(`
+      UPDATE users 
+      SET role = 'super_admin' 
+      WHERE username = 'admin' OR id = 'system_default_user';
+    `);
+    console.log('[Migration v7] Set existing admin user to super_admin role');
+  },
+  down: (db) => {
+    // SQLite doesn't support DROP COLUMN easily, need to recreate table
+    db.exec(`
+      CREATE TABLE users_backup AS 
+      SELECT id, username, email, password_hash, avatar_path, jwt_secret, 
+             created_at, updated_at, last_login 
+      FROM users;
+      
+      DROP TABLE users;
+      ALTER TABLE users_backup RENAME TO users;
+      
+      CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+      CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+    `);
+    console.log('[Migration v7] Rolled back: Removed RBAC columns from users table');
+  },
+};
+
+/**
  * All migrations in order
  */
-export const ALL_MIGRATIONS: IMigration[] = [migration_v1, migration_v2, migration_v3, migration_v4, migration_v5, migration_v6];
+export const ALL_MIGRATIONS: IMigration[] = [
+  migration_v1,
+  migration_v2,
+  migration_v3,
+  migration_v4,
+  migration_v5,
+  migration_v6,
+  migration_v7,
+];
+
 
 /**
  * Get migrations needed to upgrade from one version to another

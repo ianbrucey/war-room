@@ -17,6 +17,7 @@ import { AUTH_CONFIG, SERVER_CONFIG } from './config/constants';
 import { registerApiRoutes } from './routes/apiRoutes';
 import { registerAuthRoutes } from './routes/authRoutes';
 import { registerStaticRoutes } from './routes/staticRoutes';
+import { registerUserRoutes } from './routes/userRoutes';
 import { setupBasicMiddleware, setupCors, setupErrorHandler } from './setup';
 
 // Express Request 类型扩展定义在 src/webserver/types/express.d.ts
@@ -200,6 +201,7 @@ export async function startWebServer(port: number, allowRemote = false): Promise
   // 注册路由
   // Register routes
   registerAuthRoutes(app);
+  registerUserRoutes(app);
   registerApiRoutes(app);
   registerStaticRoutes(app);
 

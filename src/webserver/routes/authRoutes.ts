@@ -83,8 +83,15 @@ export function registerAuthRoutes(app: Express): void {
    */
   // Authenticated endpoints reuse shared limiter keyed by user/IP
   // 已登录接口复用按用户/IP 计数的限流器
-  app.post('/logout', apiRateLimiter, AuthMiddleware.authenticateToken, authenticatedActionLimiter, (_req: Request, res: Response) => {
-    res.clearCookie(AUTH_CONFIG.COOKIE.NAME);
+  app.post('/logout', apiRateLimiter, AuthMiddleware.authenticateToken, authenticatedActionLimiter, (req: Request, res: Response) => {
+    console.log('[Logout] User logging out:', req.user?.username);
+    console.log('[Logout] Cookie before clear:', req.cookies[AUTH_CONFIG.COOKIE.NAME] ? 'present' : 'missing');
+
+    // Clear cookie with the same options used when setting it
+    // 使用与设置 Cookie 时相同的选项来清除 Cookie
+    res.clearCookie(AUTH_CONFIG.COOKIE.NAME, AUTH_CONFIG.COOKIE.OPTIONS);
+
+    console.log('[Logout] Cookie cleared, sending response');
     res.json({ success: true, message: 'Logged out successfully' });
   });
 
@@ -121,6 +128,8 @@ export function registerAuthRoutes(app: Express): void {
   // Add rate limiting for authenticated user info endpoint
   // 为已认证用户信息端点添加速率限制
   app.get('/api/auth/user', apiRateLimiter, AuthMiddleware.authenticateToken, authenticatedActionLimiter, (req: Request, res: Response) => {
+    console.log('[Auth] /api/auth/user called, user:', req.user?.username || 'none');
+    console.log('[Auth] Cookie present:', req.cookies[AUTH_CONFIG.COOKIE.NAME] ? 'yes' : 'no');
     res.json({
       success: true,
       user: req.user,

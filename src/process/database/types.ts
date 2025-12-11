@@ -5,14 +5,19 @@
  */
 
 // 复用现有的业务类型定义
-import type { TChatConversation, IConfigStorageRefer } from '@/common/storage';
 import type { TMessage } from '@/common/chatLib';
+import type { IConfigStorageRefer, TChatConversation } from '@/common/storage';
 
 /**
  * ======================
  * 数据库专属类型 (新增功能)
  * ======================
  */
+
+/**
+ * User role types for role-based access control
+ */
+export type UserRole = 'super_admin' | 'admin' | 'user';
 
 /**
  * User account (新增的账户系统)
@@ -22,6 +27,10 @@ export interface IUser {
   username: string;
   email?: string;
   password_hash: string;
+  role: UserRole;
+  is_active: number; // 0 = inactive, 1 = active
+  created_by?: string | null;
+  updated_by?: string | null;
   avatar_path?: string;
   jwt_secret?: string | null;
   created_at: number;
@@ -203,8 +212,9 @@ export function rowToMessage(row: IMessageRow): TMessage {
  */
 
 export type {
-  // 复用的业务类型
-  TChatConversation,
-  TMessage,
-  IConfigStorageRefer,
+    IConfigStorageRefer,
+    // 复用的业务类型
+    TChatConversation,
+    TMessage
 };
+

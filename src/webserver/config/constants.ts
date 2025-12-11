@@ -54,6 +54,8 @@ export const AUTH_CONFIG = {
       secure: false,
       // 同站策略（SameSite strategy）
       sameSite: 'strict' as const,
+      // Cookie 路径（Cookie path）
+      path: '/',
     },
   },
 } as const;

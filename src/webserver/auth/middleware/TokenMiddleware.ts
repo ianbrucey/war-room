@@ -4,11 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { Request, Response, NextFunction } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import type { IncomingMessage } from 'http';
-import { AuthService } from '../service/AuthService';
-import { UserRepository } from '../repository/UserRepository';
 import { AUTH_CONFIG, SERVER_CONFIG } from '../../config/constants';
+import { UserRepository } from '../repository/UserRepository';
+import { AuthService } from '../service/AuthService';
 
 /**
  * Token 负载接口
@@ -158,7 +158,9 @@ export const createAuthMiddleware = (type: 'json' | 'html' = 'json') => {
     req.user = {
       id: user.id,
       username: user.username,
+      role: user.role,
     };
+
 
     next();
   };

@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME, SECURITY_CONFIG } from '@/webserver/config/constants';
 import type { NextFunction, Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
-import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME, SECURITY_CONFIG } from '@/webserver/config/constants';
 
 /**
  * 登录/注册等敏感操作的限流
@@ -82,6 +82,9 @@ export function attachCsrfToken(req: Request, res: Response, next: NextFunction)
     const token = req.csrfToken();
     res.setHeader(CSRF_HEADER_NAME, token);
     res.locals.csrfToken = token;
+    // Also set a non-httpOnly cookie so client JavaScript can read it
+    // 同时设置一个非 httpOnly 的 cookie，以便客户端 JavaScript 可以读取
+    res.cookie(CSRF_COOKIE_NAME, token, SECURITY_CONFIG.CSRF.COOKIE_OPTIONS);
   }
   next();
 }

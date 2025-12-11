@@ -4,15 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { ensureDirectory, getDataPath } from '@process/utils';
 import type Database from 'better-sqlite3';
 import BetterSqlite3 from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
-import { CURRENT_DB_VERSION, getDatabaseVersion, initSchema, setDatabaseVersion } from './schema';
 import { runMigrations as executeMigrations } from './migrations';
+import { CURRENT_DB_VERSION, getDatabaseVersion, initSchema, setDatabaseVersion } from './schema';
 import type { IConversationRow, IMessageRow, IPaginatedResult, IQueryResult, IUser, TChatConversation, TMessage } from './types';
 import { conversationToRow, messageToRow, rowToConversation, rowToMessage } from './types';
-import { ensureDirectory, getDataPath } from '@process/utils';
 
 /**
  * Main database class for AionUi
@@ -163,6 +163,10 @@ export class AionUIDatabase {
           username,
           email,
           password_hash: passwordHash,
+          role: 'user',
+          is_active: 1,
+          created_by: null,
+          updated_by: null,
           created_at: now,
           updated_at: now,
           last_login: null,
@@ -688,7 +692,30 @@ export class AionUIDatabase {
     this.db.exec('VACUUM');
     console.log('[Database] Vacuum completed');
   }
+
+  /**
+   * Execute a raw SQL statement (for user management operations)
+   * Use with caution!
+   */
+  exec(sql: string, ...params: any[]): any {
+    return this.db.prepare(sql).run(...params);
+  }
+
+  /**
+   * Query database (for user management operations)
+   */
+  query(sql: string, ...params: any[]): any[] {
+    return this.db.prepare(sql).all(...params);
+  }
+
+  /**
+   * Query single row (for user management operations)
+   */
+  querySingle(sql: string, ...params: any[]): any {
+    return this.db.prepare(sql).get(...params);
+  }
 }
+
 
 // Export singleton instance
 let dbInstance: AionUIDatabase | null = null;

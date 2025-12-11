@@ -1,5 +1,5 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { withCsrfToken } from '@/webserver/middleware/csrfClient';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 declare global {
   interface Window {
@@ -12,6 +12,7 @@ type AuthStatus = 'checking' | 'authenticated' | 'unauthenticated';
 export interface AuthUser {
   id: string;
   username: string;
+  role?: 'super_admin' | 'admin' | 'user';
 }
 
 interface LoginParams {
@@ -87,12 +88,15 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     const controller = new AbortController();
     abortRef.current = controller;
     setStatus('checking');
+    console.log('[AuthContext] Refreshing auth status...');
 
     const currentUser = await fetchCurrentUser(controller.signal);
     if (currentUser) {
+      console.log('[AuthContext] User authenticated:', currentUser.username);
       setUser(currentUser);
       setStatus('authenticated');
     } else {
+      console.log('[AuthContext] No user found, setting unauthenticated');
       setUser(null);
       setStatus('unauthenticated');
     }
@@ -174,7 +178,8 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     }
 
     try {
-      await fetch('/logout', {
+      console.log('[AuthContext] Logging out...');
+      const response = await fetch('/logout', {
         method: 'POST',
         // Logout also needs CSRF token / 登出同样需要 CSRF Token
         headers: {
@@ -183,11 +188,18 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         credentials: 'include',
         body: JSON.stringify(withCsrfToken({})),
       });
+
+      if (response.ok) {
+        console.log('[AuthContext] Logout successful');
+      } else {
+        console.warn('[AuthContext] Logout response not OK:', response.status);
+      }
     } catch (error) {
-      console.error('Logout request failed:', error);
+      console.error('[AuthContext] Logout request failed:', error);
     } finally {
       setUser(null);
       setStatus('unauthenticated');
+      console.log('[AuthContext] User state cleared, status set to unauthenticated');
     }
   }, []);
 
