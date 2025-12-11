@@ -1,0 +1,295 @@
+/**
+ * @license
+ * Copyright 2025 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import type { FileFilteringOptions, TelemetryTarget } from '@office-ai/aioncli-core';
+import { ApprovalMode, Config, DEFAULT_GEMINI_EMBEDDING_MODEL, DEFAULT_GEMINI_MODEL, DEFAULT_MEMORY_FILE_FILTERING_OPTIONS, FileDiscoveryService, getCurrentGeminiMdFilename, loadServerHierarchicalMemory, setGeminiMdFilename as setServerGeminiMdFilename } from '@office-ai/aioncli-core';
+import * as fs from 'fs';
+import { homedir } from 'node:os';
+import process from 'node:process';
+import * as path from 'path';
+import type { Settings } from './settings';
+
+import type { Extension } from './extension';
+import { annotateActiveExtensions } from './extension';
+import { getCurrentGeminiAgent } from '../index';
+
+// Simple console logger for now - replace with actual logger if available
+const logger = {
+  debug: (...args: unknown[]) => console.debug('[DEBUG]', ...args),
+  warn: (...args: unknown[]) => console.warn('[WARN]', ...args),
+  error: (...args: unknown[]) => console.error('[ERROR]', ...args),
+};
+
+export interface CliArgs {
+  model: string | undefined;
+  sandbox: boolean | string | undefined;
+  sandboxImage: string | undefined;
+  debug: boolean | undefined;
+  prompt: string | undefined;
+  promptInteractive: string | undefined;
+  allFiles: boolean | undefined;
+  all_files: boolean | undefined;
+  showMemoryUsage: boolean | undefined;
+  show_memory_usage: boolean | undefined;
+  yolo: boolean | undefined;
+  telemetry: boolean | undefined;
+  checkpointing: boolean | undefined;
+  telemetryTarget: string | undefined;
+  telemetryOtlpEndpoint: string | undefined;
+  telemetryLogPrompts: boolean | undefined;
+  telemetryOutfile: string | undefined;
+  allowedMcpServerNames: string[] | undefined;
+  experimentalAcp: boolean | undefined;
+  extensions: string[] | undefined;
+  listExtensions: boolean | undefined;
+  ideModeFeature: boolean | undefined;
+  openaiLogging: boolean | undefined;
+  openaiApiKey: string | undefined;
+  openaiBaseUrl: string | undefined;
+  proxy: string | undefined;
+  includeDirectories: string[] | undefined;
+}
+
+// This function is now a thin wrapper around the server's implementation.
+// It's kept in the CLI for now as App.tsx directly calls it for memory refresh.
+// TODO: Consider if App.tsx should get memory via a server call or if Config should refresh itself.
+export function loadHierarchicalGeminiMemory(currentWorkingDirectory: string, includeDirectoriesToReadGemini: readonly string[] = [], debugMode: boolean, fileService: FileDiscoveryService, settings: Settings, extensionContextFilePaths: string[] = [], memoryImportFormat: 'flat' | 'tree' = 'tree', fileFilteringOptions?: FileFilteringOptions): Promise<{ memoryContent: string; fileCount: number }> {
+  // FIX: Use real, canonical paths for a reliable comparison to handle symlinks.
+  const realCwd = fs.realpathSync(path.resolve(currentWorkingDirectory));
+  const realHome = fs.realpathSync(path.resolve(homedir()));
+  const isHomeDirectory = realCwd === realHome;
+
+  // If it is the home directory, pass an empty string to the core memory
+  // function to signal that it should skip the workspace search.
+  const effectiveCwd = isHomeDirectory ? '' : currentWorkingDirectory;
+
+  if (debugMode) {
+    logger.debug(`CLI: Delegating hierarchical memory load to server for CWD: ${currentWorkingDirectory} (memoryImportFormat: ${memoryImportFormat})`);
+  }
+
+  // Directly call the server function with the corrected path.
+  // Fixed parameter order: added folderTrust parameter before memoryImportFormat
+  const folderTrust = true; // Default to true for workspace trust
+  return loadServerHierarchicalMemory(effectiveCwd, includeDirectoriesToReadGemini, debugMode, fileService, extensionContextFilePaths, folderTrust, memoryImportFormat, fileFilteringOptions, settings.memoryDiscoveryMaxDirs);
+}
+
+import type { ConversationToolConfig } from './tools/conversation-tool-config';
+
+export async function loadCliConfig({ workspace, settings, extensions, sessionId, proxy, model, conversationToolConfig, yoloMode, mcpServers }: { workspace: string; settings: Settings; extensions: Extension[]; sessionId: string; proxy?: string; model?: string; conversationToolConfig: ConversationToolConfig; yoloMode?: boolean; mcpServers?: Record<string, unknown> }): Promise<Config> {
+  const argv: Partial<CliArgs> = {
+    yolo: yoloMode,
+  };
+
+  const debugMode = argv.debug || [process.env.DEBUG, process.env.DEBUG_MODE].some((v) => v === 'true' || v === '1') || false;
+  const memoryImportFormat = settings.memoryImportFormat || 'tree';
+  const ideMode = settings.ideMode ?? false;
+
+  const _ideModeFeature = (argv.ideModeFeature ?? settings.ideModeFeature ?? false) && !process.env.SANDBOX;
+
+  const allExtensions = annotateActiveExtensions(extensions, argv.extensions || []);
+
+  const activeExtensions = extensions.filter((_, i) => allExtensions[i].isActive);
+  // Handle OpenAI API key from command line
+  if (argv.openaiApiKey) {
+    process.env.OPENAI_API_KEY = argv.openaiApiKey;
+  }
+
+  // Handle OpenAI base URL from command line
+  if (argv.openaiBaseUrl) {
+    process.env.OPENAI_BASE_URL = argv.openaiBaseUrl;
+  }
+
+  // Set the context filename in the server's memoryTool module BEFORE loading memory
+  // TODO(b/343434939): This is a bit of a hack. The contextFileName should ideally be passed
+  // directly to the Config constructor in core, and have core handle setGeminiMdFilename.
+  // However, loadHierarchicalGeminiMemory is called *before* createServerConfig.
+  if (settings.contextFileName) {
+    setServerGeminiMdFilename(settings.contextFileName);
+  } else {
+    // Reset to default if not provided in settings.
+    setServerGeminiMdFilename(getCurrentGeminiMdFilename());
+  }
+
+  const extensionContextFilePaths = activeExtensions.flatMap((e) => e.contextFiles);
+
+  const fileService = new FileDiscoveryService(workspace);
+
+  const fileFiltering = {
+    ...DEFAULT_MEMORY_FILE_FILTERING_OPTIONS,
+    ...settings.fileFiltering,
+  };
+
+  // Call the (now wrapper) loadHierarchicalGeminiMemory which calls the server's version
+  const { memoryContent, fileCount } = await loadHierarchicalGeminiMemory(workspace, [], debugMode, fileService, settings, extensionContextFilePaths, memoryImportFormat, fileFiltering);
+
+  let mcpServersConfig = mergeMcpServers(settings, activeExtensions, mcpServers);
+
+  // 使用对话级别的工具配置
+  const toolConfig = conversationToolConfig.getConfig();
+
+  const excludeTools = mergeExcludeTools(settings, activeExtensions).concat(toolConfig.excludeTools);
+  const blockedMcpServers: Array<{ name: string; extensionName: string }> = [];
+
+  if (!argv.allowedMcpServerNames) {
+    if (settings.allowMCPServers) {
+      const allowedNames = new Set(settings.allowMCPServers.filter(Boolean));
+      if (allowedNames.size > 0) {
+        mcpServersConfig = Object.fromEntries(Object.entries(mcpServersConfig).filter(([key]) => allowedNames.has(key)));
+      }
+    }
+
+    if (settings.excludeMCPServers) {
+      const excludedNames = new Set(settings.excludeMCPServers.filter(Boolean));
+      if (excludedNames.size > 0) {
+        mcpServersConfig = Object.fromEntries(Object.entries(mcpServersConfig).filter(([key]) => !excludedNames.has(key)));
+      }
+    }
+  }
+
+  if (argv.allowedMcpServerNames) {
+    const allowedNames = new Set(argv.allowedMcpServerNames.filter(Boolean));
+    if (allowedNames.size > 0) {
+      mcpServersConfig = Object.fromEntries(
+        Object.entries(mcpServersConfig).filter(([key, server]) => {
+          const isAllowed = allowedNames.has(key);
+          if (!isAllowed) {
+            blockedMcpServers.push({
+              name: key,
+              extensionName: server.extensionName || '',
+            });
+          }
+          return isAllowed;
+        })
+      );
+    } else {
+      blockedMcpServers.push(
+        ...Object.entries(mcpServersConfig).map(([key, server]) => ({
+          name: key,
+          extensionName: server.extensionName || '',
+        }))
+      );
+      mcpServersConfig = {};
+    }
+  }
+
+  const config = new Config({
+    sessionId,
+    embeddingModel: DEFAULT_GEMINI_EMBEDDING_MODEL,
+    // sandbox: sandboxConfig,
+    targetDir: workspace,
+    includeDirectories: argv.includeDirectories,
+    debugMode,
+    question: argv.promptInteractive || argv.prompt || '',
+    fullContext: argv.allFiles || argv.all_files || false,
+    coreTools: settings.coreTools || undefined,
+    excludeTools,
+    toolDiscoveryCommand: settings.toolDiscoveryCommand,
+    toolCallCommand: settings.toolCallCommand,
+    mcpServerCommand: settings.mcpServerCommand,
+    mcpServers: mcpServersConfig,
+    userMemory: memoryContent,
+    geminiMdFileCount: fileCount,
+    approvalMode: argv.yolo || false ? ApprovalMode.YOLO : ApprovalMode.DEFAULT,
+    showMemoryUsage: argv.showMemoryUsage || argv.show_memory_usage || settings.showMemoryUsage || false,
+    accessibility: settings.accessibility,
+    telemetry: {
+      enabled: argv.telemetry ?? settings.telemetry?.enabled,
+      target: (argv.telemetryTarget ?? settings.telemetry?.target) as TelemetryTarget,
+      otlpEndpoint: argv.telemetryOtlpEndpoint ?? process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? settings.telemetry?.otlpEndpoint,
+      logPrompts: argv.telemetryLogPrompts ?? settings.telemetry?.logPrompts,
+      outfile: argv.telemetryOutfile ?? settings.telemetry?.outfile,
+    },
+    usageStatisticsEnabled: settings.usageStatisticsEnabled ?? true,
+    // Git-aware file filtering settings
+    fileFiltering: {
+      respectGitIgnore: settings.fileFiltering?.respectGitIgnore,
+      respectGeminiIgnore: settings.fileFiltering?.respectGeminiIgnore,
+      enableRecursiveFileSearch: settings.fileFiltering?.enableRecursiveFileSearch,
+    },
+    checkpointing: argv.checkpointing || settings.checkpointing?.enabled,
+    proxy: proxy,
+    cwd: workspace,
+    fileDiscoveryService: fileService,
+    bugCommand: settings.bugCommand,
+    model: model || DEFAULT_GEMINI_MODEL,
+    // model: "kimi-k2-0711-preview", // "Qwen/Qwen2.5-Coder-32B-Instruct", // "deepseek-chat",
+    extensionContextFilePaths,
+    maxSessionTurns: settings.maxSessionTurns ?? -1,
+    listExtensions: argv.listExtensions || false,
+    extensions: allExtensions,
+    blockedMcpServers,
+    noBrowser: !!process.env.NO_BROWSER,
+    summarizeToolOutput: settings.summarizeToolOutput,
+    ideMode,
+  });
+
+  const fallbackModelHandler = async (_currentModel: string, _fallbackModel: string, _error?: unknown): Promise<'retry' | 'stop' | 'auth' | null> => {
+    try {
+      const agent = getCurrentGeminiAgent();
+      const apiKeyManager = agent?.getApiKeyManager();
+
+      if (!apiKeyManager?.hasMultipleKeys()) {
+        return 'retry';
+      }
+
+      const hasMoreKeys = apiKeyManager.rotateKey();
+
+      if (hasMoreKeys) {
+        return 'retry';
+      }
+
+      return 'stop';
+    } catch (e) {
+      console.error(`[FallbackHandler] Handler error:`, e);
+      return 'retry';
+    }
+  };
+
+  config.setFallbackModelHandler(fallbackModelHandler);
+
+  return config;
+}
+
+function mergeMcpServers(settings: Settings, extensions: Extension[], uiMcpServers?: Record<string, unknown>) {
+  const mcpServers = { ...(settings.mcpServers || {}) };
+
+  // 添加来自 extensions 的 MCP 服务器
+  for (const extension of extensions) {
+    Object.entries(extension.config.mcpServers || {}).forEach(([key, server]) => {
+      if (mcpServers[key]) {
+        logger.warn(`Skipping extension MCP config for server with key "${key}" as it already exists.`);
+        return;
+      }
+      mcpServers[key] = {
+        ...server,
+        extensionName: extension.config.name,
+      };
+    });
+  }
+
+  // 添加来自 UI 配置的 MCP 服务器（优先级最高）
+  if (uiMcpServers) {
+    Object.entries(uiMcpServers).forEach(([key, server]) => {
+      if (mcpServers[key]) {
+        logger.warn(`Overriding existing MCP config for server with key "${key}" with UI configuration.`);
+      }
+      mcpServers[key] = server;
+      console.log(`[MCP] Added UI-configured server: ${key}`);
+    });
+  }
+
+  return mcpServers;
+}
+
+function mergeExcludeTools(settings: Settings, extensions: Extension[]): string[] {
+  const allExcludeTools = new Set(settings.excludeTools || []);
+  for (const extension of extensions) {
+    for (const tool of extension.config.excludeTools || []) {
+      allExcludeTools.add(tool);
+    }
+  }
+  return [...allExcludeTools];
+}
