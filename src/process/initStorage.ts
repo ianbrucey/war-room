@@ -7,6 +7,7 @@
 import { mkdirSync as _mkdirSync, existsSync, readdirSync, readFileSync } from 'fs';
 import fs from 'fs/promises';
 import path from 'path';
+import { JUSTICE_QUEST_WORK_DIR } from '../common/constants';
 import { application } from '../common/ipcBridge';
 import type { IChatConversationRefer, IConfigStorageRefer, IEnvStorageRefer, IMcpServer } from '../common/storage';
 import { ChatMessageStorage, ChatStorage, ConfigStorage, EnvStorage } from '../common/storage';
@@ -395,7 +396,7 @@ export const ProcessEnv = envFile;
 export const getSystemDir = () => {
   return {
     cacheDir: cacheDir,
-    workDir: dirConfig?.workDir || getDataPath(),
+    workDir: JUSTICE_QUEST_WORK_DIR || dirConfig?.workDir,
     platform: process.platform as PlatformType,
     arch: process.arch as ArchitectureType,
   };

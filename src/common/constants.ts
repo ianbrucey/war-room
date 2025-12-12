@@ -4,9 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import os from 'os';
+import path from 'path';
+
 /**
  * AionUI应用程序共用常量
  */
+
+// ===== 系统路径相关常量 =====
+export const JUSTICE_QUEST_WORK_DIR = path.join(os.homedir(), '.justicequest');
 
 // ===== 文件处理相关常量 =====
 
