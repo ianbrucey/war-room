@@ -66,6 +66,12 @@ export const fs = {
   renameEntry: bridge.buildProvider<IBridgeResponse<{ newPath: string }>, { path: string; newName: string }>('rename-entry'), // 重命名文件或文件夹
 };
 
+export const voice = {
+  start: bridge.buildProvider<void, void>('voice-start'),
+  chunk: bridge.buildProvider<void, { data: number[] }>('voice-chunk'),
+  end: bridge.buildProvider<void, void>('voice-end'),
+};
+
 export const googleAuth = {
   login: bridge.buildProvider<IBridgeResponse<{ account: string }>, { proxy?: string }>('google.auth.login'),
   logout: bridge.buildProvider<void, {}>('google.auth.logout'),

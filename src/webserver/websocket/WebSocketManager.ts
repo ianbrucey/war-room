@@ -4,12 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { TokenMiddleware } from '@/webserver/auth/middleware/TokenMiddleware';
+import { randomBytes } from 'crypto';
+import type { IncomingMessage } from 'http';
 import type { WebSocketServer } from 'ws';
 import { WebSocket } from 'ws';
-import type { IncomingMessage } from 'http';
-import { TokenMiddleware } from '@/webserver/auth/middleware/TokenMiddleware';
-import { WEBSOCKET_CONFIG } from '../config/constants';
 import { SHOW_OPEN_REQUEST_EVENT } from '../../adapter/constant';
+import { WEBSOCKET_CONFIG } from '../config/constants';
+import { VoiceService } from '../service/VoiceService';
 
 interface ClientInfo {
   token: string;
@@ -32,7 +34,7 @@ export class WebSocketManager {
    */
   initialize(): void {
     this.startHeartbeat();
-    console.log('[WebSocketManager] Initialized');
+    console.log('[WebSocketManager] Initialized with voice support (randomBytes fix applied)');
   }
 
   /**
@@ -48,6 +50,7 @@ export class WebSocketManager {
       }
 
       this.addClient(ws, token!);
+      (ws as any)._socketId = randomBytes(16).toString('hex');
       this.setupMessageHandler(ws, onMessage);
       this.setupCloseHandler(ws);
       this.setupErrorHandler(ws);
@@ -105,6 +108,43 @@ export class WebSocketManager {
         if (name === 'subscribe-show-open') {
           this.handleFileSelection(ws, data);
           return;
+        }
+
+        const voiceService = VoiceService.getInstance();
+        const sessionId = (ws as any)._socketId || 'default-session';
+
+        // Voice Handling - bridge invoke sends "subscribe-{key}" and expects "subscribe.callback-{key}{id}"
+        if (name === 'subscribe-voice-start') {
+           const requestId = data?.id || '';
+           console.log('[WebSocketManager] Voice session starting for:', sessionId, 'requestId:', requestId);
+           voiceService.startSession(sessionId);
+           // Send response using bridge callback pattern
+           ws.send(JSON.stringify({ name: `subscribe.callback-voice-start${requestId}`, data: undefined }));
+           return;
+        } else if (name === 'subscribe-voice-chunk') {
+           const requestId = data?.id || '';
+           const chunkData = data?.data;
+           voiceService.appendAudio(sessionId, chunkData);
+           // Send response using bridge callback pattern
+           ws.send(JSON.stringify({ name: `subscribe.callback-voice-chunk${requestId}`, data: undefined }));
+           return;
+        } else if (name === 'subscribe-voice-end') {
+           const requestId = data?.id || '';
+           console.log('[WebSocketManager] Voice session ending for:', sessionId, 'requestId:', requestId);
+           voiceService.transcribeSession(sessionId)
+             .then(text => {
+               console.log('[WebSocketManager] Transcription received:', text);
+               // Send the transcription as an event (for the voice-text listener)
+               ws.send(JSON.stringify({ name: 'voice-text', data: { text } }));
+               // Also send response using bridge callback pattern so invoke() completes
+               ws.send(JSON.stringify({ name: `subscribe.callback-voice-end${requestId}`, data: undefined }));
+             })
+             .catch(err => {
+               console.error('[WebSocketManager] Transcription error:', err.message);
+               ws.send(JSON.stringify({ name: 'voice-error', data: { message: err.message } }));
+               ws.send(JSON.stringify({ name: `subscribe.callback-voice-end${requestId}`, data: undefined }));
+             });
+           return;
         }
 
         // Forward other messages to bridge system

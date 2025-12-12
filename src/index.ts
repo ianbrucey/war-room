@@ -4,7 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import './utils/configureChromium';
+// Load environment variables from .env file FIRST
+import dotenv from 'dotenv';
+dotenv.config();
+
 import { app, BrowserWindow } from 'electron';
 import fixPath from 'fix-path';
 import { initMainAdapterWithWindow } from './adapter/main';
@@ -12,6 +15,7 @@ import { ipcBridge } from './common';
 import './process';
 import { initializeAcpDetector } from './process/bridge';
 import WorkerManage from './process/WorkerManage';
+import './utils/configureChromium';
 import { startWebServer } from './webserver';
 // @ts-expect-error - electron-squirrel-startup doesn't have types
 import electronSquirrelStartup from 'electron-squirrel-startup';

@@ -2,19 +2,20 @@ import { ipcBridge } from '@/common';
 import type { TMessage } from '@/common/chatLib';
 import { transformMessage } from '@/common/chatLib';
 import { uuid } from '@/common/utils';
+import FilePreview from '@/renderer/components/FilePreview';
 import SendBox from '@/renderer/components/sendbox';
+import ThoughtDisplay, { type ThoughtData } from '@/renderer/components/ThoughtDisplay';
+import { useAudioRecorder } from '@/renderer/hooks/useAudioRecorder';
 import { getSendBoxDraftHook, type FileOrFolderItem } from '@/renderer/hooks/useSendBoxDraft';
 import { useAddOrUpdateMessage } from '@/renderer/messages/hooks';
 import { allSupportedExts, type FileMetadata } from '@/renderer/services/FileService';
+import { iconColors } from '@/renderer/theme/colors';
 import { emitter, useAddEventListener } from '@/renderer/utils/emitter';
-import { Button, Tag } from '@arco-design/web-react';
-import { Plus } from '@icon-park/react';
+import { Button, Message, Tag } from '@arco-design/web-react';
+import { Plus, Voice } from '@icon-park/react';
+import ShimmerText from '@renderer/components/ShimmerText';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import ShimmerText from '@renderer/components/ShimmerText';
-import ThoughtDisplay, { type ThoughtData } from '@/renderer/components/ThoughtDisplay';
-import { iconColors } from '@/renderer/theme/colors';
-import FilePreview from '@/renderer/components/FilePreview';
 
 interface CodexDraftData {
   _type: 'codex';
@@ -41,6 +42,22 @@ const CodexSendBox: React.FC<{ conversation_id: string }> = ({ conversation_id }
     description: '',
     subject: '',
   });
+
+  const { isRecording, startRecording, stopRecording, transcription, error: voiceError } = useAudioRecorder();
+
+  // Handle voice transcription updates
+  useEffect(() => {
+    if (transcription) {
+      setContent((content || '') + (content ? ' ' : '') + transcription);
+    }
+  }, [transcription]);
+
+  // Handle voice errors
+  useEffect(() => {
+    if (voiceError) {
+      Message.error(voiceError);
+    }
+  }, [voiceError]);
 
   const { content, setContent, atPath, setAtPath, uploadFile, setUploadFile } = (function useDraft() {
     const { data, mutate } = useCodexSendBoxDraft(conversation_id);
@@ -339,6 +356,22 @@ const CodexSendBox: React.FC<{ conversation_id: string }> = ({ conversation_id }
               </div>
             )}
           </>
+        }
+        actionsRight={
+          <Button
+            type={isRecording ? 'primary' : 'secondary'}
+            status={isRecording ? 'danger' : 'default'}
+            shape='circle'
+            className={`${isRecording ? 'animate-pulse' : ''}`}
+            icon={<Voice theme={isRecording ? 'filled' : 'outline'} size='14' strokeWidth={2} fill={isRecording ? '#fff' : iconColors.primary} />}
+            onClick={() => {
+              if (isRecording) {
+                stopRecording();
+              } else {
+                startRecording();
+              }
+            }}
+          ></Button>
         }
         tools={
           <>

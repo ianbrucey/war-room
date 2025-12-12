@@ -3,22 +3,23 @@ import { transformMessage } from '@/common/chatLib';
 import type { IProvider, TProviderWithModel } from '@/common/storage';
 import { ConfigStorage } from '@/common/storage';
 import { uuid } from '@/common/utils';
+import FilePreview from '@/renderer/components/FilePreview';
 import SendBox from '@/renderer/components/sendbox';
 import ThoughtDisplay, { type ThoughtData } from '@/renderer/components/ThoughtDisplay';
+import { useAudioRecorder } from '@/renderer/hooks/useAudioRecorder';
 import { geminiModeList } from '@/renderer/hooks/useModeModeList';
 import { getSendBoxDraftHook, type FileOrFolderItem } from '@/renderer/hooks/useSendBoxDraft';
-import useSWR from 'swr';
-import { iconColors } from '@/renderer/theme/colors';
-import FilePreview from '@/renderer/components/FilePreview';
 import { createSetUploadFile, useSendBoxFiles } from '@/renderer/hooks/useSendBoxFiles';
 import { useAddOrUpdateMessage } from '@/renderer/messages/hooks';
 import { allSupportedExts } from '@/renderer/services/FileService';
+import { iconColors } from '@/renderer/theme/colors';
 import { emitter, useAddEventListener } from '@/renderer/utils/emitter';
 import { hasSpecificModelCapability } from '@/renderer/utils/modelCapabilities';
-import { Button, Dropdown, Menu, Tag } from '@arco-design/web-react';
-import { Plus } from '@icon-park/react';
+import { Button, Dropdown, Menu, Message, Tag } from '@arco-design/web-react';
+import { Plus, Voice } from '@icon-park/react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import useSWR from 'swr';
 
 const useGeminiSendBoxDraft = getSendBoxDraftHook('gemini', {
   _type: 'gemini',
@@ -104,6 +105,8 @@ const useSendBoxDraft = (conversation_id: string) => {
     [data, mutate]
   );
 
+
+
   return {
     atPath,
     uploadFile,
@@ -122,6 +125,22 @@ const GeminiSendBox: React.FC<{
   const { thought, running } = useGeminiMessage(conversation_id);
 
   const { atPath, uploadFile, setAtPath, setUploadFile, content, setContent } = useSendBoxDraft(conversation_id);
+
+  const { isRecording, startRecording, stopRecording, transcription, error: voiceError } = useAudioRecorder();
+
+  // Handle voice transcription updates
+  useEffect(() => {
+    if (transcription) {
+      setContent((content || '') + (content ? ' ' : '') + transcription);
+    }
+  }, [transcription]);
+
+  // Handle voice errors
+  useEffect(() => {
+    if (voiceError) {
+      Message.error(voiceError);
+    }
+  }, [voiceError]);
 
   const addOrUpdateMessage = useAddOrUpdateMessage();
 
@@ -263,6 +282,22 @@ const GeminiSendBox: React.FC<{
         supportedExts={allSupportedExts}
         defaultMultiLine={true}
         lockMultiLine={true}
+        actionsRight={
+          <Button
+            type={isRecording ? 'primary' : 'secondary'}
+            status={isRecording ? 'danger' : 'default'}
+            shape='circle'
+            className={`${isRecording ? 'animate-pulse' : ''}`}
+            icon={<Voice theme={isRecording ? 'filled' : 'outline'} size='14' strokeWidth={2} fill={isRecording ? '#fff' : iconColors.primary} />}
+            onClick={() => {
+              if (isRecording) {
+                stopRecording();
+              } else {
+                startRecording();
+              }
+            }}
+          ></Button>
+        }
         tools={
           <>
             <Button

@@ -1,22 +1,23 @@
 import { ipcBridge } from '@/common';
-import type { AcpBackend } from '@/types/acpTypes';
 import { transformMessage, type TMessage } from '@/common/chatLib';
 import type { IResponseMessage } from '@/common/ipcBridge';
 import { uuid } from '@/common/utils';
+import FilePreview from '@/renderer/components/FilePreview';
 import SendBox from '@/renderer/components/sendbox';
 import ShimmerText from '@/renderer/components/ShimmerText';
 import ThoughtDisplay, { type ThoughtData } from '@/renderer/components/ThoughtDisplay';
+import { useAudioRecorder } from '@/renderer/hooks/useAudioRecorder';
 import { getSendBoxDraftHook, type FileOrFolderItem } from '@/renderer/hooks/useSendBoxDraft';
 import { createSetUploadFile, useSendBoxFiles } from '@/renderer/hooks/useSendBoxFiles';
 import { useAddOrUpdateMessage } from '@/renderer/messages/hooks';
 import { allSupportedExts } from '@/renderer/services/FileService';
+import { iconColors } from '@/renderer/theme/colors';
 import { emitter, useAddEventListener } from '@/renderer/utils/emitter';
-import { Button, Tag } from '@arco-design/web-react';
-import { Plus } from '@icon-park/react';
+import type { AcpBackend } from '@/types/acpTypes';
+import { Button, Message, Tag } from '@arco-design/web-react';
+import { Plus, Voice } from '@icon-park/react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { iconColors } from '@/renderer/theme/colors';
-import FilePreview from '@/renderer/components/FilePreview';
 
 const useAcpSendBoxDraft = getSendBoxDraftHook('acp', {
   _type: 'acp',
@@ -150,6 +151,22 @@ const AcpSendBox: React.FC<{
   const { thought, running, acpStatus, aiProcessing, setAiProcessing } = useAcpMessage(conversation_id);
   const { t } = useTranslation();
   const { atPath, uploadFile, setAtPath, setUploadFile, content, setContent } = useSendBoxDraft(conversation_id);
+
+  const { isRecording, startRecording, stopRecording, transcription, error: voiceError } = useAudioRecorder();
+
+  // Handle voice transcription updates
+  useEffect(() => {
+    if (transcription) {
+      setContent((content || '') + (content ? ' ' : '') + transcription);
+    }
+  }, [transcription]);
+
+  // Handle voice errors
+  useEffect(() => {
+    if (voiceError) {
+      Message.error(voiceError);
+    }
+  }, [voiceError]);
 
   const sendingInitialMessageRef = useRef(false); // Prevent duplicate sends
   const addOrUpdateMessage = useAddOrUpdateMessage(); // Move this here so it's available in useEffect
@@ -321,6 +338,22 @@ const AcpSendBox: React.FC<{
         className='z-10'
         onFilesAdded={handleFilesAdded}
         supportedExts={allSupportedExts}
+        actionsRight={
+          <Button
+            type={isRecording ? 'primary' : 'secondary'}
+            status={isRecording ? 'danger' : 'default'}
+            shape='circle'
+            className={`${isRecording ? 'animate-pulse' : ''}`}
+            icon={<Voice theme={isRecording ? 'filled' : 'outline'} size='14' strokeWidth={2} fill={isRecording ? '#fff' : iconColors.primary} />}
+            onClick={() => {
+              if (isRecording) {
+                stopRecording();
+              } else {
+                startRecording();
+              }
+            }}
+          ></Button>
+        }
         tools={
           <>
             <Button
