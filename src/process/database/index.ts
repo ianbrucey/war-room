@@ -23,8 +23,8 @@ export class AionUIDatabase {
   private readonly defaultUserId = 'system_default_user';
   private readonly systemPasswordPlaceholder = '';
 
-  constructor() {
-    const finalPath = path.join(getDataPath(), 'aionui.db');
+  constructor(dbPath?: string) {
+    const finalPath = dbPath || path.join(getDataPath(), 'aionui.db');
     console.log(`[Database] Initializing database at: ${finalPath}`);
 
     const dir = path.dirname(finalPath);
@@ -392,12 +392,41 @@ export class AionUIDatabase {
       const caseId = `case_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
       const now = Date.now();
 
+      // Generate filesystem-safe name from title
+      const safeName = title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+      // Import required modules
+      const os = require('os');
+      const JUSTICE_QUEST_WORK_DIR = path.join(os.homedir(), '.justicequest');
+      const workspacePath = path.join(JUSTICE_QUEST_WORK_DIR, `${safeName}-${now}`);
+
+      // Create workspace directory
+      if (!fs.existsSync(JUSTICE_QUEST_WORK_DIR)) {
+        fs.mkdirSync(JUSTICE_QUEST_WORK_DIR, { recursive: true });
+      }
+      fs.mkdirSync(workspacePath, { recursive: true });
+
+      // Copy template if it exists
+      const templatePath = path.join(process.cwd(), 'case-folder-template');
+      if (fs.existsSync(templatePath)) {
+        const files = fs.readdirSync(templatePath);
+        for (const file of files) {
+          const srcPath = path.join(templatePath, file);
+          const destPath = path.join(workspacePath, file);
+          fs.copyFileSync(srcPath, destPath);
+        }
+      }
+
+      // Insert into database with workspace_path
       const stmt = this.db.prepare(`
-        INSERT INTO case_files (id, title, case_number, user_id, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO case_files (id, title, case_number, workspace_path, user_id, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
 
-      stmt.run(caseId, title, caseNumber ?? null, userId, now, now);
+      stmt.run(caseId, title, caseNumber ?? null, workspacePath, userId, now, now);
 
       return {
         success: true,
@@ -405,6 +434,7 @@ export class AionUIDatabase {
           id: caseId,
           title,
           case_number: caseNumber ?? null,
+          workspace_path: workspacePath,
           user_id: userId,
           created_at: now,
           updated_at: now,
@@ -941,7 +971,6 @@ export class AionUIDatabase {
     return this.db.prepare(sql).get(...params);
   }
 }
-
 
 // Export singleton instance
 let dbInstance: AionUIDatabase | null = null;

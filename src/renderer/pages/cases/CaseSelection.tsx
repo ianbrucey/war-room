@@ -130,19 +130,10 @@ export default function CaseSelection() {
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
             {cases.map((caseFile) => (
-              <Card
-                key={caseFile.id}
-                hoverable
-                style={{ cursor: 'pointer' }}
-                onClick={() => handleSelectCase(caseFile.id)}
-              >
+              <Card key={caseFile.id} hoverable style={{ cursor: 'pointer' }} onClick={() => handleSelectCase(caseFile.id)}>
                 <div style={{ marginBottom: '12px' }}>
                   <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>{caseFile.title}</h3>
-                  {caseFile.case_number && (
-                    <p style={{ margin: '4px 0 0 0', color: 'var(--color-text-3)', fontSize: '14px' }}>
-                      Case #: {caseFile.case_number}
-                    </p>
-                  )}
+                  {caseFile.case_number && <p style={{ margin: '4px 0 0 0', color: 'var(--color-text-3)', fontSize: '14px' }}>Case #: {caseFile.case_number}</p>}
                 </div>
               </Card>
             ))}
@@ -163,11 +154,7 @@ export default function CaseSelection() {
         focusLock={true}
       >
         <Form form={form} layout='vertical'>
-          <Form.Item
-            label='Case Title'
-            field='title'
-            rules={[{ required: true, message: 'Please enter a case title' }]}
-          >
+          <Form.Item label='Case Title' field='title' rules={[{ required: true, message: 'Please enter a case title' }]}>
             <Input placeholder='Enter case title' />
           </Form.Item>
           <Form.Item label='Case Number (Optional)' field='case_number'>
@@ -178,4 +165,3 @@ export default function CaseSelection() {
     </div>
   );
 }
-

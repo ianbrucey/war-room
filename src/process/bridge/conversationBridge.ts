@@ -20,12 +20,40 @@ import { migrateConversationToDatabase } from './migrationUtils';
 export function initConversationBridge(): void {
   ipcBridge.conversation.create.provider(async (params): Promise<TChatConversation> => {
     const { type, extra, name, model, id, caseFileId } = params;
+
+    // Fetch case to get workspace path
+    if (!caseFileId) {
+      throw new Error('caseFileId is required to create a conversation');
+    }
+
+    const db = getDatabase();
+    const caseResult = db.getCaseFile(caseFileId);
+
+    if (!caseResult.success || !caseResult.data) {
+      throw new Error(`Case file not found: ${caseFileId}`);
+    }
+
+    const caseWorkspace = caseResult.data.workspace_path;
+
     const buildConversation = () => {
-      if (type === 'gemini') return createGeminiAgent(model, extra.workspace, extra.defaultFiles, extra.webSearchEngine);
-      if (type === 'acp') return createAcpAgent(params);
-      if (type === 'codex') return createCodexAgent(params);
+      if (type === 'gemini') {
+        return createGeminiAgent(model, caseWorkspace, extra.defaultFiles, extra.webSearchEngine);
+      }
+      if (type === 'acp') {
+        return createAcpAgent({
+          ...params,
+          extra: { ...extra, workspace: caseWorkspace },
+        });
+      }
+      if (type === 'codex') {
+        return createCodexAgent({
+          ...params,
+          extra: { ...extra, workspace: caseWorkspace },
+        });
+      }
       throw new Error('Invalid conversation type');
     };
+
     try {
       const conversation = await buildConversation();
       if (name) {
@@ -41,7 +69,6 @@ export function initConversationBridge(): void {
       }
 
       // Save to database only
-      const db = getDatabase();
       const result = db.createConversation(conversation, undefined, caseFileId);
       if (!result.success) {
         console.error('[conversationBridge] Failed to create conversation in database:', result.error);
@@ -55,7 +82,7 @@ export function initConversationBridge(): void {
       console.error('[conversationBridge] Error details:', {
         type: params.type,
         hasModel: !!params.model,
-        hasWorkspace: !!params.extra?.workspace,
+        hasCaseFileId: !!caseFileId,
         error: errorMessage,
         stack: errorStack,
       });

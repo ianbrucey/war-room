@@ -111,6 +111,19 @@ export const database = {
   getConversationsByCase: bridge.buildProvider<import('@/common/storage').TChatConversation[], { caseFileId: string; page?: number; pageSize?: number }>('database.get-conversations-by-case'),
 };
 
+// Case management
+export const cases = {
+  create: bridge.buildProvider<IBridgeResponse<import('@/common/storage').ICaseFile>, { title: string; caseNumber?: string; userId: string }>('cases.create'),
+
+  getAll: bridge.buildProvider<IBridgeResponse<import('@/common/storage').IPaginatedResult<import('@/common/storage').ICaseFile>>, { userId: string; page?: number; pageSize?: number }>('cases.get-all'),
+
+  get: bridge.buildProvider<IBridgeResponse<import('@/common/storage').ICaseFile>, { caseId: string }>('cases.get'),
+
+  update: bridge.buildProvider<IBridgeResponse<import('@/common/storage').ICaseFile>, { caseId: string; updates: Partial<import('@/common/storage').ICaseFile> }>('cases.update'),
+
+  delete: bridge.buildProvider<IBridgeResponse, { caseId: string }>('cases.delete'),
+};
+
 interface ISendMessageParams {
   input: string;
   msg_id: string;

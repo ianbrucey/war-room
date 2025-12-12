@@ -12,13 +12,11 @@ import fs from 'fs/promises';
 import path from 'path';
 import { getSystemDir } from './initStorage';
 
-const buildWorkspaceWidthFiles = async (defaultWorkspaceName: string, workspace?: string, defaultFiles?: string[]) => {
-  const customWorkspace = !!workspace;
-  if (!workspace) {
-    const tempPath = getSystemDir().workDir;
-    workspace = path.join(tempPath, defaultWorkspaceName);
-    await fs.mkdir(workspace, { recursive: true });
-  }
+const buildWorkspaceWidthFiles = async (caseWorkspace: string, defaultFiles?: string[]) => {
+  // Workspace is provided by the case - no temp folder creation
+  const workspace = caseWorkspace;
+
+  // Copy default files if provided
   if (defaultFiles) {
     for (const file of defaultFiles) {
       // 确保文件路径是绝对路径
@@ -53,29 +51,29 @@ const buildWorkspaceWidthFiles = async (defaultWorkspaceName: string, workspace?
       }
     }
   }
-  return { workspace, customWorkspace };
+  return { workspace, customWorkspace: true };
 };
 
-export const createGeminiAgent = async (model: TProviderWithModel, workspace?: string, defaultFiles?: string[], webSearchEngine?: 'google' | 'default'): Promise<TChatConversation> => {
-  const { workspace: newWorkspace, customWorkspace } = await buildWorkspaceWidthFiles(`gemini-temp-${Date.now()}`, workspace, defaultFiles);
+export const createGeminiAgent = async (model: TProviderWithModel, caseWorkspace: string, defaultFiles?: string[], webSearchEngine?: 'google' | 'default'): Promise<TChatConversation> => {
+  const { workspace } = await buildWorkspaceWidthFiles(caseWorkspace, defaultFiles);
   return {
     type: 'gemini',
     model,
-    extra: { workspace: newWorkspace, customWorkspace, webSearchEngine },
-    desc: customWorkspace ? newWorkspace : '临时工作区',
+    extra: { workspace, customWorkspace: true, webSearchEngine },
+    desc: workspace,
     createTime: Date.now(),
     modifyTime: Date.now(),
-    name: newWorkspace,
+    name: workspace,
     id: uuid(),
   };
 };
 
 export const createAcpAgent = async (options: ICreateConversationParams): Promise<TChatConversation> => {
   const { extra } = options;
-  const { workspace, customWorkspace } = await buildWorkspaceWidthFiles(`${extra.backend}-temp-${Date.now()}`, extra.workspace, extra.defaultFiles);
+  const { workspace } = await buildWorkspaceWidthFiles(extra.workspace, extra.defaultFiles);
   return {
     type: 'acp',
-    extra: { workspace: workspace, customWorkspace, backend: extra.backend, cliPath: extra.cliPath },
+    extra: { workspace, customWorkspace: true, backend: extra.backend, cliPath: extra.cliPath },
     createTime: Date.now(),
     modifyTime: Date.now(),
     name: workspace,
@@ -85,12 +83,12 @@ export const createAcpAgent = async (options: ICreateConversationParams): Promis
 
 export const createCodexAgent = async (options: ICreateConversationParams): Promise<TChatConversation> => {
   const { extra } = options;
-  const { workspace, customWorkspace } = await buildWorkspaceWidthFiles(`codex-temp-${Date.now()}`, extra.workspace, extra.defaultFiles);
+  const { workspace } = await buildWorkspaceWidthFiles(extra.workspace, extra.defaultFiles);
   return {
     type: 'codex',
     extra: {
-      workspace: workspace,
-      customWorkspace,
+      workspace,
+      customWorkspace: true,
       cliPath: extra.cliPath,
       sandboxMode: 'workspace-write', // 默认为读写权限
     },

@@ -85,4 +85,3 @@ export const CaseFileRepository = {
     return caseFile !== null && caseFile.user_id === userId;
   },
 };
-

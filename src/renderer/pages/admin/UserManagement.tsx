@@ -97,9 +97,7 @@ export default function UserManagement() {
                 <p>
                   <strong>Password:</strong> <code>{data.generatedPassword}</code>
                 </p>
-                <p style={{ color: 'var(--color-danger-6)', marginTop: 12 }}>
-                  ⚠️ Save this password! It won't be shown again.
-                </p>
+                <p style={{ color: 'var(--color-danger-6)', marginTop: 12 }}>⚠️ Save this password! It won't be shown again.</p>
               </div>
             ),
           });
@@ -223,15 +221,10 @@ export default function UserManagement() {
       dataIndex: 'role',
       width: 150,
       render: (role: string, record: User) => (
-        <Select
-          size="small"
-          value={role}
-          onChange={(value) => handleChangeRole(record.id, value)}
-          style={{ width: 120 }}
-        >
-          <Select.Option value="user">User</Select.Option>
-          <Select.Option value="admin">Admin</Select.Option>
-          <Select.Option value="super_admin">Super Admin</Select.Option>
+        <Select size='small' value={role} onChange={(value) => handleChangeRole(record.id, value)} style={{ width: 120 }}>
+          <Select.Option value='user'>User</Select.Option>
+          <Select.Option value='admin'>Admin</Select.Option>
+          <Select.Option value='super_admin'>Super Admin</Select.Option>
         </Select>
       ),
     },
@@ -239,12 +232,7 @@ export default function UserManagement() {
       title: 'Status',
       dataIndex: 'is_active',
       width: 100,
-      render: (active: number) =>
-        active ? (
-          <span style={{ color: 'var(--color-success-6)' }}>✅ Active</span>
-        ) : (
-          <span style={{ color: 'var(--color-danger-6)' }}>❌ Inactive</span>
-        ),
+      render: (active: number) => (active ? <span style={{ color: 'var(--color-success-6)' }}>✅ Active</span> : <span style={{ color: 'var(--color-danger-6)' }}>❌ Inactive</span>),
     },
     {
       title: 'Last Login',
@@ -257,11 +245,11 @@ export default function UserManagement() {
       width: 200,
       render: (_: any, record: User) => (
         <Space>
-          <Button type="text" size="small" icon={<IconEdit />} onClick={() => openEditModal(record)}>
+          <Button type='text' size='small' icon={<IconEdit />} onClick={() => openEditModal(record)}>
             Edit
           </Button>
-          <Popconfirm title="Are you sure you want to deactivate this user?" onOk={() => handleDeactivateUser(record.id)}>
-            <Button type="text" status="danger" size="small" icon={<IconDelete />}>
+          <Popconfirm title='Are you sure you want to deactivate this user?' onOk={() => handleDeactivateUser(record.id)}>
+            <Button type='text' status='danger' size='small' icon={<IconDelete />}>
               Deactivate
             </Button>
           </Popconfirm>
@@ -297,16 +285,16 @@ export default function UserManagement() {
           <h2 style={{ margin: 0 }}>User Management</h2>
           <p style={{ color: 'var(--color-text-3)', marginTop: 4 }}>Manage users and their roles</p>
         </div>
-        <Button type="primary" icon={<IconPlus />} onClick={() => setCreateModalVisible(true)}>
+        <Button type='primary' icon={<IconPlus />} onClick={() => setCreateModalVisible(true)}>
           Create User
         </Button>
       </div>
 
-      <Table columns={columns} data={users} loading={loading} rowKey="id" pagination={{ pageSize: 10 }} />
+      <Table columns={columns} data={users} loading={loading} rowKey='id' pagination={{ pageSize: 10 }} />
 
       {/* Create User Modal */}
       <Modal
-        title="Create New User"
+        title='Create New User'
         visible={createModalVisible}
         onOk={handleCreateUser}
         onCancel={() => {
@@ -316,32 +304,32 @@ export default function UserManagement() {
         autoFocus={false}
         focusLock={true}
       >
-        <Form form={form} layout="vertical" autoComplete="off">
-          <Form.Item label="Username" field="username" rules={[{ required: true, message: 'Username is required' }]}>
-            <Input placeholder="Enter username" />
+        <Form form={form} layout='vertical' autoComplete='off'>
+          <Form.Item label='Username' field='username' rules={[{ required: true, message: 'Username is required' }]}>
+            <Input placeholder='Enter username' />
           </Form.Item>
 
-          <Form.Item label="Email" field="email">
-            <Input placeholder="Enter email (optional)" type="email" />
+          <Form.Item label='Email' field='email'>
+            <Input placeholder='Enter email (optional)' type='email' />
           </Form.Item>
 
-          <Form.Item label="Role" field="role" rules={[{ required: true, message: 'Role is required' }]} initialValue="user">
-            <Select placeholder="Select role">
-              <Select.Option value="user">User</Select.Option>
-              <Select.Option value="admin">Admin</Select.Option>
-              <Select.Option value="super_admin">Super Admin</Select.Option>
+          <Form.Item label='Role' field='role' rules={[{ required: true, message: 'Role is required' }]} initialValue='user'>
+            <Select placeholder='Select role'>
+              <Select.Option value='user'>User</Select.Option>
+              <Select.Option value='admin'>Admin</Select.Option>
+              <Select.Option value='super_admin'>Super Admin</Select.Option>
             </Select>
           </Form.Item>
 
-          <Form.Item label="Password" field="password" extra="Leave empty to auto-generate a secure password">
-            <Input.Password placeholder="Leave empty to auto-generate" />
+          <Form.Item label='Password' field='password' extra='Leave empty to auto-generate a secure password'>
+            <Input.Password placeholder='Leave empty to auto-generate' />
           </Form.Item>
         </Form>
       </Modal>
 
       {/* Edit User Modal */}
       <Modal
-        title="Edit User"
+        title='Edit User'
         visible={editModalVisible}
         onOk={handleEditUser}
         onCancel={() => {
@@ -352,12 +340,12 @@ export default function UserManagement() {
         autoFocus={false}
         focusLock={true}
       >
-        <Form form={editForm} layout="vertical" autoComplete="off">
-          <Form.Item label="Email" field="email">
-            <Input placeholder="Enter email" type="email" />
+        <Form form={editForm} layout='vertical' autoComplete='off'>
+          <Form.Item label='Email' field='email'>
+            <Input placeholder='Enter email' type='email' />
           </Form.Item>
 
-          <Form.Item label="Status" field="is_active" initialValue={1}>
+          <Form.Item label='Status' field='is_active' initialValue={1}>
             <Select>
               <Select.Option value={1}>Active</Select.Option>
               <Select.Option value={0}>Inactive</Select.Option>

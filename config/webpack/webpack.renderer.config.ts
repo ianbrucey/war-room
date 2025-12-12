@@ -1,7 +1,7 @@
-import type { Configuration } from 'webpack';
-import { rules } from './webpack.rules';
-import { plugins } from './webpack.plugins';
 import path from 'path';
+import type { Configuration } from 'webpack';
+import { plugins } from './webpack.plugins';
+import { rules } from './webpack.rules';
 
 export const rendererConfig: Configuration = {
   module: {
@@ -20,6 +20,8 @@ export const rendererConfig: Configuration = {
     fallback: {
       'crypto': false,
       'node:crypto': false,
+      'os': false,
+      'path': false,
     },
   },
   externals: {

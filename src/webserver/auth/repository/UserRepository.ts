@@ -13,7 +13,6 @@ import type { IQueryResult, IUser } from '@process/database/types';
  */
 export type AuthUser = Pick<IUser, 'id' | 'username' | 'email' | 'password_hash' | 'role' | 'is_active' | 'jwt_secret' | 'created_at' | 'updated_at' | 'last_login'>;
 
-
 /**
  * 解包数据库查询结果，失败时抛出异常
  * Unwrap database query result, throw error on failure
@@ -211,20 +210,20 @@ export const UserRepository = {
     const db = getDatabase();
     const result = db.createUser(username, email, passwordHash);
     const user = unwrap(result, 'Failed to create user');
-    
+
     // Update role if not default 'user'
     if (role !== 'user') {
       db.exec('UPDATE users SET role = ?, created_by = ? WHERE id = ?', role, createdBy || null, user.id);
     } else if (createdBy) {
       db.exec('UPDATE users SET created_by = ? WHERE id = ?', createdBy, user.id);
     }
-    
+
     // Fetch the updated user
     const updatedUser = this.findById(user.id);
     if (!updatedUser) {
       throw new Error('Failed to fetch created user');
     }
-    
+
     return updatedUser;
   },
 
@@ -238,30 +237,30 @@ export const UserRepository = {
   update(userId: string, updates: { email?: string; is_active?: number }, updatedBy?: string): void {
     const db = getDatabase();
     const now = Date.now();
-    
+
     const fields: string[] = [];
     const values: any[] = [];
-    
+
     if (updates.email !== undefined) {
       fields.push('email = ?');
       values.push(updates.email);
     }
-    
+
     if (updates.is_active !== undefined) {
       fields.push('is_active = ?');
       values.push(updates.is_active);
     }
-    
+
     if (updatedBy) {
       fields.push('updated_by = ?');
       values.push(updatedBy);
     }
-    
+
     fields.push('updated_at = ?');
     values.push(now);
-    
+
     values.push(userId);
-    
+
     const sql = `UPDATE users SET ${fields.join(', ')} WHERE id = ?`;
     db.exec(sql, ...values);
   },
@@ -301,4 +300,3 @@ export const UserRepository = {
     return users.map(mapUser);
   },
 };
-

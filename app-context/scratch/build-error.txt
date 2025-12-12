@@ -1,0 +1,341 @@
+'/Users/ianbruce/code/aionui/src/common'
+        Parsed request is a module
+        using description file:
+        /Users/ianbruce/code/aionui/package.json (relative
+        path: ./src/common)
+        Field 'browser' doesn't contain a valid alias
+        configuration
+        resolve as module
+        /Users/ianbruce/code/aionui/src/common/node_modules
+        doesn't exist or is not a directory
+        /Users/ianbruce/code/aionui/src/node_modules
+        doesn't exist or is not a directory
+        looking for modules in
+        /Users/ianbruce/code/aionui/node_modules
+        single file module
+        using description file:
+        /Users/ianbruce/code/aionui/package.json (relative
+        path: ./node_modules/path)
+        no extension
+        Field 'browser' doesn't contain a valid alias
+        configuration
+        /Users/ianbruce/code/aionui/node_modules/path
+        doesn't exist
+        .js
+        Field 'browser' doesn't contain a valid alias
+        configuration
+        /Users/ianbruce/code/aionui/node_modules/path.js
+        doesn't exist
+        .ts
+        Field 'browser' doesn't contain a valid alias
+        configuration
+        /Users/ianbruce/code/aionui/node_modules/path.ts
+        doesn't exist
+        .jsx
+        Field 'browser' doesn't contain a valid alias
+        configuration
+        /Users/ianbruce/code/aionui/node_modules/path.jsx
+        doesn't exist
+        .tsx
+        Field 'browser' doesn't contain a valid alias
+        configuration
+        /Users/ianbruce/code/aionui/node_modules/path.tsx
+        doesn't exist
+        .css
+        Field 'browser' doesn't contain a valid alias
+        configuration
+        /Users/ianbruce/code/aionui/node_modules/path.css
+        doesn't exist
+        /Users/ianbruce/code/aionui/node_modules/path
+        doesn't exist
+        /Users/ianbruce/code/node_modules doesn't exist or
+        is not a directory
+        looking for modules in /Users/ianbruce/node_modules
+        single file module
+        using description file:
+        /Users/ianbruce/package.json (relative path:
+        ./node_modules/path)
+        no extension
+        Field 'browser' doesn't contain a valid alias
+        configuration
+        /Users/ianbruce/node_modules/path doesn't exist
+        .js
+        Field 'browser' doesn't contain a valid alias
+        configuration
+        /Users/ianbruce/node_modules/path.js doesn't exist
+        .ts
+        Field 'browser' doesn't contain a valid alias
+        configuration
+        /Users/ianbruce/node_modules/path.ts doesn't exist
+        .jsx
+        Field 'browser' doesn't contain a valid alias
+        configuration
+        /Users/ianbruce/node_modules/path.jsx doesn't exist
+        .tsx
+        Field 'browser' doesn't contain a valid alias
+        configuration
+        /Users/ianbruce/node_modules/path.tsx doesn't exist
+        .css
+        Field 'browser' doesn't contain a valid alias
+        configuration
+        /Users/ianbruce/node_modules/path.css doesn't exist
+        /Users/ianbruce/node_modules/path doesn't exist
+        /Users/node_modules doesn't exist or is not a
+        directory
+        /node_modules doesn't exist or is not a directory
+        @ ./src/renderer/services/FileService.ts 69:20-49
+        @ ./src/renderer/pages/guid/index.tsx 69:22-64
+        @ ./src/renderer/router.tsx 13:31-54
+        @ ./src/renderer/main.tsx 13:33-52
+        @ ./src/renderer/index.ts 14:31-48
+        group_0 (webpack 5.102.1) compiled with 2 errors in
+        24481 ms
+
+<e> [ForkTsCheckerWebpackPlugin] ERROR in ./src/process/services/mcpServices/McpProtocol.ts:212:13
+<e> TS2353: Object literal may only specify known properties, and 'prompts' does not exist in type '{ experimental?: { [x: string]: object; }; sampling?: object; elicitation?: { [x: string]: unknown; applyDefaults?: boolean; }; roots?: { listChanged?: boolean; }; }'.
+<e>     210 |         {
+<e>     211 |           capabilities: {
+<e>   > 212 |             prompts: {},
+<e>         |             ^^^^^^^
+<e>     213 |             resources: {},
+<e>     214 |             tools: {},
+<e>     215 |             logging: {},
+<e> 
+<e> ERROR in ./src/process/services/mcpServices/McpProtocol.ts:289:13
+<e> TS2353: Object literal may only specify known properties, and 'prompts' does not exist in type '{ experimental?: { [x: string]: object; }; sampling?: object; elicitation?: { [x: string]: unknown; applyDefaults?: boolean; }; roots?: { listChanged?: boolean; }; }'.
+<e>     287 |         {
+<e>     288 |           capabilities: {
+<e>   > 289 |             prompts: {},
+<e>         |             ^^^^^^^
+<e>     290 |             resources: {},
+<e>     291 |             tools: {},
+<e>     292 |             logging: {},
+<e> 
+<e> ERROR in ./src/process/services/mcpServices/McpProtocol.ts:420:13
+<e> TS2353: Object literal may only specify known properties, and 'prompts' does not exist in type '{ experimental?: { [x: string]: object; }; sampling?: object; elicitation?: { [x: string]: unknown; applyDefaults?: boolean; }; roots?: { listChanged?: boolean; }; }'.
+<e>     418 |         {
+<e>     419 |           capabilities: {
+<e>   > 420 |             prompts: {},
+<e>         |             ^^^^^^^
+<e>     421 |             resources: {},
+<e>     422 |             tools: {},
+<e>     423 |             logging: {},
+<e> 
+<i> [ForkTsCheckerWebpackPlugin] Found 3 errors in 22965 ms.
+
+An unhandled rejection has occurred inside Forge:
+Error: Compilation errors in the preload: group_0:
+  asset main_window/preload.js 390 KiB [emitted] (name: main_window)
+  runtime modules 30 KiB 14 modules
+  modules by path ./node_modules/ 115 KiB
+    modules by path ./node_modules/webpack-dev-server/client/ 71.8 KiB 16 modules
+    modules by path ./node_modules/webpack/hot/*.js 5.17 KiB
+      ./node_modules/webpack/hot/dev-server.js 1.94 KiB [built] [code generated]
+      + 3 modules
+    modules by path ./node_modules/html-entities/dist/esm/*.js 33.5 KiB
+      ./node_modules/html-entities/dist/esm/index.js 4.98 KiB [built] [code generated]
+      + 3 modules
+    ./node_modules/ansi-html-community/index.js 4.16 KiB [built] [code generated]
+  modules by path ./src/ 1.49 KiB
+    ./src/preload.ts 1.04 KiB [built] [code generated]
+    ./src/adapter/constant.ts 459 bytes [built] [code generated]
+  external "electron" 42 bytes [built] [code generated]
+  external "events" 42 bytes [built] [code generated]
+  group_0 (webpack 5.102.1) compiled successfully in 4330 ms
+
+group_0:
+  assets by chunk 1.96 MiB (id hint: vendors)
+    asset react-syntax-highlighter_languages_highlight_mathematica/index.js 400 KiB [emitted] (name: react-syntax-highlighter_languages_highlight_mathematica) (id hint: vendors)
+    asset react-syntax-highlighter_languages_highlight_isbl/index.js 288 KiB [emitted] (name: react-syntax-highlighter_languages_highlight_isbl) (id hint: vendors)
+    asset react-syntax-highlighter_languages_highlight_oneC/index.js 153 KiB [emitted] (name: react-syntax-highlighter_languages_highlight_oneC) (id hint: vendors)
+    + 24 assets
+  assets by path static/images/ 77.8 KiB
+    asset static/images/app.png 64.1 KiB [emitted] [from: src/renderer/assets/logos/app.png] (auxiliary name: main_window)
+    asset static/images/iflow.svg 4.12 KiB [emitted] [from: src/renderer/assets/logos/iflow.svg] (auxiliary name: main_window)
+    asset static/images/gemini.svg 2.76 KiB [emitted] [from: src/renderer/assets/logos/gemini.svg] (auxiliary name: main_window)
+    asset static/images/qwen.svg 1.99 KiB [emitted] [from: src/renderer/assets/logos/qwen.svg] (auxiliary name: main_window)
+    + 4 assets
+  assets by path main_window/ 50 MiB
+    asset main_window/index.js 50 MiB [emitted] (name: main_window)
+    asset main_window/index.html 648 bytes [emitted]
+  + 165 assets
+  Entrypoint main_window 50.7 MiB (77.8 KiB) = main_window.css 725 KiB main_window/index.js 50 MiB 8 auxiliary assets
+  orphan modules 1.69 MiB (javascript) 13.6 KiB (runtime) [orphan] 98 modules
+  runtime modules 116 KiB 73 modules
+  modules by path ./node_modules/ 15.7 MiB (javascript) 675 KiB (css/mini-extract) 4954 modules
+  modules by path ./src/ 796 KiB (javascript) 77.8 KiB (asset) 20.1 KiB (css/mini-extract)
+    javascript modules 739 KiB 133 modules
+    asset modules 77.8 KiB (asset) 336 bytes (javascript) 8 modules
+    css modules 20.1 KiB 6 modules
+    json modules 57.2 KiB
+      ./src/renderer/i18n/locales/zh-CN.json 12.7 KiB [built] [code generated]
+      + 3 modules
+  modules by path ./*.css 703 bytes (javascript) 83 bytes (css/mini-extract)
+    ./_virtual_%2F__uno.css 703 bytes [built] [code generated]
+    css ./node_modules/css-loader/dist/cjs.js!./node_modules/unplugin/dist/webpack/loaders/load.js??ruleSet[1].rules[1].use[0]!./_virtual_%2F__uno.css 83 bytes [built] [code generated]
+  ./package.json 4.64 KiB [built] [code generated]
+
+  ERROR in ./src/common/constants.ts 12:29-42
+  Module not found: Error: Can't resolve 'os' in '/Users/ianbruce/code/aionui/src/common'
+
+  BREAKING CHANGE: webpack < 5 used to include polyfills for node.js core modules by default.
+  This is no longer the case. Verify if you need this module and configure a polyfill for it.
+
+  If you want to include a polyfill, you need to:
+        - add a fallback 'resolve.fallback: { "os": require.resolve("os-browserify/browser") }'
+        - install 'os-browserify'
+  If you don't want to include a polyfill, you can use an empty module like this:
+        resolve.fallback: { "os": false }
+  resolve 'os' in '/Users/ianbruce/code/aionui/src/common'
+    Parsed request is a module
+    using description file: /Users/ianbruce/code/aionui/package.json (relative path: ./src/common)
+      Field 'browser' doesn't contain a valid alias configuration
+      resolve as module
+        /Users/ianbruce/code/aionui/src/common/node_modules doesn't exist or is not a directory
+        /Users/ianbruce/code/aionui/src/node_modules doesn't exist or is not a directory
+        looking for modules in /Users/ianbruce/code/aionui/node_modules
+          single file module
+            using description file: /Users/ianbruce/code/aionui/package.json (relative path: ./node_modules/os)
+              no extension
+                Field 'browser' doesn't contain a valid alias configuration
+                /Users/ianbruce/code/aionui/node_modules/os doesn't exist
+              .js
+                Field 'browser' doesn't contain a valid alias configuration
+                /Users/ianbruce/code/aionui/node_modules/os.js doesn't exist
+              .ts
+                Field 'browser' doesn't contain a valid alias configuration
+                /Users/ianbruce/code/aionui/node_modules/os.ts doesn't exist
+              .jsx
+                Field 'browser' doesn't contain a valid alias configuration
+                /Users/ianbruce/code/aionui/node_modules/os.jsx doesn't exist
+              .tsx
+                Field 'browser' doesn't contain a valid alias configuration
+                /Users/ianbruce/code/aionui/node_modules/os.tsx doesn't exist
+              .css
+                Field 'browser' doesn't contain a valid alias configuration
+                /Users/ianbruce/code/aionui/node_modules/os.css doesn't exist
+          /Users/ianbruce/code/aionui/node_modules/os doesn't exist
+        /Users/ianbruce/code/node_modules doesn't exist or is not a directory
+        looking for modules in /Users/ianbruce/node_modules
+          single file module
+            using description file: /Users/ianbruce/package.json (relative path: ./node_modules/os)
+              no extension
+                Field 'browser' doesn't contain a valid alias configuration
+                /Users/ianbruce/node_modules/os doesn't exist
+              .js
+                Field 'browser' doesn't contain a valid alias configuration
+                /Users/ianbruce/node_modules/os.js doesn't exist
+              .ts
+                Field 'browser' doesn't contain a valid alias configuration
+                /Users/ianbruce/node_modules/os.ts doesn't exist
+              .jsx
+                Field 'browser' doesn't contain a valid alias configuration
+                /Users/ianbruce/node_modules/os.jsx doesn't exist
+              .tsx
+                Field 'browser' doesn't contain a valid alias configuration
+                /Users/ianbruce/node_modules/os.tsx doesn't exist
+              .css
+                Field 'browser' doesn't contain a valid alias configuration
+                /Users/ianbruce/node_modules/os.css doesn't exist
+          /Users/ianbruce/node_modules/os doesn't exist
+        /Users/node_modules doesn't exist or is not a directory
+        /node_modules doesn't exist or is not a directory
+   @ ./src/renderer/services/FileService.ts 69:20-49
+   @ ./src/renderer/pages/guid/index.tsx 69:22-64
+   @ ./src/renderer/router.tsx 13:31-54
+   @ ./src/renderer/main.tsx 13:33-52
+   @ ./src/renderer/index.ts 14:31-48
+
+  ERROR in ./src/common/constants.ts 13:31-46
+  Module not found: Error: Can't resolve 'path' in '/Users/ianbruce/code/aionui/src/common'
+
+  BREAKING CHANGE: webpack < 5 used to include polyfills for node.js core modules by default.
+  This is no longer the case. Verify if you need this module and configure a polyfill for it.
+
+  If you want to include a polyfill, you need to:
+        - add a fallback 'resolve.fallback: { "path": require.resolve("path-browserify") }'
+        - install 'path-browserify'
+  If you don't want to include a polyfill, you can use an empty module like this:
+        resolve.fallback: { "path": false }
+  resolve 'path' in '/Users/ianbruce/code/aionui/src/common'
+    Parsed request is a module
+    using description file: /Users/ianbruce/code/aionui/package.json (relative path: ./src/common)
+      Field 'browser' doesn't contain a valid alias configuration
+      resolve as module
+        /Users/ianbruce/code/aionui/src/common/node_modules doesn't exist or is not a directory
+        /Users/ianbruce/code/aionui/src/node_modules doesn't exist or is not a directory
+        looking for modules in /Users/ianbruce/code/aionui/node_modules
+          single file module
+            using description file: /Users/ianbruce/code/aionui/package.json (relative path: ./node_modules/path)
+              no extension
+                Field 'browser' doesn't contain a valid alias configuration
+                /Users/ianbruce/code/aionui/node_modules/path doesn't exist
+              .js
+                Field 'browser' doesn't contain a valid alias configuration
+                /Users/ianbruce/code/aionui/node_modules/path.js doesn't exist
+              .ts
+                Field 'browser' doesn't contain a valid alias configuration
+                /Users/ianbruce/code/aionui/node_modules/path.ts doesn't exist
+              .jsx
+                Field 'browser' doesn't contain a valid alias configuration
+                /Users/ianbruce/code/aionui/node_modules/path.jsx doesn't exist
+              .tsx
+                Field 'browser' doesn't contain a valid alias configuration
+                /Users/ianbruce/code/aionui/node_modules/path.tsx doesn't exist
+              .css
+                Field 'browser' doesn't contain a valid alias configuration
+                /Users/ianbruce/code/aionui/node_modules/path.css doesn't exist
+          /Users/ianbruce/code/aionui/node_modules/path doesn't exist
+        /Users/ianbruce/code/node_modules doesn't exist or is not a directory
+        looking for modules in /Users/ianbruce/node_modules
+          single file module
+            using description file: /Users/ianbruce/package.json (relative path: ./node_modules/path)
+              no extension
+                Field 'browser' doesn't contain a valid alias configuration
+                /Users/ianbruce/node_modules/path doesn't exist
+              .js
+                Field 'browser' doesn't contain a valid alias configuration
+                /Users/ianbruce/node_modules/path.js doesn't exist
+              .ts
+                Field 'browser' doesn't contain a valid alias configuration
+                /Users/ianbruce/node_modules/path.ts doesn't exist
+              .jsx
+                Field 'browser' doesn't contain a valid alias configuration
+                /Users/ianbruce/node_modules/path.jsx doesn't exist
+              .tsx
+                Field 'browser' doesn't contain a valid alias configuration
+                /Users/ianbruce/node_modules/path.tsx doesn't exist
+              .css
+                Field 'browser' doesn't contain a valid alias configuration
+                /Users/ianbruce/node_modules/path.css doesn't exist
+          /Users/ianbruce/node_modules/path doesn't exist
+        /Users/node_modules doesn't exist or is not a directory
+        /node_modules doesn't exist or is not a directory
+   @ ./src/renderer/services/FileService.ts 69:20-49
+   @ ./src/renderer/pages/guid/index.tsx 69:22-64
+   @ ./src/renderer/router.tsx 13:31-54
+   @ ./src/renderer/main.tsx 13:33-52
+   @ ./src/renderer/index.ts 14:31-48
+
+  group_0 (webpack 5.102.1) compiled with 2 errors in 24481 ms
+at /Users/ianbruce/code/aionui/node_modules/@electron-forge/plugin-webpack/dist/WebpackPlugin.js:227:43
+    at Hook.eval [as call] (eval at create (/Users/ianbruce/code/aionui/node_modules/tapable/lib/HookCodeFactory.js:19:10), <anonymous>:7:1)
+    at Hook.CALL_DELEGATE [as _call] (/Users/ianbruce/code/aionui/node_modules/tapable/lib/Hook.js:16:14)
+    at /Users/ianbruce/code/aionui/node_modules/webpack/lib/MultiCompiler.js:113:22
+    at Hook.eval [as callAsync] (eval at create (/Users/ianbruce/code/aionui/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:29:1)
+    at Hook.CALL_ASYNC_DELEGATE [as _callAsync] (/Users/ianbruce/code/aionui/node_modules/tapable/lib/Hook.js:21:14)
+    at Watching._done (/Users/ianbruce/code/aionui/node_modules/webpack/lib/Watching.js:312:28)
+    at /Users/ianbruce/code/aionui/node_modules/webpack/lib/Watching.js:227:21
+    at Compiler.emitRecords (/Users/ianbruce/code/aionui/node_modules/webpack/lib/Compiler.js:1066:4)
+    at /Users/ianbruce/code/aionui/node_modules/webpack/lib/Watching.js:203:22
+    at /Users/ianbruce/code/aionui/node_modules/webpack/lib/Compiler.js:1029:14
+    at Hook.eval [as callAsync] (eval at create (/Users/ianbruce/code/aionui/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:6:1)
+    at Hook.CALL_ASYNC_DELEGATE [as _callAsync] (/Users/ianbruce/code/aionui/node_modules/tapable/lib/Hook.js:21:14)
+    at /Users/ianbruce/code/aionui/node_modules/webpack/lib/Compiler.js:1026:27
+    at /Users/ianbruce/code/aionui/node_modules/neo-async/async.js:2818:7
+    at done (/Users/ianbruce/code/aionui/node_modules/neo-async/async.js:3522:9)
+    at eval (eval at create (/Users/ianbruce/code/aionui/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:11:1)
+    at /Users/ianbruce/code/aionui/node_modules/webpack-dev-middleware/dist/utils/setupWriteToDisk.js:101:20
+    at /Users/ianbruce/code/aionui/node_modules/graceful-fs/graceful-fs.js:61:14
+    at FSReqCallback.oncomplete (node:fs:180:23)
+ianbruce@MacBook-Pro-9160 aionui % 

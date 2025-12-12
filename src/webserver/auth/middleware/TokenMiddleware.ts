@@ -161,7 +161,6 @@ export const createAuthMiddleware = (type: 'json' | 'html' = 'json') => {
       role: user.role,
     };
 
-
     next();
   };
 };

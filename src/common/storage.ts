@@ -193,3 +193,24 @@ export interface IMcpTool {
   description?: string;
   inputSchema?: any;
 }
+
+/**
+ * Case File (案件文件)
+ */
+export interface ICaseFile {
+  id: string;
+  title: string;
+  case_number?: string | null;
+  workspace_path: string;
+  user_id: string;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface IPaginatedResult<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+}

@@ -109,9 +109,7 @@ const ChatHistory: React.FC<{ onSessionClick?: () => void; collapsed?: boolean }
   useEffect(() => {
     const refresh = () => {
       // Get conversations from database - filter by case if caseFileId is present
-      const fetchPromise = caseFileId
-        ? ipcBridge.database.getConversationsByCase.invoke({ caseFileId, page: 0, pageSize: 10000 })
-        : ipcBridge.database.getUserConversations.invoke({ page: 0, pageSize: 10000 });
+      const fetchPromise = caseFileId ? ipcBridge.database.getConversationsByCase.invoke({ caseFileId, page: 0, pageSize: 10000 }) : ipcBridge.database.getUserConversations.invoke({ page: 0, pageSize: 10000 });
 
       fetchPromise
         .then((history) => {

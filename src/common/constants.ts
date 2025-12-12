@@ -4,15 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import os from 'os';
-import path from 'path';
-
 /**
- * AionUI应用程序共用常量
+ * AionUI应用程序共用常量 (Browser-safe constants)
+ * These constants can be safely imported in both main and renderer processes
  */
-
-// ===== 系统路径相关常量 =====
-export const JUSTICE_QUEST_WORK_DIR = path.join(os.homedir(), '.justicequest');
 
 // ===== 文件处理相关常量 =====
 

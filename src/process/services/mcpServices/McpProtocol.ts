@@ -4,16 +4,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { app } from 'electron';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import type { IMcpServer } from '@/common/storage';
 import type { AcpBackendAll } from '@/types/acpTypes';
 import { JSONRPC_VERSION } from '@/types/acpTypes';
-import type { IMcpServer } from '@/common/storage';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { exec } from 'child_process';
+import { app } from 'electron';
+import { promisify } from 'util';
 
 /**
  * MCP源类型 - 包括所有ACP后端和AionUi内置
@@ -208,12 +208,7 @@ export abstract class AbstractMcpAgent implements IMcpProtocol {
           version: app.getVersion(),
         },
         {
-          capabilities: {
-            prompts: {},
-            resources: {},
-            tools: {},
-            logging: {},
-          },
+          capabilities: {},
         }
       );
 
@@ -285,12 +280,7 @@ export abstract class AbstractMcpAgent implements IMcpProtocol {
           version: app.getVersion(),
         },
         {
-          capabilities: {
-            prompts: {},
-            resources: {},
-            tools: {},
-            logging: {},
-          },
+          capabilities: {},
         }
       );
 
@@ -416,12 +406,7 @@ export abstract class AbstractMcpAgent implements IMcpProtocol {
           version: app.getVersion(),
         },
         {
-          capabilities: {
-            prompts: {},
-            resources: {},
-            tools: {},
-            logging: {},
-          },
+          capabilities: {},
         }
       );
 

@@ -6,7 +6,8 @@
 
 // 复用现有的业务类型定义
 import type { TMessage } from '@/common/chatLib';
-import type { IConfigStorageRefer, TChatConversation } from '@/common/storage';
+import type { ICaseFile, IConfigStorageRefer, TChatConversation } from '@/common/storage';
+export type { ICaseFile };
 
 /**
  * ======================
@@ -36,18 +37,6 @@ export interface IUser {
   created_at: number;
   updated_at: number;
   last_login?: number | null;
-}
-
-/**
- * Case File (案件文件)
- */
-export interface ICaseFile {
-  id: string;
-  title: string;
-  case_number?: string | null;
-  user_id: string;
-  created_at: number;
-  updated_at: number;
 }
 
 // Image metadata removed - images are stored in filesystem and referenced via message.resultDisplay
@@ -91,6 +80,7 @@ export interface ICaseFileRow {
   id: string;
   title: string;
   case_number?: string | null;
+  workspace_path: string;
   user_id: string;
   created_at: number;
   updated_at: number;
@@ -149,6 +139,7 @@ export function caseFileToRow(caseFile: ICaseFile): ICaseFileRow {
     id: caseFile.id,
     title: caseFile.title,
     case_number: caseFile.case_number,
+    workspace_path: caseFile.workspace_path,
     user_id: caseFile.user_id,
     created_at: caseFile.created_at,
     updated_at: caseFile.updated_at,
@@ -163,6 +154,7 @@ export function rowToCaseFile(row: ICaseFileRow): ICaseFile {
     id: row.id,
     title: row.title,
     case_number: row.case_number,
+    workspace_path: row.workspace_path,
     user_id: row.user_id,
     created_at: row.created_at,
     updated_at: row.updated_at,
@@ -266,9 +258,8 @@ export function rowToMessage(row: IMessageRow): TMessage {
  */
 
 export type {
-    IConfigStorageRefer,
-    // 复用的业务类型
-    TChatConversation,
-    TMessage
+  IConfigStorageRefer,
+  // 复用的业务类型
+  TChatConversation,
+  TMessage,
 };
-

@@ -274,9 +274,13 @@ const migration_v9: IMigration = {
     }
 
     // Step 2: Create a "Default Case" for each user who has conversations
-    const usersWithConversations = db.prepare(`
+    const usersWithConversations = db
+      .prepare(
+        `
       SELECT DISTINCT user_id FROM conversations WHERE case_file_id IS NULL
-    `).all() as Array<{ user_id: string }>;
+    `
+      )
+      .all() as Array<{ user_id: string }>;
 
     const now = Date.now();
     const insertCaseStmt = db.prepare(`
@@ -352,20 +356,113 @@ const migration_v9: IMigration = {
 };
 
 /**
+ * Migration v9 -> v10: Add workspace_path to case_files
+ * Add workspace_path column and create workspace directories for existing cases
+ */
+const migration_v10: IMigration = {
+  version: 10,
+  name: 'Add workspace_path to case_files',
+  up: (db) => {
+    const fs = require('fs');
+    const path = require('path');
+    const os = require('os');
+
+    const JUSTICE_QUEST_WORK_DIR = path.join(os.homedir(), '.justicequest');
+
+    // 1. Add workspace_path column as nullable first
+    db.exec(`ALTER TABLE case_files ADD COLUMN workspace_path TEXT;`);
+    console.log('[Migration v10] Added workspace_path column to case_files table');
+
+    // 2. For each existing case, generate workspace path and create folder
+    const cases = db.prepare('SELECT * FROM case_files').all() as Array<{
+      id: string;
+      title: string;
+      created_at: number;
+    }>;
+
+    const updateStmt = db.prepare('UPDATE case_files SET workspace_path = ? WHERE id = ?');
+
+    // Ensure base workspace directory exists
+    if (!fs.existsSync(JUSTICE_QUEST_WORK_DIR)) {
+      fs.mkdirSync(JUSTICE_QUEST_WORK_DIR, { recursive: true });
+    }
+
+    for (const caseFile of cases) {
+      // Generate filesystem-safe name
+      const safeName = caseFile.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+      const timestamp = caseFile.created_at;
+      const workspacePath = path.join(JUSTICE_QUEST_WORK_DIR, `${safeName}-${timestamp}`);
+
+      // Create directory
+      try {
+        fs.mkdirSync(workspacePath, { recursive: true });
+
+        // Copy template if it exists
+        const templatePath = path.join(process.cwd(), 'case-folder-template');
+        if (fs.existsSync(templatePath)) {
+          // Copy all files from template
+          const files = fs.readdirSync(templatePath);
+          for (const file of files) {
+            const srcPath = path.join(templatePath, file);
+            const destPath = path.join(workspacePath, file);
+            fs.copyFileSync(srcPath, destPath);
+          }
+        }
+
+        updateStmt.run(workspacePath, caseFile.id);
+        console.log(`[Migration v10] Created workspace for case ${caseFile.id}: ${workspacePath}`);
+      } catch (error) {
+        console.error(`[Migration v10] Failed to create workspace for case ${caseFile.id}:`, error);
+        // Continue with other cases even if one fails
+      }
+    }
+
+    // 3. Make workspace_path NOT NULL by recreating the table
+    db.exec(`
+      CREATE TABLE case_files_new (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        case_number TEXT,
+        workspace_path TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+      
+      INSERT INTO case_files_new SELECT * FROM case_files;
+      DROP TABLE case_files;
+      ALTER TABLE case_files_new RENAME TO case_files;
+      
+      CREATE INDEX IF NOT EXISTS idx_case_files_user_id ON case_files(user_id);
+      CREATE INDEX IF NOT EXISTS idx_case_files_created_at ON case_files(created_at DESC);
+    `);
+    console.log('[Migration v10] Made workspace_path NOT NULL and recreated indexes');
+  },
+  down: (db) => {
+    // Recreate table without workspace_path column
+    db.exec(`
+      CREATE TABLE case_files_backup AS
+      SELECT id, title, case_number, user_id, created_at, updated_at
+      FROM case_files;
+      
+      DROP TABLE case_files;
+      ALTER TABLE case_files_backup RENAME TO case_files;
+      
+      CREATE INDEX IF NOT EXISTS idx_case_files_user_id ON case_files(user_id);
+      CREATE INDEX IF NOT EXISTS idx_case_files_created_at ON case_files(created_at DESC);
+    `);
+    console.log('[Migration v10] Rolled back: Removed workspace_path from case_files table');
+  },
+};
+
+/**
  * All migrations in order
  */
-export const ALL_MIGRATIONS: IMigration[] = [
-  migration_v1,
-  migration_v2,
-  migration_v3,
-  migration_v4,
-  migration_v5,
-  migration_v6,
-  migration_v7,
-  migration_v8,
-  migration_v9,
-];
-
+export const ALL_MIGRATIONS: IMigration[] = [migration_v1, migration_v2, migration_v3, migration_v4, migration_v5, migration_v6, migration_v7, migration_v8, migration_v9, migration_v10];
 
 /**
  * Get migrations needed to upgrade from one version to another

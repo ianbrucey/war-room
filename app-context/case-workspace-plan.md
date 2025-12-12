@@ -5,7 +5,7 @@ This document outlines the plan to refactor the application to use a case-based 
 ## Phase 1: Scaffolding and Configuration
 
 1.  **Create Case Folder Template:**
-    - A directory named `CaseFolderTemplate` has been created at the project root.
+    - A directory named `case-folder-template` has been created at the project root.
     - Inside this directory, a placeholder file `README.md` has been added.
 
 2.  **Define Workspace Constants:**
@@ -72,7 +72,7 @@ This document outlines the plan to refactor the application to use a case-based 
       3.  Checks if the directory exists using `fs.promises.access`. If not, creates it with `fs.promises.mkdir({ recursive: true })`.
       4.  Generates a unique, filesystem-safe folder name from the case name (e.g., slugify the name and add a timestamp).
       5.  Constructs the full `newCasePath`.
-      6.  Copies the `CaseFolderTemplate` to the `newCasePath` using `fs.promises.cp(..., { recursive: true })`.
+      6.  Copies the `case-folder-template` to the `newCasePath` using `fs.promises.cp(..., { recursive: true })`.
       7.  Calls `db.createCase()` to save the new case record to the database, storing `newCasePath` in the `workspace_path` column.
       8.  Returns the newly created case object.
     - **`ipcBridge.cases.getAll.provider`:**
