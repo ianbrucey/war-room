@@ -40,10 +40,16 @@ export class AcpConnection {
 
   // Get backend-specific ACP arguments
   private getBackendAcpArgs(backend: AcpBackend, workingDir?: string): string[] {
+    let args: string[];
     switch (backend) {
       case 'auggie':
-        // Add --workspace-root flag to automatically index the workspace without prompting
-        return workingDir ? ['--acp', '--workspace-root', workingDir] : ['--acp'];
+        // Add --workspace-root, --allow-indexing, and --model flags to automatically index and set model
+        args = workingDir
+          ? ['--acp', '--workspace-root', workingDir, '--allow-indexing', '--model', 'haiku4.5']
+          : ['--acp'];
+        console.error(`[ACP] Auggie args: ${JSON.stringify(args)}`);
+        console.error(`[ACP] Auggie workingDir: ${workingDir}`);
+        return args;
       case 'qwen':
       case 'iflow':
         return ['--experimental-acp'];
@@ -81,6 +87,12 @@ export class AcpConnection {
       shell: isWindows,
     };
 
+    // Log the full command being executed
+    console.error(`[ACP] Spawning ${backend} process:`);
+    console.error(`[ACP]   Command: ${spawnCommand}`);
+    console.error(`[ACP]   Args: ${JSON.stringify(spawnArgs)}`);
+    console.error(`[ACP]   CWD: ${workingDir}`);
+
     return {
       command: spawnCommand,
       args: spawnArgs,
@@ -96,6 +108,8 @@ export class AcpConnection {
   }
 
   async connect(backend: AcpBackend, cliPath?: string, workingDir: string = process.cwd()): Promise<void> {
+    console.error(`[ACP] connect() called with backend=${backend}, cliPath=${cliPath}, workingDir=${workingDir}`);
+
     if (this.child) {
       this.disconnect();
     }
@@ -117,6 +131,7 @@ export class AcpConnection {
         if (!cliPath) {
           throw new Error(`${backend} CLI path is required for ${backend} backend`);
         }
+        console.error(`[ACP] Calling connectGenericBackend for ${backend}`);
         await this.connectGenericBackend(backend, cliPath, workingDir);
         break;
 
