@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { JSONRPC_VERSION } from '@/types/acpTypes';
 import type { AcpBackend, AcpMessage, AcpNotification, AcpPermissionRequest, AcpRequest, AcpResponse, AcpSessionUpdate } from '@/types/acpTypes';
+import { JSONRPC_VERSION } from '@/types/acpTypes';
 import type { ChildProcess, SpawnOptions } from 'child_process';
 import { spawn } from 'child_process';
 import { promises as fs } from 'fs';
@@ -39,10 +39,11 @@ export class AcpConnection {
   public onFileOperation: (operation: { method: string; path: string; content?: string; sessionId: string }) => void = () => {};
 
   // Get backend-specific ACP arguments
-  private getBackendAcpArgs(backend: AcpBackend): string[] {
+  private getBackendAcpArgs(backend: AcpBackend, workingDir?: string): string[] {
     switch (backend) {
       case 'auggie':
-        return ['--acp'];
+        // Add --workspace-root flag to automatically index the workspace without prompting
+        return workingDir ? ['--acp', '--workspace-root', workingDir] : ['--acp'];
       case 'qwen':
       case 'iflow':
         return ['--experimental-acp'];
@@ -60,7 +61,7 @@ export class AcpConnection {
 
     let spawnCommand: string;
     let spawnArgs: string[];
-    const acpArgs = this.getBackendAcpArgs(backend);
+    const acpArgs = this.getBackendAcpArgs(backend, workingDir);
 
     if (cliPath.startsWith('npx ')) {
       // For "npx @package/name", split into command and arguments
