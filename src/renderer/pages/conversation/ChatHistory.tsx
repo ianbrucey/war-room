@@ -8,8 +8,8 @@ import { ipcBridge } from '@/common';
 import type { TChatConversation } from '@/common/storage';
 import FlexFullContainer from '@/renderer/components/FlexFullContainer';
 import { addEventListener, emitter } from '@/renderer/utils/emitter';
-import { Empty, Popconfirm, Input, Tooltip } from '@arco-design/web-react';
-import { DeleteOne, MessageOne, EditOne } from '@icon-park/react';
+import { Empty, Input, Popconfirm, Tooltip } from '@arco-design/web-react';
+import { DeleteOne, EditOne, MessageOne } from '@icon-park/react';
 import classNames from 'classnames';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -85,7 +85,7 @@ const ChatHistory: React.FC<{ onSessionClick?: () => void; collapsed?: boolean }
   const [chatHistory, setChatHistory] = useState<TChatConversation[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState<string>('');
-  const { id } = useParams();
+  const { id, caseFileId } = useParams<{ id?: string; caseFileId?: string }>();
   const { t } = useTranslation();
   const navigate = useNavigate();
 
@@ -93,7 +93,8 @@ const ChatHistory: React.FC<{ onSessionClick?: () => void; collapsed?: boolean }
 
   const handleSelect = (conversation: TChatConversation) => {
     // ipcBridge.conversation.createWithConversation.invoke({ conversation }).then(() => {
-    Promise.resolve(navigate(`/conversation/${conversation.id}`)).catch((error) => {
+    const targetPath = caseFileId ? `/${caseFileId}/conversation/${conversation.id}` : `/conversation/${conversation.id}`;
+    Promise.resolve(navigate(targetPath)).catch((error) => {
       console.error('Navigation failed:', error);
     });
     // 点击session后自动隐藏sidebar
@@ -107,9 +108,12 @@ const ChatHistory: React.FC<{ onSessionClick?: () => void; collapsed?: boolean }
 
   useEffect(() => {
     const refresh = () => {
-      // Get conversations from database instead of file storage
-      ipcBridge.database.getUserConversations
-        .invoke({ page: 0, pageSize: 10000 })
+      // Get conversations from database - filter by case if caseFileId is present
+      const fetchPromise = caseFileId
+        ? ipcBridge.database.getConversationsByCase.invoke({ caseFileId, page: 0, pageSize: 10000 })
+        : ipcBridge.database.getUserConversations.invoke({ page: 0, pageSize: 10000 });
+
+      fetchPromise
         .then((history) => {
           if (history && Array.isArray(history) && history.length > 0) {
             const sortedHistory = history.sort((a, b) => (b.createTime - a.createTime < 0 ? -1 : 1));
@@ -125,7 +129,7 @@ const ChatHistory: React.FC<{ onSessionClick?: () => void; collapsed?: boolean }
     };
     refresh();
     return addEventListener('chat.history.refresh', refresh);
-  }, [isConversation]);
+  }, [isConversation, caseFileId]);
 
   const handleRemoveConversation = (id: string) => {
     void ipcBridge.conversation.remove

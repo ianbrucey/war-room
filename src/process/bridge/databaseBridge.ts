@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { ipcBridge } from '../../common';
-import { getDatabase } from '@process/database';
-import { ProcessChat } from '../initStorage';
 import type { TChatConversation } from '@/common/storage';
+import { getDatabase } from '@process/database';
+import { ipcBridge } from '../../common';
+import { ProcessChat } from '../initStorage';
 import { migrateConversationToDatabase } from './migrationUtils';
 
 export function initDatabaseBridge(): void {
@@ -51,6 +51,18 @@ export function initDatabaseBridge(): void {
       return dbConversations;
     } catch (error) {
       console.error('[DatabaseBridge] Error getting user conversations:', error);
+      return [];
+    }
+  });
+
+  // Get conversations by case file ID
+  ipcBridge.database.getConversationsByCase.provider(async ({ caseFileId, page = 0, pageSize = 10000 }) => {
+    try {
+      const db = getDatabase();
+      const result = db.getConversationsByCase(caseFileId, page, pageSize);
+      return result.data || [];
+    } catch (error) {
+      console.error('[DatabaseBridge] Error getting conversations by case:', error);
       return [];
     }
   });

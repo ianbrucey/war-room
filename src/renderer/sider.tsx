@@ -2,7 +2,7 @@ import { Tooltip } from '@arco-design/web-react';
 import { ArrowCircleLeft, Logout, Plus, SettingTwo } from '@icon-park/react';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import ChatHistory from './pages/conversation/ChatHistory';
 import SettingsSider from './pages/settings/SettingsSider';
@@ -10,6 +10,7 @@ import { iconColors } from './theme/colors';
 
 const Sider: React.FC<{ onSessionClick?: () => void; collapsed?: boolean }> = ({ onSessionClick, collapsed = false }) => {
   const { pathname } = useLocation();
+  const { caseFileId } = useParams<{ caseFileId?: string }>();
 
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -41,7 +42,8 @@ const Sider: React.FC<{ onSessionClick?: () => void; collapsed?: boolean }> = ({
             <div
               className='flex items-center justify-start gap-10px px-12px py-8px hover:bg-hover rd-0.5rem mb-8px cursor-pointer group'
               onClick={() => {
-                Promise.resolve(navigate('/guid')).catch((error) => {
+                const targetPath = caseFileId ? `/${caseFileId}/guid` : '/cases';
+                Promise.resolve(navigate(targetPath)).catch((error) => {
                   console.error('Navigation failed:', error);
                 });
                 // 点击new chat后自动隐藏sidebar / Hide sidebar after starting new chat on mobile
@@ -61,7 +63,8 @@ const Sider: React.FC<{ onSessionClick?: () => void; collapsed?: boolean }> = ({
         <div
           onClick={() => {
             if (isSettings) {
-              Promise.resolve(navigate('/guid')).catch((error) => {
+              const targetPath = caseFileId ? `/${caseFileId}/guid` : '/cases';
+              Promise.resolve(navigate(targetPath)).catch((error) => {
                 console.error('Navigation failed:', error);
               });
               return;

@@ -16,6 +16,7 @@ import { initWebAdapter } from './adapter';
 import { AUTH_CONFIG, SERVER_CONFIG } from './config/constants';
 import { registerApiRoutes } from './routes/apiRoutes';
 import { registerAuthRoutes } from './routes/authRoutes';
+import { registerCaseRoutes } from './routes/caseRoutes';
 import { registerStaticRoutes } from './routes/staticRoutes';
 import { registerUserRoutes } from './routes/userRoutes';
 import { setupBasicMiddleware, setupCors, setupErrorHandler } from './setup';
@@ -202,6 +203,7 @@ export async function startWebServer(port: number, allowRemote = false): Promise
   // Register routes
   registerAuthRoutes(app);
   registerUserRoutes(app);
+  registerCaseRoutes(app);
   registerApiRoutes(app);
   registerStaticRoutes(app);
 

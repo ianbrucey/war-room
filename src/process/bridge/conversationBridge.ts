@@ -19,7 +19,7 @@ import { migrateConversationToDatabase } from './migrationUtils';
 
 export function initConversationBridge(): void {
   ipcBridge.conversation.create.provider(async (params): Promise<TChatConversation> => {
-    const { type, extra, name, model, id } = params;
+    const { type, extra, name, model, id, caseFileId } = params;
     const buildConversation = () => {
       if (type === 'gemini') return createGeminiAgent(model, extra.workspace, extra.defaultFiles, extra.webSearchEngine);
       if (type === 'acp') return createAcpAgent(params);
@@ -42,7 +42,7 @@ export function initConversationBridge(): void {
 
       // Save to database only
       const db = getDatabase();
-      const result = db.createConversation(conversation);
+      const result = db.createConversation(conversation, undefined, caseFileId);
       if (!result.success) {
         console.error('[conversationBridge] Failed to create conversation in database:', result.error);
       }

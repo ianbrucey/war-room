@@ -199,8 +199,8 @@ const migration_v7: IMigration = {
 
     // Set existing admin user to super_admin role
     db.exec(`
-      UPDATE users 
-      SET role = 'super_admin' 
+      UPDATE users
+      SET role = 'super_admin'
       WHERE username = 'admin' OR id = 'system_default_user';
     `);
     console.log('[Migration v7] Set existing admin user to super_admin role');
@@ -208,18 +208,146 @@ const migration_v7: IMigration = {
   down: (db) => {
     // SQLite doesn't support DROP COLUMN easily, need to recreate table
     db.exec(`
-      CREATE TABLE users_backup AS 
-      SELECT id, username, email, password_hash, avatar_path, jwt_secret, 
-             created_at, updated_at, last_login 
+      CREATE TABLE users_backup AS
+      SELECT id, username, email, password_hash, avatar_path, jwt_secret,
+             created_at, updated_at, last_login
       FROM users;
-      
+
       DROP TABLE users;
       ALTER TABLE users_backup RENAME TO users;
-      
+
       CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
       CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
     `);
     console.log('[Migration v7] Rolled back: Removed RBAC columns from users table');
+  },
+};
+
+/**
+ * Migration v7 -> v8: Add case_files table
+ * Create case_files table for case management feature
+ */
+const migration_v8: IMigration = {
+  version: 8,
+  name: 'Add case_files table',
+  up: (db) => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS case_files (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        case_number TEXT,
+        user_id TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_case_files_user_id ON case_files(user_id);
+      CREATE INDEX IF NOT EXISTS idx_case_files_created_at ON case_files(created_at DESC);
+    `);
+    console.log('[Migration v8] Created case_files table');
+  },
+  down: (db) => {
+    db.exec(`
+      DROP TABLE IF EXISTS case_files;
+    `);
+    console.log('[Migration v8] Rolled back: Removed case_files table');
+  },
+};
+
+/**
+ * Migration v8 -> v9: Add case_file_id to conversations
+ * Add case_file_id foreign key to conversations and migrate existing data
+ */
+const migration_v9: IMigration = {
+  version: 9,
+  name: 'Add case_file_id to conversations',
+  up: (db) => {
+    // Check if case_file_id column already exists
+    const tableInfo = db.prepare('PRAGMA table_info(conversations)').all() as Array<{ name: string }>;
+    const hasColumn = tableInfo.some((col) => col.name === 'case_file_id');
+
+    if (!hasColumn) {
+      // Step 1: Add case_file_id column as nullable
+      db.exec(`ALTER TABLE conversations ADD COLUMN case_file_id TEXT;`);
+      console.log('[Migration v9] Added case_file_id column to conversations table');
+    }
+
+    // Step 2: Create a "Default Case" for each user who has conversations
+    const usersWithConversations = db.prepare(`
+      SELECT DISTINCT user_id FROM conversations WHERE case_file_id IS NULL
+    `).all() as Array<{ user_id: string }>;
+
+    const now = Date.now();
+    const insertCaseStmt = db.prepare(`
+      INSERT INTO case_files (id, title, case_number, user_id, created_at, updated_at)
+      VALUES (?, ?, NULL, ?, ?, ?)
+    `);
+
+    const updateConversationsStmt = db.prepare(`
+      UPDATE conversations SET case_file_id = ? WHERE user_id = ? AND case_file_id IS NULL
+    `);
+
+    for (const { user_id } of usersWithConversations) {
+      const caseId = `case_${now}_${user_id.slice(-8)}`;
+      insertCaseStmt.run(caseId, 'Default Case', user_id, now, now);
+      updateConversationsStmt.run(caseId, user_id);
+      console.log(`[Migration v9] Created default case ${caseId} for user ${user_id}`);
+    }
+
+    // Step 3: Add foreign key constraint by recreating the table
+    // SQLite doesn't support adding FK constraints to existing columns
+    db.exec(`
+      -- Create new table with FK constraint
+      CREATE TABLE conversations_new (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        case_file_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL CHECK(type IN ('gemini', 'acp', 'codex')),
+        extra TEXT NOT NULL,
+        model TEXT,
+        status TEXT CHECK(status IN ('pending', 'running', 'finished')),
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (case_file_id) REFERENCES case_files(id) ON DELETE CASCADE
+      );
+
+      -- Copy data from old table
+      INSERT INTO conversations_new
+      SELECT id, user_id, case_file_id, name, type, extra, model, status, created_at, updated_at
+      FROM conversations;
+
+      -- Drop old table and rename new one
+      DROP TABLE conversations;
+      ALTER TABLE conversations_new RENAME TO conversations;
+
+      -- Recreate indexes
+      CREATE INDEX IF NOT EXISTS idx_conversations_user_id ON conversations(user_id);
+      CREATE INDEX IF NOT EXISTS idx_conversations_updated_at ON conversations(updated_at);
+      CREATE INDEX IF NOT EXISTS idx_conversations_type ON conversations(type);
+      CREATE INDEX IF NOT EXISTS idx_conversations_user_updated ON conversations(user_id, updated_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_conversations_case_file_id ON conversations(case_file_id);
+    `);
+    console.log('[Migration v9] Added case_file_id foreign key constraint and index');
+  },
+  down: (db) => {
+    // Recreate conversations table without case_file_id
+    db.exec(`
+      CREATE TABLE conversations_backup AS
+      SELECT id, user_id, name, type, extra, model, status, created_at, updated_at
+      FROM conversations;
+
+      DROP TABLE conversations;
+      ALTER TABLE conversations_backup RENAME TO conversations;
+
+      CREATE INDEX IF NOT EXISTS idx_conversations_user_id ON conversations(user_id);
+      CREATE INDEX IF NOT EXISTS idx_conversations_updated_at ON conversations(updated_at);
+      CREATE INDEX IF NOT EXISTS idx_conversations_type ON conversations(type);
+      CREATE INDEX IF NOT EXISTS idx_conversations_user_updated ON conversations(user_id, updated_at DESC);
+    `);
+    console.log('[Migration v9] Rolled back: Removed case_file_id from conversations table');
   },
 };
 
@@ -234,6 +362,8 @@ export const ALL_MIGRATIONS: IMigration[] = [
   migration_v5,
   migration_v6,
   migration_v7,
+  migration_v8,
+  migration_v9,
 ];
 
 

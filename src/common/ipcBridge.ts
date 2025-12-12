@@ -6,9 +6,9 @@
 
 import { bridge } from '@office-ai/platform';
 import type { OpenDialogOptions } from 'electron';
-import type { AcpBackend } from '../types/acpTypes';
 import type { McpSource } from '../process/services/mcpServices/McpProtocol';
-import type { IProvider, TChatConversation, TProviderWithModel, IMcpServer } from './storage';
+import type { AcpBackend } from '../types/acpTypes';
+import type { IMcpServer, IProvider, TChatConversation, TProviderWithModel } from './storage';
 
 export const shell = {
   openFile: bridge.buildProvider<void, string>('open-file'), // 使用系统默认程序打开文件
@@ -108,6 +108,7 @@ export const codexConversation = {
 export const database = {
   getConversationMessages: bridge.buildProvider<import('@/common/chatLib').TMessage[], { conversation_id: string; page?: number; pageSize?: number }>('database.get-conversation-messages'),
   getUserConversations: bridge.buildProvider<import('@/common/storage').TChatConversation[], { page?: number; pageSize?: number }>('database.get-user-conversations'),
+  getConversationsByCase: bridge.buildProvider<import('@/common/storage').TChatConversation[], { caseFileId: string; page?: number; pageSize?: number }>('database.get-conversations-by-case'),
 };
 
 interface ISendMessageParams {
@@ -132,6 +133,7 @@ export interface ICreateConversationParams {
   name?: string;
   model: TProviderWithModel;
   extra: { workspace?: string; defaultFiles?: string[]; backend?: AcpBackend; cliPath?: string; webSearchEngine?: 'google' | 'default' };
+  caseFileId?: string;
 }
 interface IResetConversationParams {
   id?: string;

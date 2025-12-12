@@ -11,8 +11,8 @@ import fs from 'fs';
 import path from 'path';
 import { runMigrations as executeMigrations } from './migrations';
 import { CURRENT_DB_VERSION, getDatabaseVersion, initSchema, setDatabaseVersion } from './schema';
-import type { IConversationRow, IMessageRow, IPaginatedResult, IQueryResult, IUser, TChatConversation, TMessage } from './types';
-import { conversationToRow, messageToRow, rowToConversation, rowToMessage } from './types';
+import type { ICaseFile, ICaseFileRow, IConversationRow, IMessageRow, IPaginatedResult, IQueryResult, IUser, TChatConversation, TMessage } from './types';
+import { conversationToRow, messageToRow, rowToCaseFile, rowToConversation, rowToMessage } from './types';
 
 /**
  * Main database class for AionUi
@@ -378,20 +378,203 @@ export class AionUIDatabase {
 
   /**
    * ==================
+   * Case File operations
+   * 案件文件操作
+   * ==================
+   */
+
+  /**
+   * Create a new case file
+   * 创建新案件文件
+   */
+  createCaseFile(title: string, userId: string, caseNumber?: string): IQueryResult<ICaseFile> {
+    try {
+      const caseId = `case_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+      const now = Date.now();
+
+      const stmt = this.db.prepare(`
+        INSERT INTO case_files (id, title, case_number, user_id, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `);
+
+      stmt.run(caseId, title, caseNumber ?? null, userId, now, now);
+
+      return {
+        success: true,
+        data: {
+          id: caseId,
+          title,
+          case_number: caseNumber ?? null,
+          user_id: userId,
+          created_at: now,
+          updated_at: now,
+        },
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Get case file by ID
+   * 通过 ID 获取案件文件
+   */
+  getCaseFile(caseFileId: string): IQueryResult<ICaseFile> {
+    try {
+      const row = this.db.prepare('SELECT * FROM case_files WHERE id = ?').get(caseFileId) as ICaseFileRow | undefined;
+
+      if (!row) {
+        return {
+          success: false,
+          error: 'Case file not found',
+        };
+      }
+
+      return {
+        success: true,
+        data: rowToCaseFile(row),
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Get all case files for a user
+   * 获取用户的所有案件文件
+   */
+  getUserCaseFiles(userId: string, page = 0, pageSize = 50): IPaginatedResult<ICaseFile> {
+    try {
+      const countResult = this.db.prepare('SELECT COUNT(*) as count FROM case_files WHERE user_id = ?').get(userId) as {
+        count: number;
+      };
+
+      const rows = this.db
+        .prepare(
+          `
+            SELECT *
+            FROM case_files
+            WHERE user_id = ?
+            ORDER BY created_at DESC
+            LIMIT ? OFFSET ?
+          `
+        )
+        .all(userId, pageSize, page * pageSize) as ICaseFileRow[];
+
+      return {
+        data: rows.map(rowToCaseFile),
+        total: countResult.count,
+        page,
+        pageSize,
+        hasMore: (page + 1) * pageSize < countResult.count,
+      };
+    } catch (error: any) {
+      return {
+        data: [],
+        total: 0,
+        page,
+        pageSize,
+        hasMore: false,
+      };
+    }
+  }
+
+  /**
+   * Update case file
+   * 更新案件文件
+   */
+  updateCaseFile(caseFileId: string, updates: Partial<Pick<ICaseFile, 'title' | 'case_number'>>): IQueryResult<ICaseFile> {
+    try {
+      const now = Date.now();
+      const setClauses: string[] = [];
+      const values: any[] = [];
+
+      if (updates.title !== undefined) {
+        setClauses.push('title = ?');
+        values.push(updates.title);
+      }
+
+      if (updates.case_number !== undefined) {
+        setClauses.push('case_number = ?');
+        values.push(updates.case_number);
+      }
+
+      if (setClauses.length === 0) {
+        return this.getCaseFile(caseFileId);
+      }
+
+      setClauses.push('updated_at = ?');
+      values.push(now);
+      values.push(caseFileId);
+
+      const stmt = this.db.prepare(`
+        UPDATE case_files
+        SET ${setClauses.join(', ')}
+        WHERE id = ?
+      `);
+
+      stmt.run(...values);
+
+      return this.getCaseFile(caseFileId);
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Delete case file (and all associated conversations)
+   * 删除案件文件（及所有关联的会话）
+   */
+  deleteCaseFile(caseFileId: string): IQueryResult<boolean> {
+    try {
+      const stmt = this.db.prepare('DELETE FROM case_files WHERE id = ?');
+      const result = stmt.run(caseFileId);
+
+      return {
+        success: true,
+        data: result.changes > 0,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message,
+        data: false,
+      };
+    }
+  }
+
+  /**
+   * ==================
    * Conversation operations
    * ==================
    */
 
-  createConversation(conversation: TChatConversation, userId?: string): IQueryResult<TChatConversation> {
+  createConversation(conversation: TChatConversation, userId?: string, caseFileId?: string): IQueryResult<TChatConversation> {
     try {
-      const row = conversationToRow(conversation, userId || this.defaultUserId);
+      if (!caseFileId) {
+        return {
+          success: false,
+          error: 'case_file_id is required',
+        };
+      }
+
+      const row = conversationToRow(conversation, userId || this.defaultUserId, caseFileId);
 
       const stmt = this.db.prepare(`
-        INSERT INTO conversations (id, user_id, name, type, extra, model, status, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO conversations (id, user_id, case_file_id, name, type, extra, model, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
-      stmt.run(row.id, row.user_id, row.name, row.type, row.extra, row.model, row.status, row.created_at, row.updated_at);
+      stmt.run(row.id, row.user_id, row.case_file_id, row.name, row.type, row.extra, row.model, row.status, row.created_at, row.updated_at);
 
       return {
         success: true,
@@ -467,22 +650,65 @@ export class AionUIDatabase {
     }
   }
 
+  /**
+   * Get conversations by case file ID
+   * 通过案件文件 ID 获取会话
+   */
+  getConversationsByCase(caseFileId: string, page = 0, pageSize = 50): IPaginatedResult<TChatConversation> {
+    try {
+      const countResult = this.db.prepare('SELECT COUNT(*) as count FROM conversations WHERE case_file_id = ?').get(caseFileId) as {
+        count: number;
+      };
+
+      const rows = this.db
+        .prepare(
+          `
+            SELECT *
+            FROM conversations
+            WHERE case_file_id = ?
+            ORDER BY updated_at DESC
+            LIMIT ? OFFSET ?
+          `
+        )
+        .all(caseFileId, pageSize, page * pageSize) as IConversationRow[];
+
+      return {
+        data: rows.map(rowToConversation),
+        total: countResult.count,
+        page,
+        pageSize,
+        hasMore: (page + 1) * pageSize < countResult.count,
+      };
+    } catch (error: any) {
+      console.error('[Database] Get conversations by case error:', error);
+      return {
+        data: [],
+        total: 0,
+        page,
+        pageSize,
+        hasMore: false,
+      };
+    }
+  }
+
   updateConversation(conversationId: string, updates: Partial<TChatConversation>): IQueryResult<boolean> {
     try {
-      const existing = this.getConversation(conversationId);
-      if (!existing.success || !existing.data) {
+      // Get existing conversation to preserve case_file_id
+      const existingRow = this.db.prepare('SELECT * FROM conversations WHERE id = ?').get(conversationId) as IConversationRow | undefined;
+      if (!existingRow) {
         return {
           success: false,
           error: 'Conversation not found',
         };
       }
 
+      const existing = rowToConversation(existingRow);
       const updated = {
-        ...existing.data,
+        ...existing,
         ...updates,
         modifyTime: Date.now(),
       } as TChatConversation;
-      const row = conversationToRow(updated, this.defaultUserId);
+      const row = conversationToRow(updated, existingRow.user_id, existingRow.case_file_id);
 
       const stmt = this.db.prepare(`
         UPDATE conversations

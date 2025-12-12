@@ -3,6 +3,7 @@ import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import AppLoader from './components/AppLoader';
 import { useAuth } from './context/AuthContext';
 import UserManagement from './pages/admin/UserManagement';
+import CaseSelection from './pages/cases/CaseSelection';
 import Conversation from './pages/conversation';
 import Guid from './pages/guid';
 import LoginPage from './pages/login';
@@ -33,11 +34,12 @@ const PanelRoute: React.FC<{ layout: React.ReactElement }> = ({ layout }) => {
   return (
     <HashRouter>
       <Routes>
-        <Route path='/login' element={status === 'authenticated' ? <Navigate to='/guid' replace /> : <LoginPage />} />
+        <Route path='/login' element={status === 'authenticated' ? <Navigate to='/cases' replace /> : <LoginPage />} />
         <Route element={<ProtectedLayout layout={layout} />}>
-          <Route index element={<Navigate to='/guid' replace />} />
-          <Route path='/guid' element={<Guid />} />
-          <Route path='/conversation/:id' element={<Conversation />} />
+          <Route index element={<Navigate to='/cases' replace />} />
+          <Route path='/cases' element={<CaseSelection />} />
+          <Route path='/:caseFileId/guid' element={<Guid />} />
+          <Route path='/:caseFileId/conversation/:id' element={<Conversation />} />
           <Route path='/settings/gemini' element={<GeminiSettings />} />
           <Route path='/settings/model' element={<ModeSettings />} />
           <Route path='/settings/system' element={<SystemSettings />} />
@@ -47,7 +49,7 @@ const PanelRoute: React.FC<{ layout: React.ReactElement }> = ({ layout }) => {
           <Route path='/admin/users' element={<UserManagement />} />
           <Route path='/test/components' element={<ComponentsShowcase />} />
         </Route>
-        <Route path='*' element={<Navigate to={status === 'authenticated' ? '/guid' : '/login'} replace />} />
+        <Route path='*' element={<Navigate to={status === 'authenticated' ? '/cases' : '/login'} replace />} />
       </Routes>
     </HashRouter>
   );

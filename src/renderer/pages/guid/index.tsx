@@ -15,6 +15,7 @@ import GeminiLogo from '@/renderer/assets/logos/gemini.svg';
 import IflowLogo from '@/renderer/assets/logos/iflow.svg';
 import QwenLogo from '@/renderer/assets/logos/qwen.svg';
 import FilePreview from '@/renderer/components/FilePreview';
+import { useLayoutContext } from '@/renderer/context/LayoutContext';
 import { useCompositionInput } from '@/renderer/hooks/useCompositionInput';
 import { useDragUpload } from '@/renderer/hooks/useDragUpload';
 import { geminiModeList } from '@/renderer/hooks/useModeModeList';
@@ -28,10 +29,9 @@ import { Button, ConfigProvider, Dropdown, Input, Menu, Tooltip } from '@arco-de
 import { ArrowUp, FolderOpen, MenuUnfold, Plus, Up } from '@icon-park/react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import useSWR from 'swr';
 import styles from './index.module.css';
-import { useLayoutContext } from '@/renderer/context/LayoutContext';
 
 /**
  * 缓存Provider的可用模型列表，避免重复计算
@@ -131,6 +131,7 @@ const AGENT_LOGO_MAP: Record<AcpBackend, string> = {
 
 const Guid: React.FC = () => {
   const { t } = useTranslation();
+  const { caseFileId } = useParams<{ caseFileId: string }>();
   const guidContainerRef = useRef<HTMLDivElement>(null);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -227,6 +228,7 @@ const Guid: React.FC = () => {
             workspace: dir,
             webSearchEngine: isGoogleAuth ? 'google' : 'default',
           },
+          caseFileId,
         });
 
         if (!conversation || !conversation.id) {
@@ -243,7 +245,7 @@ const Guid: React.FC = () => {
             console.error('Failed to send message:', error);
             throw error;
           });
-        await navigate(`/conversation/${conversation.id}`);
+        await navigate(`/${caseFileId}/conversation/${conversation.id}`);
       } catch (error: any) {
         console.error('Failed to create or send Gemini message:', error);
         alert(`Failed to create Gemini conversation: ${error.message || error}`);
@@ -261,6 +263,7 @@ const Guid: React.FC = () => {
             defaultFiles: files,
             workspace: dir,
           },
+          caseFileId,
         });
 
         if (!conversation || !conversation.id) {
@@ -273,7 +276,7 @@ const Guid: React.FC = () => {
           files: files.length > 0 ? files : undefined,
         };
         sessionStorage.setItem(`codex_initial_message_${conversation.id}`, JSON.stringify(initialMessage));
-        await navigate(`/conversation/${conversation.id}`);
+        await navigate(`/${caseFileId}/conversation/${conversation.id}`);
       } catch (error: any) {
         alert(`Failed to create Codex conversation: ${error.message || error}`);
         throw error;
@@ -301,6 +304,7 @@ const Guid: React.FC = () => {
             backend: selectedAgent,
             cliPath: agentInfo.cliPath,
           },
+          caseFileId,
         });
 
         if (!conversation || !conversation.id) {
@@ -318,7 +322,7 @@ const Guid: React.FC = () => {
         // Store initial message in sessionStorage to be picked up by the conversation page
         sessionStorage.setItem(`acp_initial_message_${conversation.id}`, JSON.stringify(initialMessage));
 
-        await navigate(`/conversation/${conversation.id}`);
+        await navigate(`/${caseFileId}/conversation/${conversation.id}`);
       } catch (error: any) {
         console.error('Failed to create ACP conversation:', error);
 

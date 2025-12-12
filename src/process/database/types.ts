@@ -38,6 +38,18 @@ export interface IUser {
   last_login?: number | null;
 }
 
+/**
+ * Case File (案件文件)
+ */
+export interface ICaseFile {
+  id: string;
+  title: string;
+  case_number?: string | null;
+  user_id: string;
+  created_at: number;
+  updated_at: number;
+}
+
 // Image metadata removed - images are stored in filesystem and referenced via message.resultDisplay
 
 /**
@@ -73,11 +85,24 @@ export interface IPaginatedResult<T> {
  */
 
 /**
+ * Case File stored in database (序列化后的格式)
+ */
+export interface ICaseFileRow {
+  id: string;
+  title: string;
+  case_number?: string | null;
+  user_id: string;
+  created_at: number;
+  updated_at: number;
+}
+
+/**
  * Conversation stored in database (序列化后的格式)
  */
 export interface IConversationRow {
   id: string;
   user_id: string;
+  case_file_id: string;
   name: string;
   type: 'gemini' | 'acp' | 'codex';
   extra: string; // JSON string of extra data
@@ -117,12 +142,41 @@ export interface IConfigRow {
  */
 
 /**
+ * Convert ICaseFile to database row
+ */
+export function caseFileToRow(caseFile: ICaseFile): ICaseFileRow {
+  return {
+    id: caseFile.id,
+    title: caseFile.title,
+    case_number: caseFile.case_number,
+    user_id: caseFile.user_id,
+    created_at: caseFile.created_at,
+    updated_at: caseFile.updated_at,
+  };
+}
+
+/**
+ * Convert database row to ICaseFile
+ */
+export function rowToCaseFile(row: ICaseFileRow): ICaseFile {
+  return {
+    id: row.id,
+    title: row.title,
+    case_number: row.case_number,
+    user_id: row.user_id,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+/**
  * Convert TChatConversation to database row
  */
-export function conversationToRow(conversation: TChatConversation, userId: string): IConversationRow {
+export function conversationToRow(conversation: TChatConversation, userId: string, caseFileId: string): IConversationRow {
   return {
     id: conversation.id,
     user_id: userId,
+    case_file_id: caseFileId,
     name: conversation.name,
     type: conversation.type,
     extra: JSON.stringify(conversation.extra),
