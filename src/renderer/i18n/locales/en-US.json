@@ -113,6 +113,10 @@
       "search.empty": "The search result is empty",
       "addFile": "Add File",
       "refresh": "Refresh",
+      "uploadCaseFiles": "Upload Case Files",
+      "dragDropFiles": "Drag and drop files here",
+      "browseFiles": "Browse Files",
+      "supportedFormats": "Supported formats: PDF, DOCX, TXT, MD, JPG, PNG, MP3, WAV, M4A",
       "contextMenu": {
         "open": "Open",
         "openLocation": "Show in folder",
@@ -137,6 +141,31 @@
       "noModelSelected": "No model selected for current session, cannot send message",
       "sendMessageTo": "Send message to {{model}}",
       "processing": "Processing..."
+    }
+  },
+  "uploadModal": {
+    "title": "Upload Case Files",
+    "tabs": {
+      "documents": "Documents",
+      "failed": "Failed"
+    },
+    "preview": {
+      "extractedText": "Extracted Text",
+      "analysis": "Analysis",
+      "noText": "No text extracted",
+      "uploadedAt": "Uploaded at",
+      "status": "Status"
+    },
+    "success": {
+      "uploaded": "File uploaded successfully",
+      "downloaded": "File downloaded successfully"
+    },
+    "errors": {
+      "authRequired": "Authentication required",
+      "uploadFailed": "Upload failed",
+      "previewFailed": "Failed to load preview",
+      "downloadFailed": "Download failed",
+      "fetchFailed": "Failed to load documents"
     }
   },
   "settings": {

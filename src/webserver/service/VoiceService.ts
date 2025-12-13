@@ -97,10 +97,12 @@ export class VoiceService {
       await fs.promises.writeFile(tempFilePath, session.buffer);
 
       // Call OpenAI Whisper API
+      // Using a prompt helps Whisper understand context and improves punctuation
       const response = await this.openai.audio.transcriptions.create({
         file: fs.createReadStream(tempFilePath),
         model: 'whisper-1',
         language: 'en', // Default to English for now, could be parameterized
+        prompt: 'This is a voice message with proper punctuation, capitalization, and formatting.', // Guides the model to include punctuation
       });
 
       // Clear buffer after successful transcription

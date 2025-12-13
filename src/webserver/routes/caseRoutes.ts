@@ -108,6 +108,55 @@ export function registerCaseRoutes(app: Express): void {
   });
 
   /**
+   * Get case file by workspace path
+   * GET /api/cases/by-workspace?path=...
+   */
+  app.get('/api/cases/by-workspace', apiRateLimiter, AuthMiddleware.authenticateToken, (req: Request, res: Response) => {
+    try {
+      const workspacePath = req.query.path as string;
+      const userId = req.user!.id;
+
+      if (!workspacePath) {
+        res.status(400).json({
+          success: false,
+          error: 'Workspace path is required',
+        });
+        return;
+      }
+
+      const caseFile = CaseFileRepository.findByWorkspacePath(workspacePath);
+
+      if (!caseFile) {
+        res.status(404).json({
+          success: false,
+          error: 'Case file not found for this workspace',
+        });
+        return;
+      }
+
+      // Check ownership
+      if (caseFile.user_id !== userId) {
+        res.status(403).json({
+          success: false,
+          error: 'Access denied',
+        });
+        return;
+      }
+
+      res.json({
+        success: true,
+        case: caseFile,
+      });
+    } catch (error) {
+      console.error('[CaseRoutes] Get case by workspace error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+      });
+    }
+  });
+
+  /**
    * Update a case file
    * PATCH /api/cases/:id
    */

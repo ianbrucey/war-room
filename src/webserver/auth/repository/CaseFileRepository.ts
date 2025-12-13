@@ -84,4 +84,19 @@ export const CaseFileRepository = {
     const caseFile = this.findById(caseFileId);
     return caseFile !== null && caseFile.user_id === userId;
   },
+
+  /**
+   * Find case file by workspace path
+   * 通过工作空间路径查找案件文件
+   */
+  findByWorkspacePath(workspacePath: string): ICaseFile | null {
+    const db = getDatabase();
+    try {
+      const row = db.querySingle('SELECT * FROM case_files WHERE workspace_path = ?', workspacePath);
+      return row ? (row as ICaseFile) : null;
+    } catch (error) {
+      console.error('[CaseFileRepository] Failed to find by workspace path:', error);
+      return null;
+    }
+  },
 };

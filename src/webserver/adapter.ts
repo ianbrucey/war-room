@@ -4,8 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { WebSocketServer } from 'ws';
 import { bridge } from '@office-ai/platform';
+import type { WebSocketServer } from 'ws';
+import { initializeDocumentProgress } from './websocket/documentProgress';
 import { WebSocketManager } from './websocket/WebSocketManager';
 
 /**
@@ -15,6 +16,13 @@ import { WebSocketManager } from './websocket/WebSocketManager';
 export function initWebAdapter(wss: WebSocketServer): void {
   const wsManager = new WebSocketManager(wss);
   wsManager.initialize();
+
+  // Initialize document progress WebSocket emitter
+  initializeDocumentProgress({
+    emitToCaseFile: (caseFileId, event, data) => {
+      wsManager.emitToCaseFile(caseFileId, event, data);
+    },
+  });
 
   // Setup bridge adapter
   bridge.adapter({

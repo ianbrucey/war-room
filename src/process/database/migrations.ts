@@ -408,7 +408,14 @@ const migration_v10: IMigration = {
           for (const file of files) {
             const srcPath = path.join(templatePath, file);
             const destPath = path.join(workspacePath, file);
-            fs.copyFileSync(srcPath, destPath);
+            const stat = fs.statSync(srcPath);
+            if (stat.isDirectory()) {
+              // Recursively copy directories
+              fs.cpSync(srcPath, destPath, { recursive: true });
+            } else {
+              // Copy files
+              fs.copyFileSync(srcPath, destPath);
+            }
           }
         }
 
@@ -460,9 +467,79 @@ const migration_v10: IMigration = {
 };
 
 /**
+ * Migration v11: Add case_documents table for document intake system
+ */
+const migration_v11: IMigration = {
+  version: 11,
+  name: 'Add case_documents table',
+  up: (db) => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS case_documents (
+        id TEXT PRIMARY KEY,
+        case_file_id TEXT NOT NULL,
+        filename TEXT NOT NULL,
+        folder_name TEXT NOT NULL,
+        document_type TEXT,
+        file_type TEXT NOT NULL,
+        page_count INTEGER,
+        word_count INTEGER,
+
+        processing_status TEXT DEFAULT 'pending' CHECK(processing_status IN ('pending', 'extracting', 'analyzing', 'indexing', 'complete', 'failed')),
+        has_text_extraction INTEGER DEFAULT 0,
+        has_metadata INTEGER DEFAULT 0,
+        rag_indexed INTEGER DEFAULT 0,
+
+        file_search_store_id TEXT,
+        gemini_file_uri TEXT,
+
+        uploaded_at INTEGER NOT NULL,
+        processed_at INTEGER,
+
+        FOREIGN KEY (case_file_id) REFERENCES case_files(id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_case_documents_case_file_id ON case_documents(case_file_id);
+      CREATE INDEX IF NOT EXISTS idx_case_documents_status ON case_documents(processing_status);
+      CREATE INDEX IF NOT EXISTS idx_case_documents_type ON case_documents(document_type);
+      CREATE INDEX IF NOT EXISTS idx_case_documents_uploaded_at ON case_documents(uploaded_at DESC);
+
+      ALTER TABLE case_files ADD COLUMN file_search_store_id TEXT;
+    `);
+    console.log('[Migration v11] Added case_documents table and file_search_store_id to case_files');
+  },
+  down: (db) => {
+    db.exec(`
+      DROP TABLE IF EXISTS case_documents;
+
+      CREATE TABLE case_files_backup (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        case_number TEXT,
+        workspace_path TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+
+      INSERT INTO case_files_backup (id, title, case_number, workspace_path, user_id, created_at, updated_at)
+      SELECT id, title, case_number, workspace_path, user_id, created_at, updated_at
+      FROM case_files;
+
+      DROP TABLE case_files;
+      ALTER TABLE case_files_backup RENAME TO case_files;
+
+      CREATE INDEX IF NOT EXISTS idx_case_files_user_id ON case_files(user_id);
+      CREATE INDEX IF NOT EXISTS idx_case_files_created_at ON case_files(created_at DESC);
+    `);
+    console.log('[Migration v11] Rolled back: Removed case_documents table and file_search_store_id column');
+  },
+};
+
+/**
  * All migrations in order
  */
-export const ALL_MIGRATIONS: IMigration[] = [migration_v1, migration_v2, migration_v3, migration_v4, migration_v5, migration_v6, migration_v7, migration_v8, migration_v9, migration_v10];
+export const ALL_MIGRATIONS: IMigration[] = [migration_v1, migration_v2, migration_v3, migration_v4, migration_v5, migration_v6, migration_v7, migration_v8, migration_v9, migration_v10, migration_v11];
 
 /**
  * Get migrations needed to upgrade from one version to another

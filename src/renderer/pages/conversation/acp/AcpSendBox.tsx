@@ -15,6 +15,7 @@ import { iconColors } from '@/renderer/theme/colors';
 import { emitter, useAddEventListener } from '@/renderer/utils/emitter';
 import type { AcpBackend } from '@/types/acpTypes';
 import { Button, Message, Tag } from '@arco-design/web-react';
+import { IconLoading } from '@arco-design/web-react/icon';
 import { Plus, Voice } from '@icon-park/react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -152,7 +153,7 @@ const AcpSendBox: React.FC<{
   const { t } = useTranslation();
   const { atPath, uploadFile, setAtPath, setUploadFile, content, setContent } = useSendBoxDraft(conversation_id);
 
-  const { isRecording, startRecording, stopRecording, transcription, error: voiceError } = useAudioRecorder();
+  const { isRecording, isProcessing, startRecording, stopRecording, transcription, error: voiceError } = useAudioRecorder();
 
   // Handle voice transcription updates
   useEffect(() => {
@@ -344,7 +345,14 @@ const AcpSendBox: React.FC<{
             status={isRecording ? 'danger' : 'default'}
             shape='circle'
             className={`${isRecording ? 'animate-pulse' : ''}`}
-            icon={<Voice theme={isRecording ? 'filled' : 'outline'} size='14' strokeWidth={2} fill={isRecording ? '#fff' : iconColors.primary} />}
+            disabled={isProcessing}
+            icon={
+              isProcessing ? (
+                <IconLoading />
+              ) : (
+                <Voice theme={isRecording ? 'filled' : 'outline'} size='14' strokeWidth={2} fill={isRecording ? '#fff' : iconColors.primary} />
+              )
+            }
             onClick={() => {
               if (isRecording) {
                 stopRecording();

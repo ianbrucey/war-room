@@ -16,6 +16,8 @@ import { VoiceService } from '../service/VoiceService';
 interface ClientInfo {
   token: string;
   lastPing: number;
+  /** Case files this client is subscribed to */
+  subscribedCaseFiles: Set<string>;
 }
 
 /**
@@ -25,8 +27,19 @@ interface ClientInfo {
 export class WebSocketManager {
   private clients: Map<WebSocket, ClientInfo> = new Map();
   private heartbeatTimer: NodeJS.Timeout | null = null;
+  /** Singleton instance for global access */
+  private static instance: WebSocketManager | null = null;
 
-  constructor(private wss: WebSocketServer) {}
+  constructor(private wss: WebSocketServer) {
+    WebSocketManager.instance = this;
+  }
+
+  /**
+   * Get singleton instance
+   */
+  static getInstance(): WebSocketManager | null {
+    return WebSocketManager.instance;
+  }
 
   /**
    * 初始化 WebSocket 管理器
@@ -85,6 +98,7 @@ export class WebSocketManager {
     this.clients.set(ws, {
       token,
       lastPing: Date.now(),
+      subscribedCaseFiles: new Set(),
     });
   }
 
@@ -107,6 +121,18 @@ export class WebSocketManager {
         // Handle file selection request - forward to client
         if (name === 'subscribe-show-open') {
           this.handleFileSelection(ws, data);
+          return;
+        }
+
+        // Handle case file subscription
+        if (name === 'subscribe-case-file') {
+          this.handleCaseFileSubscription(ws, data);
+          return;
+        }
+
+        // Handle case file unsubscription
+        if (name === 'unsubscribe-case-file') {
+          this.handleCaseFileUnsubscription(ws, data);
           return;
         }
 
@@ -282,6 +308,66 @@ export class WebSocketManager {
   }
 
   /**
+   * 向订阅特定案件文件的客户端发送消息
+   * Emit message to clients subscribed to a specific case file
+   *
+   * @param caseFileId - Case file ID
+   * @param event - Event name
+   * @param data - Event data
+   */
+  emitToCaseFile(caseFileId: string, event: string, data: any): void {
+    const message = JSON.stringify({ name: event, data });
+
+    for (const [ws, clientInfo] of this.clients) {
+      if (ws.readyState === WebSocket.OPEN && clientInfo.subscribedCaseFiles.has(caseFileId)) {
+        ws.send(message);
+      }
+    }
+  }
+
+  /**
+   * 处理案件文件订阅
+   * Handle case file subscription request
+   */
+  private handleCaseFileSubscription(ws: WebSocket, data: any): void {
+    const caseFileId = data?.caseFileId;
+    if (!caseFileId) {
+      ws.send(JSON.stringify({
+        name: 'subscription-error',
+        data: { error: 'caseFileId required' }
+      }));
+      return;
+    }
+
+    const clientInfo = this.clients.get(ws);
+    if (clientInfo) {
+      clientInfo.subscribedCaseFiles.add(caseFileId);
+      ws.send(JSON.stringify({
+        name: 'subscribed-case-file',
+        data: { caseFileId, success: true }
+      }));
+      console.log(`[WebSocketManager] Client subscribed to case file: ${caseFileId}`);
+    }
+  }
+
+  /**
+   * 处理案件文件取消订阅
+   * Handle case file unsubscription request
+   */
+  private handleCaseFileUnsubscription(ws: WebSocket, data: any): void {
+    const caseFileId = data?.caseFileId;
+    if (!caseFileId) {
+      return;
+    }
+
+    const clientInfo = this.clients.get(ws);
+    if (clientInfo) {
+      clientInfo.subscribedCaseFiles.delete(caseFileId);
+      console.log(`[WebSocketManager] Client unsubscribed from case file: ${caseFileId}`);
+    }
+  }
+
+  /**
    * 获取连接的客户端数量
    * Get connected client count
    */
@@ -305,6 +391,7 @@ export class WebSocketManager {
     }
 
     this.clients.clear();
+    WebSocketManager.instance = null;
     console.log('[WebSocketManager] Destroyed');
   }
 }

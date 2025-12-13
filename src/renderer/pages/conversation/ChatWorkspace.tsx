@@ -8,15 +8,17 @@ import { ipcBridge } from '@/common';
 import type { IDirOrFile } from '@/common/ipcBridge';
 import { ConfigStorage } from '@/common/storage';
 import FlexFullContainer from '@/renderer/components/FlexFullContainer';
+import { UploadCaseFilesModal } from '@/renderer/components/UploadCaseFilesModal';
 import { usePasteService } from '@/renderer/hooks/usePasteService';
 import { iconColors } from '@/renderer/theme/colors';
 import { emitter, useAddEventListener } from '@/renderer/utils/emitter';
 import { removeWorkspaceEntry, renameWorkspaceEntry } from '@/renderer/utils/workspaceFs';
 import { Checkbox, Empty, Input, Message, Modal, Tooltip, Tree } from '@arco-design/web-react';
 import type { NodeInstance } from '@arco-design/web-react/es/Tree/interface';
-import { FileAddition, Refresh, Search, FileText, FolderOpen } from '@icon-park/react';
+import { FileAddition, FileText, FolderOpen, Refresh, Search, Upload } from '@icon-park/react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useParams } from 'react-router-dom';
 import useDebounce from '../../hooks/useDebounce';
 interface WorkspaceProps {
   workspace: string;
@@ -47,6 +49,7 @@ const useLoading = () => {
 
 const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, eventPrefix = 'gemini' }) => {
   const { t } = useTranslation();
+  const { caseFileId } = useParams<{ caseFileId?: string }>();
   const [selected, setSelected] = useState<string[]>([]);
   const [files, setFiles] = useState<IDirOrFile[]>([]);
   const [loading, setLoading] = useLoading();
@@ -58,6 +61,7 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
   const [confirmFilesToPaste, setConfirmFilesToPaste] = useState<Array<{ path: string; name: string }>>([]);
   const [doNotAsk, setDoNotAsk] = useState(false);
   const [messageApi, messageContext] = Message.useMessage();
+  const [uploadModalVisible, setUploadModalVisible] = useState(false);
   const [pasteTargetFolder, setPasteTargetFolder] = useState<string | null>(null); // 跟踪粘贴目标文件夹 / Track paste target folder
   const selectedNodeRef = useRef<{ relativePath: string; fullPath: string } | null>(null); // 存储最后选中的文件夹节点 / Store the last selected folder node
   const selectedKeysRef = useRef<string[]>([]); // 存储选中的键供 renderTitle 访问 / Store selected keys for renderTitle to access
@@ -932,6 +936,13 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
                 <Refresh className={loading ? 'loading lh-[1] flex cursor-pointer' : 'flex cursor-pointer'} theme='outline' size='16' fill={iconColors.secondary} onClick={() => refreshWorkspace()} />
               </span>
             </Tooltip>
+            {caseFileId && (
+              <Tooltip content={t('conversation.workspace.uploadCaseFiles')}>
+                <span>
+                  <Upload className='cursor-pointer flex' theme='outline' size='16' fill={iconColors.secondary} onClick={() => setUploadModalVisible(true)} />
+                </span>
+              </Tooltip>
+            )}
           </div>
         </div>
       </div>
@@ -1158,6 +1169,7 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
           ></Tree>
         )}
       </FlexFullContainer>
+      {caseFileId && <UploadCaseFilesModal visible={uploadModalVisible} caseFileId={caseFileId} onClose={() => setUploadModalVisible(false)} />}
     </div>
   );
 };

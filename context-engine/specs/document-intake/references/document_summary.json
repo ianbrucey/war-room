@@ -1,0 +1,59 @@
+```json
+{
+  "document_summary": {
+    "executive_summary": "Ian Bruce, as the successor trustee and sole beneficiary of the Angela Bruce Estate Trust, has filed a Petition to Compel Release of Trust Assets against Bank of America, N.A. in the Superior Court of California, County of Los Angeles. The petition, filed on June 17, 2025, alleges that following the death of Angela Bruce on May 13, 2024, Ian Bruce submitted all legally required documentation, including the Declaration of Trust, Certification of Trust, and a certified death certificate, to Bank of America on multiple occasions (June 18, October 21, December 26, 2024). Despite these submissions and diligent efforts over a year, Bank of America has persistently refused to release the trust funds or provide a clear explanation for its refusal, instead issuing generic requests for \"additional documentation\" without specifying deficiencies. The petition asserts four causes of action: Breach of Trust, Conversion, Negligence, and Negligent Infliction of Emotional Distress. Ian Bruce seeks a court order compelling Bank of America to immediately release the trust funds and provide a full accounting, along with compensatory damages for financial loss, delayed trust administration, and emotional distress, as well as costs of suit. The court has granted Ian Bruce's request for a fee waiver, covering various court fees including the sheriff's fee for service.",
+    "document_type": "Complaint (Petition to Compel Release of Trust Assets) with supporting documents (Summons, Civil Case Cover Sheet, Fee Waiver Order, Request for Sheriff Service, Declaration)",
+    "key_parties": [
+      "Petitioner: Ian Bruce (Successor Trustee and Sole Beneficiary of the Angela Bruce Estate Trust, Pro Se)",
+      "Decedent: Angela Bruce (Original Grantor and Trustee of the Angela Bruce Estate Trust)",
+      "Respondent/Defendant: Bank of America, N.A.",
+      "Agent for Service: CT Corporation System (for Bank of America)",
+      "Court Clerk: David W. Slayton, Executive Officer/Clerk of Court; A. Miranda, Deputy Clerk",
+      "Notary: Eglarine Harrison (Florida Notary)",
+      "Sheriff/Marshal: Los Angeles County Sheriff or Marshal's Office"
+    ],
+    "main_arguments": [
+      "Breach of Trust: Bank of America failed its duties to facilitate lawful trust administration by wrongfully withholding access to trust accounts and obstructing Petitioner's fiduciary duties, despite receiving all legally required documentation.",
+      "Conversion: Bank of America knowingly and wrongfully exercised control and dominion over trust funds, to which Petitioner has an immediate right of possession, without legal basis.",
+      "Negligence: Bank of America owed a duty of care to review and act on estate and trust documentation but negligently handled Petitioner's submissions, failed to provide coherent responses, and caused financial loss and emotional burden.",
+      "Negligent Infliction of Emotional Distress: Bank of America's negligent handling of sensitive trust matters following a death, and its prolonged failure to resolve the issue, caused Petitioner substantial emotional distress."
+    ],
+    "important_dates": [
+      "March 19, 2024: Angela Bruce executed the Angela Bruce Estate Trust.",
+      "March 21, 2024: Certification of Trust dated.",
+      "March 22, 2024: Certification of Trust notarized.",
+      "May 13, 2024: Angela Bruce passed away.",
+      "June 2024: Ian Bruce first contacted Bank of America.",
+      "June 18, 2024: Trust documents faxed to Bank of America.",
+      "July 1, 2024: Bank of America letter requesting \"additional documentation.\"",
+      "October 21, 2024: Trust documents faxed to Bank of America.",
+      "November 1, 2024: Bank of America letter requesting \"new completed document(s).\"",
+      "December 26, 2024: Trust documents faxed to Bank of America.",
+      "January 8, 2025: Bank of America letter requesting \"additional information.\"",
+      "June 16, 2025: Declaration of Ian Bruce signed.",
+      "June 17, 2025: Petition, Summons, Civil Case Cover Sheet, Fee Waiver Request filed; Fee Waiver granted; Request for Sheriff to Serve Court Papers dated."
+    ],
+    "jurisdiction": "Superior Court of California, County of Los Angeles (Long Beach - South District)",
+    "authorities": [
+      "California Constitution, Article VI, Section 10",
+      "California Probate Code §§ 1513, 16000 et seq., 17000–17211, 18100.5, 1826, 1851",
+      "California Code of Civil Procedure § 395(a), 416.10, 412.20, 465",
+      "California Government Code § 26666.2, 68834(a)",
+      "California Rules of Court, rules 2.30, 3.52, 3.55, 3.56, 3.220, 3.400-3.403, 3.740, 8.130, 8.818, 8.834, 8.835",
+      "California Civil Code § 54.8",
+      "LASC Local Rule 2.3"
+    ],
+    "critical_facts": [
+      "Angela Bruce established the Angela Bruce Estate Trust on March 19, 2024, naming herself as original trustee and Ian Bruce as successor trustee and sole beneficiary.",
+      "Angela Bruce passed away on May 13, 2024, in Los Angeles County, California.",
+      "Ian Bruce, as successor trustee, attempted to access trust assets held at Bank of America starting in June 2024.",
+      "Ian Bruce submitted all required documentation, including a notarized Declaration of Trust, Certification of Trust (compliant with Probate Code § 18100.5), and a certified death certificate, to Bank of America on June 18, October 21, and December 26, 2024.",
+      "Bank of America repeatedly refused to release the funds or provide a clear explanation, instead sending generic letters requesting \"additional documentation\" without specifying deficiencies.",
+      "Ian Bruce made diligent efforts for over 12 months to resolve the issue informally.",
+      "Bank of America has continued to withhold trust assets and has not provided an accounting.",
+      "The court has granted a fee waiver for Ian Bruce, covering various court fees including the sheriff's fee for service."
+    ],
+    "requested_relief": "An order compelling Bank of America to immediately release all funds held in the Angela Bruce Estate Trust accounts to Ian Bruce as successor trustee; an order compelling Bank of America to provide a full and complete accounting of all trust accounts and funds, including balances, transaction histories, and accrued interest from May 13, 2024, to the present; an award of compensatory damages, including the value of wrongfully withheld trust assets, accrued interest, consequential damages, and general damages for emotional distress; an award of reasonable costs of suit, including filing fees, mailing/notarization expenses, and attorney's fees; and such other and further relief as the Court deems just and proper. A jury trial is demanded."
+  }
+}
+```

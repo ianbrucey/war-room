@@ -416,7 +416,14 @@ export class AionUIDatabase {
         for (const file of files) {
           const srcPath = path.join(templatePath, file);
           const destPath = path.join(workspacePath, file);
-          fs.copyFileSync(srcPath, destPath);
+          const stat = fs.statSync(srcPath);
+          if (stat.isDirectory()) {
+            // Recursively copy directories
+            fs.cpSync(srcPath, destPath, { recursive: true });
+          } else {
+            // Copy files
+            fs.copyFileSync(srcPath, destPath);
+          }
         }
       }
 

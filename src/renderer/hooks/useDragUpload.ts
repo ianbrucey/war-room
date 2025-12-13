@@ -4,11 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { Message } from '@arco-design/web-react';
 import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Message } from '@arco-design/web-react';
 import type { FileMetadata } from '../services/FileService';
-import { isSupportedFile, FileService } from '../services/FileService';
+import { FileService, isSupportedFile } from '../services/FileService';
 
 export interface UseDragUploadOptions {
   supportedExts?: string[];
@@ -82,15 +82,34 @@ export const useDragUpload = ({ supportedExts = [], onFilesAdded }: UseDragUploa
 
         // 第二步：只处理校验通过的文件
         if (validFiles.length > 0) {
-          // 创建 FileList 对象给 processDroppedFiles
-          const validFileList = Object.assign(validFiles, {
-            length: validFiles.length,
-            item: (index: number) => validFiles[index] || null,
-          }) as unknown as FileList;
-          const processedFiles = await FileService.processDroppedFiles(validFileList);
+          // Check if we're in Electron or WebUI
+          const isElectron = typeof window !== 'undefined' && Boolean((window as any).electronAPI);
 
-          if (processedFiles.length > 0) {
-            onFilesAdded(processedFiles);
+          if (isElectron) {
+            // Electron: Use FileService to create temp files
+            const validFileList = Object.assign(validFiles, {
+              length: validFiles.length,
+              item: (index: number) => validFiles[index] || null,
+            }) as unknown as FileList;
+            const processedFiles = await FileService.processDroppedFiles(validFileList);
+
+            if (processedFiles.length > 0) {
+              onFilesAdded(processedFiles);
+            }
+          } else {
+            // WebUI: Pass File objects directly
+            const processedFiles: (FileMetadata & { file?: File })[] = validFiles.map(file => ({
+              name: file.name,
+              path: '', // Not used in WebUI
+              size: file.size,
+              type: file.type,
+              lastModified: file.lastModified,
+              file: file, // Keep the actual File object
+            }));
+
+            if (processedFiles.length > 0) {
+              onFilesAdded(processedFiles);
+            }
           }
         }
       } catch (err) {

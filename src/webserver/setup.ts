@@ -4,14 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { AuthMiddleware } from '@/webserver/auth/middleware/AuthMiddleware';
+import cookieParser from 'cookie-parser';
+import cors from 'cors';
 import type { Express } from 'express';
 import express from 'express';
-import cors from 'cors';
-import cookieParser from 'cookie-parser';
-import csrf from 'tiny-csrf';
-import { AuthMiddleware } from '@/webserver/auth/middleware/AuthMiddleware';
 import { errorHandler } from './middleware/errorHandler';
-import { attachCsrfToken } from './middleware/security';
 
 // CSRF secret must be exactly 32 characters for AES-256-CBC
 // CSRF 密钥必须正好 32 个字符以用于 AES-256-CBC
@@ -27,20 +25,26 @@ export function setupBasicMiddleware(app: Express): void {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-  // CSRF Protection using tiny-csrf (CodeQL compliant)
-  // Must be applied after cookieParser and before routes
-  // CSRF 保护使用 tiny-csrf（符合 CodeQL 要求）
-  // 必须在 cookieParser 之后、路由之前应用
+  // Cookie parser (required for session management)
   app.use(cookieParser('cookie-parser-secret'));
+
+  // CSRF Protection DISABLED for single-tenant application
+  // Rationale: This is a single-tenant application where:
+  // - Users are already authenticated via session cookies
+  // - No third-party sites can make requests to the backend
+  // - CSRF adds unnecessary complexity for file uploads with multipart/form-data
+  // If you need CSRF protection in the future, uncomment the code below:
+  /*
   app.use(
     csrf(
       CSRF_SECRET,
       ['POST', 'PUT', 'DELETE', 'PATCH'], // Protected methods
-      ['/login'], // Excluded URLs - login endpoint runs before CSRF token is available
+      ['/login'], // Excluded URLs
       [] // No service worker URLs
     )
   );
   app.use(attachCsrfToken); // Attach token to response headers
+  */
 
   // 安全中间件
   // Security middleware

@@ -14,6 +14,7 @@ import { AUTH_CONFIG, SERVER_CONFIG } from './config/constants';
 import { registerApiRoutes } from './routes/apiRoutes';
 import { registerAuthRoutes } from './routes/authRoutes';
 import { registerCaseRoutes } from './routes/caseRoutes';
+import documentRoutes from './routes/documentRoutes';
 import { registerStaticRoutes } from './routes/staticRoutes';
 import { registerUserRoutes } from './routes/userRoutes';
 import { setupBasicMiddleware, setupCors, setupErrorHandler } from './setup';
@@ -117,7 +118,10 @@ export async function startWebServer(port: number, allowRemote = false): Promise
   // Create Express app and server
   const app = express();
   const server = createServer(app);
-  const wss = new WebSocketServer({ server });
+  const wss = new WebSocketServer({
+    server,
+    maxPayload: 500 * 1024 * 1024 // 500MB max payload (increased from default 100MB)
+  });
 
   // 初始化默认管理员账户
   // Initialize default admin account
@@ -133,6 +137,7 @@ export async function startWebServer(port: number, allowRemote = false): Promise
   registerAuthRoutes(app);
   registerUserRoutes(app);
   registerCaseRoutes(app);
+  app.use('/api', documentRoutes);
   registerApiRoutes(app);
   registerStaticRoutes(app);
 

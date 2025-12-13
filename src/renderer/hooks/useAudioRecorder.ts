@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface UseAudioRecorderReturn {
   isRecording: boolean;
+  isProcessing: boolean; // NEW: true while waiting for transcription
   startRecording: () => Promise<void>;
   stopRecording: () => void;
   transcription: string; // The latest transcription result
@@ -13,6 +14,7 @@ interface UseAudioRecorderReturn {
 
 export const useAudioRecorder = (): UseAudioRecorderReturn => {
   const [isRecording, setIsRecording] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false); // NEW: processing state
   const [transcription, setTranscription] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [volume, setVolume] = useState(0);
@@ -37,11 +39,13 @@ export const useAudioRecorder = (): UseAudioRecorderReturn => {
     const handleVoiceText = (data: { text: string }) => {
       console.log('[useAudioRecorder] Received transcription:', data.text);
       setTranscription(data.text);
+      setIsProcessing(false); // Stop processing spinner
     };
 
     const handleVoiceError = (data: { message: string }) => {
       console.error('[useAudioRecorder] Voice error:', data.message);
       setError(data.message);
+      setIsProcessing(false); // Stop processing spinner
     };
 
     // Listen to bridge events instead of local emitter
@@ -115,7 +119,9 @@ export const useAudioRecorder = (): UseAudioRecorderReturn => {
       console.log('[useAudioRecorder] Audio visualizer setup complete');
 
       // Setup Recorder
-      // Request 500ms chunks
+      // Request 500ms chunks for streaming to backend
+      // Note: All chunks are accumulated into a single buffer and transcribed once when recording stops
+      // This gives Whisper the full context for better punctuation and accuracy
       const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
       mediaRecorderRef.current = mediaRecorder;
 
@@ -135,10 +141,12 @@ export const useAudioRecorder = (): UseAudioRecorderReturn => {
 
       mediaRecorder.onstop = () => {
         console.log('[useAudioRecorder] MediaRecorder stopped, requesting transcription');
+        setIsRecording(false);
+        setIsProcessing(true); // Start processing spinner
         voice.end.invoke().catch((err) => {
             console.error('[useAudioRecorder] Failed to end recording:', err);
+            setIsProcessing(false); // Stop spinner on error
         });
-        setIsRecording(false);
         cleanup();
       };
 
@@ -170,6 +178,7 @@ export const useAudioRecorder = (): UseAudioRecorderReturn => {
 
   return {
     isRecording,
+    isProcessing, // NEW: expose processing state
     startRecording,
     stopRecording,
     transcription,
