@@ -537,9 +537,107 @@ const migration_v11: IMigration = {
 };
 
 /**
+ * Migration v12: Add S3 storage columns to case_documents
+ * These columns track S3 storage metadata for each document
+ */
+const migration_v12: IMigration = {
+  version: 12,
+  name: 'Add S3 storage columns to case_documents',
+  up: (db) => {
+    // Check which columns already exist
+    const tableInfo = db.prepare('PRAGMA table_info(case_documents)').all() as Array<{ name: string }>;
+    const existingColumns = new Set(tableInfo.map((col) => col.name));
+
+    // Add s3_key column if it doesn't exist
+    if (!existingColumns.has('s3_key')) {
+      db.exec(`ALTER TABLE case_documents ADD COLUMN s3_key TEXT;`);
+      console.log('[Migration v12] Added s3_key column to case_documents');
+    }
+
+    // Add s3_bucket column if it doesn't exist
+    if (!existingColumns.has('s3_bucket')) {
+      db.exec(`ALTER TABLE case_documents ADD COLUMN s3_bucket TEXT;`);
+      console.log('[Migration v12] Added s3_bucket column to case_documents');
+    }
+
+    // Add s3_uploaded_at column if it doesn't exist
+    if (!existingColumns.has('s3_uploaded_at')) {
+      db.exec(`ALTER TABLE case_documents ADD COLUMN s3_uploaded_at INTEGER;`);
+      console.log('[Migration v12] Added s3_uploaded_at column to case_documents');
+    }
+
+    // Add s3_version_id column if it doesn't exist
+    if (!existingColumns.has('s3_version_id')) {
+      db.exec(`ALTER TABLE case_documents ADD COLUMN s3_version_id TEXT;`);
+      console.log('[Migration v12] Added s3_version_id column to case_documents');
+    }
+
+    // Add content_type column if it doesn't exist
+    if (!existingColumns.has('content_type')) {
+      db.exec(`ALTER TABLE case_documents ADD COLUMN content_type TEXT;`);
+      console.log('[Migration v12] Added content_type column to case_documents');
+    }
+
+    // Add file_size_bytes column if it doesn't exist
+    if (!existingColumns.has('file_size_bytes')) {
+      db.exec(`ALTER TABLE case_documents ADD COLUMN file_size_bytes INTEGER;`);
+      console.log('[Migration v12] Added file_size_bytes column to case_documents');
+    }
+
+    // Add index for S3 key lookups
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_case_documents_s3_key ON case_documents(s3_key);
+    `);
+    console.log('[Migration v12] Added S3 storage columns and index to case_documents table');
+  },
+  down: (db) => {
+    // Recreate table without S3 columns (SQLite doesn't support DROP COLUMN easily)
+    db.exec(`
+      DROP INDEX IF EXISTS idx_case_documents_s3_key;
+      
+      CREATE TABLE case_documents_backup (
+        id TEXT PRIMARY KEY,
+        case_file_id TEXT NOT NULL,
+        filename TEXT NOT NULL,
+        folder_name TEXT NOT NULL,
+        document_type TEXT,
+        file_type TEXT NOT NULL,
+        page_count INTEGER,
+        word_count INTEGER,
+        processing_status TEXT DEFAULT 'pending' CHECK(processing_status IN ('pending', 'extracting', 'analyzing', 'indexing', 'complete', 'failed')),
+        has_text_extraction INTEGER DEFAULT 0,
+        has_metadata INTEGER DEFAULT 0,
+        rag_indexed INTEGER DEFAULT 0,
+        file_search_store_id TEXT,
+        gemini_file_uri TEXT,
+        uploaded_at INTEGER NOT NULL,
+        processed_at INTEGER,
+        FOREIGN KEY (case_file_id) REFERENCES case_files(id) ON DELETE CASCADE
+      );
+      
+      INSERT INTO case_documents_backup
+      SELECT id, case_file_id, filename, folder_name, document_type, file_type,
+             page_count, word_count, processing_status, has_text_extraction,
+             has_metadata, rag_indexed, file_search_store_id, gemini_file_uri,
+             uploaded_at, processed_at
+      FROM case_documents;
+      
+      DROP TABLE case_documents;
+      ALTER TABLE case_documents_backup RENAME TO case_documents;
+      
+      CREATE INDEX IF NOT EXISTS idx_case_documents_case_file_id ON case_documents(case_file_id);
+      CREATE INDEX IF NOT EXISTS idx_case_documents_status ON case_documents(processing_status);
+      CREATE INDEX IF NOT EXISTS idx_case_documents_type ON case_documents(document_type);
+      CREATE INDEX IF NOT EXISTS idx_case_documents_uploaded_at ON case_documents(uploaded_at DESC);
+    `);
+    console.log('[Migration v12] Rolled back: Removed S3 storage columns from case_documents');
+  },
+};
+
+/**
  * All migrations in order
  */
-export const ALL_MIGRATIONS: IMigration[] = [migration_v1, migration_v2, migration_v3, migration_v4, migration_v5, migration_v6, migration_v7, migration_v8, migration_v9, migration_v10, migration_v11];
+export const ALL_MIGRATIONS: IMigration[] = [migration_v1, migration_v2, migration_v3, migration_v4, migration_v5, migration_v6, migration_v7, migration_v8, migration_v9, migration_v10, migration_v11, migration_v12];
 
 /**
  * Get migrations needed to upgrade from one version to another

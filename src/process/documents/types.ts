@@ -20,7 +20,7 @@ export type DocumentType = 'Complaint' | 'Motion' | 'Response' | 'Order' | 'Noti
 export type FileType = 'pdf' | 'docx' | 'txt' | 'md' | 'jpg' | 'png' | 'mp3' | 'wav' | 'm4a' | 'unknown';
 
 /**
- * Case Document entity - matches migration v11 schema
+ * Case Document entity - matches migration v12 schema
  * Represents a document uploaded to a case file
  */
 export interface ICaseDocument {
@@ -71,6 +71,26 @@ export interface ICaseDocument {
   
   /** Processing completion timestamp (Unix milliseconds) */
   processed_at?: number | null;
+
+  // ========== S3 Storage Fields (added in migration v12) ==========
+  
+  /** S3 object key (full path in bucket) */
+  s3_key?: string | null;
+  
+  /** S3 bucket name */
+  s3_bucket?: string | null;
+  
+  /** S3 upload timestamp (Unix milliseconds) */
+  s3_uploaded_at?: number | null;
+  
+  /** S3 version ID (if versioning is enabled) */
+  s3_version_id?: string | null;
+  
+  /** MIME content type (e.g., application/pdf, video/mp4) */
+  content_type?: string | null;
+  
+  /** File size in bytes */
+  file_size_bytes?: number | null;
 }
 
 /**

@@ -5,7 +5,7 @@
  */
 
 import { useDragUpload } from '@/renderer/hooks/useDragUpload';
-import type { FileMetadata } from '@/renderer/services/FileService';
+import { FileService, type FileMetadata } from '@/renderer/services/FileService';
 import { iconColors } from '@/renderer/theme/colors';
 import { Button } from '@arco-design/web-react';
 import { FileAddition } from '@icon-park/react';

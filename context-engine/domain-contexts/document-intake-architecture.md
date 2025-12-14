@@ -33,15 +33,15 @@ User Upload → HTTP Endpoint → Immediate Storage → Database Record → Back
 
 ### Phase 0: Upload (Synchronous)
 
-**Entry Point:** `POST /api/cases/:caseFileId/documents/upload`  
-**File:** `src/webserver/routes/documentRoutes.ts` (lines 23-79)
+**Entry Point:** `POST /api/cases/:caseFileId/documents/upload`
+**File:** `src/webserver/routes/documentRoutes.ts` (lines 23-82)
 
 **What Happens:**
 
 1. **Multer receives file** → Temporarily stored in `uploads/` directory
 2. **Validate case file exists** → Query `CaseFileRepository.findById(caseFileId)`
-3. **Create originals directory** → `{workspace}/documents/originals/`
-4. **Move file immediately** → `fs.renameSync(tempPath, originalsPath/filename)`
+3. **Create intake directory** → `{workspace}/intake/`
+4. **Move file to intake** → `fs.renameSync(tempPath, intakePath/filename)`
 5. **Detect file type** → `detectFileType(filename)` → Returns `'pdf' | 'docx' | 'txt' | ...`
 6. **Create database record** → `DocumentRepository.create()` with status `'pending'`
 7. **Fire background extraction** → `textExtractor.extractDocument().catch(...)` (non-blocking)
@@ -63,32 +63,34 @@ INSERT INTO case_documents (
 **Filesystem State After Upload:**
 ```
 ~/.justicequest/case-name-timestamp/
+├── intake/
+│   └── complaint.pdf  ← File is HERE temporarily
 └── documents/
-    └── originals/
-        └── complaint.pdf  ← File is HERE immediately
+    └── (empty - document folders created during extraction)
 ```
 
-**Critical Detail:** The file is **moved** (not copied) from the temp upload directory to the originals folder **before** the database record is created. This ensures the file is safely stored even if the database write fails.
+**Critical Detail:** The file is **moved** (not copied) from the temp upload directory to the `intake/` folder. During Phase 1 (extraction), it will be moved again to its permanent location at `documents/{folder_name}/original.{ext}`.
 
 ---
 
 ### Phase 1: Text Extraction (Asynchronous)
 
-**Entry Point:** `TextExtractor.extractDocument()`  
-**File:** `src/process/documents/services/TextExtractor.ts` (lines 27-79)
+**Entry Point:** `TextExtractor.extractDocument()`
+**File:** `src/process/documents/services/TextExtractor.ts` (lines 32-99)
 
 **What Happens:**
 
 1. **Update status to `'extracting'`** → `DocumentRepository.updateStatus(documentId, 'extracting')`
-2. **Emit WebSocket event** → `emitDocumentExtracting(documentId, caseFileId, filename)`
-3. **Route to handler** → Based on file extension:
+2. **Create document folder** → `{workspace}/documents/{folder_name}/`
+3. **Move file from intake** → `fs.rename(intakePath, docFolderPath/original.{ext})`
+4. **Route to handler** → Based on file extension:
    - `.pdf` → Mistral OCR API (TODO: not yet implemented, returns placeholder)
    - `.txt`, `.md` → Read file directly
    - `.docx` → DOCX handler (TODO: not yet implemented)
-4. **Extract text with page breaks** → Format: `--- Page 1 ---\nText...\n--- Page 2 ---\n...`
-5. **Save extracted text** → `{workspace}/documents/extractions/{filename}.txt`
-6. **Calculate metrics** → Count pages (by `--- Page X ---` markers) and words
-7. **Update database** → Set `has_text_extraction=1`, `page_count`, `word_count`, status=`'analyzing'`
+5. **Extract text with page breaks** → Format: `--- Page 1 ---\nText...\n--- Page 2 ---\n...`
+6. **Save extracted text** → `{workspace}/documents/{folder_name}/extracted-text.txt`
+7. **Calculate metrics** → Count pages (by `--- Page X ---` markers) and words
+8. **Update database** → Set `has_text_extraction=1`, `page_count`, `word_count`, status=`'analyzing'`
 
 **Database State After Extraction:**
 ```sql
@@ -103,32 +105,32 @@ WHERE id = 'uuid';
 **Filesystem State After Extraction:**
 ```
 ~/.justicequest/case-name-timestamp/
+├── intake/
+│   └── (empty - file moved to document folder)
 └── documents/
-    ├── originals/
-    │   └── complaint.pdf
-    └── extractions/
-        └── complaint.txt  ← Extracted text saved HERE
+    └── complaint_pdf/
+        ├── original.pdf  ← Original file moved HERE
+        └── extracted-text.txt  ← Extracted text saved HERE
 ```
 
-**Error Handling:** If extraction fails, status is set to `'failed'` and `emitDocumentError()` is called. Processing stops.
+**Error Handling:** If extraction fails, status is set to `'failed'` and processing stops. WebSocket events are currently commented out but designed to emit `emitDocumentError()`.
 
 ---
 
 ### Phase 2: AI Analysis (Asynchronous)
 
 **Entry Point:** `DocumentAnalyzer.analyzeDocument()`
-**File:** `src/process/documents/services/DocumentAnalyzer.ts` (lines 40-95)
+**File:** `src/process/documents/services/DocumentAnalyzer.ts`
 
 **What Happens:**
 
 1. **Update status to `'analyzing'`** → `DocumentRepository.updateStatus(documentId, 'analyzing')`
-2. **Emit WebSocket event** → `emitDocumentAnalyzing(documentId, caseFileId, filename)`
-3. **Read extracted text** → Load from `{workspace}/documents/extractions/{filename}.txt`
-4. **Build Gemini prompt** → Structured prompt requesting JSON metadata (see below)
-5. **Call Gemini API** → `model.generateContent(prompt)` with retry logic (3 attempts, exponential backoff)
-6. **Parse JSON response** → Extract structured metadata (document type, summary, entities, etc.)
-7. **Save metadata JSON** → `{workspace}/documents/metadata/{folder_name}.json`
-8. **Update database** → Set `has_metadata=1`, `document_type`, status=`'indexing'`
+2. **Read extracted text** → Load from `{workspace}/documents/{folder_name}/extracted-text.txt`
+3. **Build Gemini prompt** → Structured prompt requesting JSON metadata (see below)
+4. **Call Gemini API** → `model.generateContent(prompt)` with retry logic (3 attempts, exponential backoff)
+5. **Parse JSON response** → Extract structured metadata (document type, summary, entities, etc.)
+6. **Save metadata JSON** → `{workspace}/documents/{folder_name}/metadata.json`
+7. **Update database** → Set `has_metadata=1`, `document_type`, status=`'indexing'`
 
 **Gemini Prompt Structure:**
 ```
@@ -153,12 +155,10 @@ WHERE id = 'uuid';
 ```
 ~/.justicequest/case-name-timestamp/
 └── documents/
-    ├── originals/
-    │   └── complaint.pdf
-    ├── extractions/
-    │   └── complaint.txt
-    └── metadata/
-        └── complaint_pdf.json  ← AI-generated metadata HERE
+    └── complaint_pdf/
+        ├── original.pdf
+        ├── extracted-text.txt
+        └── metadata.json  ← AI-generated metadata HERE
 ```
 
 **Metadata JSON Example:**
@@ -229,13 +229,13 @@ WHERE id = 'uuid';
 **Final Filesystem State:**
 ```
 ~/.justicequest/case-name-timestamp/
+├── intake/
+│   └── (empty - all files moved to document folders)
 └── documents/
-    ├── originals/
-    │   └── complaint.pdf
-    ├── extractions/
-    │   └── complaint.txt
-    └── metadata/
-        └── complaint_pdf.json
+    └── complaint_pdf/
+        ├── original.pdf
+        ├── extracted-text.txt
+        └── metadata.json
 ```
 
 **Note:** No new files are created in Phase 3. The document is uploaded to Gemini's cloud storage for RAG queries.
@@ -389,22 +389,51 @@ UI updates progress bar and status
 **Endpoints:**
 - `POST /api/cases/:caseFileId/documents/upload` - Upload document
 - `GET /api/cases/:caseFileId/documents` - List all documents for case
-- `GET /api/documents/:documentId` - Get document details
-- `GET /api/documents/:documentId/download` - Download original file
-- `DELETE /api/documents/:documentId` - Delete document
+- `GET /api/documents/:documentId` - Get document details (includes preview data)
+- `GET /api/documents/:documentId/download` - Download original file from `documents/{folder_name}/original.{ext}`
+- `DELETE /api/documents/:documentId` - Delete document record and entire `documents/{folder_name}/` directory
 - `GET /api/cases/:caseFileId/documents/stats` - Get processing stats
 
-**Authentication:** All routes require JWT token via `AuthMiddleware.authenticateToken`
+**Authentication:** All routes require authentication via `AuthMiddleware.authenticateToken`, which supports:
+- Cookie-based authentication (`aionui-session` cookie) - **Primary method**
+- Bearer token in Authorization header
+- Token in query parameter
+
+**Database Location:** `{userData}/config/aionui.db` (e.g., `/Users/{username}/Library/Application Support/AionUi/aionui/aionui.db` on macOS)
 
 ### Type Definitions
 
 **Location:** `src/process/documents/types.ts`
 
 **Key Types:**
-- `ProcessingStatus` - Status enum
+- `ProcessingStatus` - Status enum: `'pending' | 'extracting' | 'analyzing' | 'indexing' | 'complete' | 'failed'`
 - `ICaseDocument` - Database entity
 - `IDocumentMetadata` - AI-generated metadata structure
 - `ICaseDocumentsManifest` - Aggregated case view
+
+### UI Components
+
+**Location:** `src/renderer/components/UploadCaseFilesModal/`
+
+**Key Components:**
+- `UploadCaseFilesModal/index.tsx` - Main modal with upload, document list, and action handlers
+- `DocumentListSection.tsx` - Document list with tabs (All Documents / Processing)
+- `DocumentListItem.tsx` - Individual document item with status badge and action buttons
+
+**UI Behavior:**
+- **Action Buttons** (Preview, Download, Delete) only appear when `processing_status === 'complete'`
+- **Progress Indicators** show during processing phases with real-time WebSocket updates
+- **Status Badges** display current processing status with color coding:
+  - `pending` (10%) - Blue
+  - `extracting` (30%) - Blue
+  - `analyzing` (60%) - Blue
+  - `indexing` (85%) - Blue
+  - `complete` (100%) - Green
+  - `failed` (0%) - Red
+
+**Authentication:**
+- All API calls use `credentials: 'include'` to send session cookies
+- No Bearer tokens or localStorage authentication used in document operations
 
 ---
 
@@ -476,7 +505,8 @@ UI shows error badge and message
 - **Virus scanning** → Not implemented (TODO: add ClamAV integration)
 
 ### 2. Authentication & Authorization
-- **JWT tokens** → All API endpoints require valid token
+- **Cookie-based sessions** → All API endpoints require valid `aionui-session` cookie (primary method)
+- **JWT tokens** → Also supported via Bearer token in Authorization header or query parameter
 - **Case ownership** → Verify user owns the case file before upload
 - **Document access** → Only case owner can view/download documents
 
@@ -548,7 +578,23 @@ UI shows error badge and message
 
 ---
 
-**Document Version:** 1.0
+## Document Change Log
+
+**Version 1.1** (2025-12-13)
+- Updated file storage paths to reflect actual implementation: `documents/{folder_name}/original.{ext}` instead of `documents/originals/{filename}`
+- Corrected filesystem flow: files now go through `intake/` folder before being moved to permanent `documents/{folder_name}/` location
+- Added database location information: `{userData}/config/aionui.db`
+- Updated authentication details: cookie-based authentication (`aionui-session`) is the primary method
+- Added UI component behavior section documenting when action buttons appear (`processing_status === 'complete'`)
+- Corrected file paths in all phase descriptions to match actual implementation
+- Updated API endpoint descriptions with accurate file paths
+
+**Version 1.0** (2025-12-13)
+- Initial documentation
+
+---
+
+**Document Version:** 1.1
 **Last Reviewed:** 2025-12-13
 **Maintained By:** Development Team
 

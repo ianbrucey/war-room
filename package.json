@@ -101,6 +101,8 @@
   },
   "dependencies": {
     "@arco-design/web-react": "^2.66.1",
+    "@aws-sdk/client-s3": "^3.948.0",
+    "@aws-sdk/s3-request-presigner": "^3.948.0",
     "@codemirror/lang-json": "^6.0.2",
     "@google/genai": "^1.16.0",
     "@google/generative-ai": "^0.24.1",

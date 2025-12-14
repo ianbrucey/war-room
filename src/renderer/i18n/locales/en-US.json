@@ -156,16 +156,24 @@
       "uploadedAt": "Uploaded at",
       "status": "Status"
     },
+    "delete": {
+      "confirmTitle": "Delete Document",
+      "confirmMessage": "Are you sure you want to delete this document? This action cannot be undone.",
+      "confirmOk": "Delete",
+      "confirmCancel": "Cancel"
+    },
     "success": {
       "uploaded": "File uploaded successfully",
-      "downloaded": "File downloaded successfully"
+      "downloaded": "File downloaded successfully",
+      "deleted": "Document deleted successfully"
     },
     "errors": {
       "authRequired": "Authentication required",
       "uploadFailed": "Upload failed",
       "previewFailed": "Failed to load preview",
       "downloadFailed": "Download failed",
-      "fetchFailed": "Failed to load documents"
+      "fetchFailed": "Failed to load documents",
+      "deleteFailed": "Failed to delete document"
     }
   },
   "settings": {

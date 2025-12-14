@@ -20,6 +20,7 @@ interface DocumentListSectionProps {
   onPageChange: (page: number) => void;
   onPreview: (documentId: string) => void;
   onDownload: (documentId: string) => void;
+  onDelete: (documentId: string) => void;
 }
 
 /**
@@ -34,7 +35,8 @@ export const DocumentListSection: React.FC<DocumentListSectionProps> = ({
   pageSize,
   onPageChange,
   onPreview,
-  onDownload
+  onDownload,
+  onDelete
 }) => {
   // Filter documents based on active tab
   const filteredDocuments = useMemo(() => {
@@ -70,6 +72,7 @@ export const DocumentListSection: React.FC<DocumentListSectionProps> = ({
                   document={doc}
                   onPreview={onPreview}
                   onDownload={onDownload}
+                  onDelete={onDelete}
                 />
               ))
             )}
@@ -88,6 +91,7 @@ export const DocumentListSection: React.FC<DocumentListSectionProps> = ({
                   document={doc}
                   onPreview={onPreview}
                   onDownload={onDownload}
+                  onDelete={onDelete}
                 />
               ))
             )}

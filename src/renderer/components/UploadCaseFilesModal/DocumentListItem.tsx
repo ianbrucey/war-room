@@ -5,7 +5,7 @@
  */
 
 import { Badge, Button } from '@arco-design/web-react';
-import { Download, Eyes } from '@icon-park/react';
+import { DeleteOne, Download, Eyes } from '@icon-park/react';
 import type { ICaseDocument, ProcessingStatus } from '@process/documents/types';
 import React from 'react';
 import { ProgressIndicator } from './ProgressIndicator';
@@ -14,6 +14,7 @@ interface DocumentListItemProps {
   document: ICaseDocument;
   onPreview: (documentId: string) => void;
   onDownload: (documentId: string) => void;
+  onDelete: (documentId: string) => void;
 }
 
 /**
@@ -72,7 +73,8 @@ const formatTimestamp = (timestamp: number): string => {
 export const DocumentListItem: React.FC<DocumentListItemProps> = ({
   document,
   onPreview,
-  onDownload
+  onDownload,
+  onDelete
 }) => {
   const isComplete = document.processing_status === 'complete';
 
@@ -114,6 +116,14 @@ export const DocumentListItem: React.FC<DocumentListItemProps> = ({
             onClick={() => onDownload(document.id)}
           >
             Download
+          </Button>
+          <Button
+            type="text"
+            status="danger"
+            icon={<DeleteOne />}
+            onClick={() => onDelete(document.id)}
+          >
+            Delete
           </Button>
         </div>
       )}

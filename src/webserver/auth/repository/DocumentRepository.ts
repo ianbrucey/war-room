@@ -29,9 +29,10 @@ export const DocumentRepository = {
           page_count, word_count, processing_status,
           has_text_extraction, has_metadata, rag_indexed,
           file_search_store_id, gemini_file_uri,
-          uploaded_at, processed_at
+          uploaded_at, processed_at,
+          s3_key, s3_bucket, s3_uploaded_at, s3_version_id, content_type, file_size_bytes
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         id,
         doc.case_file_id,
         doc.filename,
@@ -47,7 +48,14 @@ export const DocumentRepository = {
         doc.file_search_store_id || null,
         doc.gemini_file_uri || null,
         doc.uploaded_at,
-        doc.processed_at || null
+        doc.processed_at || null,
+        // S3 storage fields
+        doc.s3_key || null,
+        doc.s3_bucket || null,
+        doc.s3_uploaded_at || null,
+        doc.s3_version_id || null,
+        doc.content_type || null,
+        doc.file_size_bytes || null
       );
 
       const result = this.findById(id);
@@ -167,6 +175,31 @@ export const DocumentRepository = {
       if (typeof flags.processed_at !== 'undefined') {
         updates.push('processed_at = ?');
         values.push(flags.processed_at);
+      }
+      // S3 storage fields
+      if (typeof flags.s3_key !== 'undefined') {
+        updates.push('s3_key = ?');
+        values.push(flags.s3_key);
+      }
+      if (typeof flags.s3_bucket !== 'undefined') {
+        updates.push('s3_bucket = ?');
+        values.push(flags.s3_bucket);
+      }
+      if (typeof flags.s3_uploaded_at !== 'undefined') {
+        updates.push('s3_uploaded_at = ?');
+        values.push(flags.s3_uploaded_at);
+      }
+      if (typeof flags.s3_version_id !== 'undefined') {
+        updates.push('s3_version_id = ?');
+        values.push(flags.s3_version_id);
+      }
+      if (typeof flags.content_type !== 'undefined') {
+        updates.push('content_type = ?');
+        values.push(flags.content_type);
+      }
+      if (typeof flags.file_size_bytes !== 'undefined') {
+        updates.push('file_size_bytes = ?');
+        values.push(flags.file_size_bytes);
       }
 
       if (updates.length === 0) {

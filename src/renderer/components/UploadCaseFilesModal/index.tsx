@@ -5,6 +5,7 @@
  */
 
 import ModalWrapper from '@/renderer/components/base/ModalWrapper';
+import DocumentPreview from '@/renderer/components/DocumentPreview';
 import type { FileMetadata } from '@/renderer/services/FileService';
 import { Message, Modal } from '@arco-design/web-react';
 import type { ICaseDocument } from '@process/documents/types';
@@ -36,6 +37,10 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
   const [uploading, setUploading] = useState<Map<string, number>>(new Map());
   const [activeTab, setActiveTab] = useState<'documents' | 'failed'>('documents');
   const [page, setPage] = useState(1);
+  const [previewDocumentId, setPreviewDocumentId] = useState<string | null>(null);
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const pageSize = 10;
 
   /**
@@ -130,98 +135,69 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
   }, [caseFileId, message]);
 
   /**
-   * Handle preview action - Show document details in a modal
+   * Handle preview action - Open document preview modal with S3 pre-signed URL
    */
   const handlePreview = useCallback(
-    async (documentId: string) => {
-      try {
-        const token = localStorage.getItem('auth_token');
-        if (!token) {
-          message.error(t('uploadModal.errors.authRequired'));
-          return;
-        }
-
-        const response = await fetch(`/api/documents/${documentId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch document details');
-        }
-
-        const document = await response.json();
-
-        // Show preview modal with document details
-        Modal.info({
-          title: document.filename,
-          style: { width: '80vw', maxWidth: '900px' },
-          content: (
-            <div className='space-y-4'>
-              <div>
-                <div className='font-bold text-14px mb-2'>{t('uploadModal.preview.extractedText')}</div>
-                <div className='max-h-300px overflow-y-auto bg-fill-2 p-12px rd-8px text-12px whitespace-pre-wrap'>{document.extracted_text || t('uploadModal.preview.noText')}</div>
-              </div>
-              {document.analysis && (
-                <div>
-                  <div className='font-bold text-14px mb-2'>{t('uploadModal.preview.analysis')}</div>
-                  <div className='max-h-200px overflow-y-auto bg-fill-2 p-12px rd-8px text-12px whitespace-pre-wrap'>{document.analysis}</div>
-                </div>
-              )}
-              <div className='text-12px text-t-secondary'>
-                <div>
-                  {t('uploadModal.preview.uploadedAt')}: {new Date(document.created_at).toLocaleString()}
-                </div>
-                <div>
-                  {t('uploadModal.preview.status')}: {document.processing_status}
-                </div>
-              </div>
-            </div>
-          ),
-        });
-      } catch (error) {
-        console.error('[UploadModal] Preview error:', error);
-        message.error(t('uploadModal.errors.previewFailed'));
-      }
+    (documentId: string) => {
+      setPreviewDocumentId(documentId);
     },
-    [t, message]
+    []
   );
 
   /**
-   * Handle download action - Download the original file
+   * Close preview modal
+   */
+  const handleClosePreview = useCallback(() => {
+    setPreviewDocumentId(null);
+  }, []);
+
+  /**
+   * Handle download action - Get pre-signed URL from S3 and trigger download
    */
   const handleDownload = useCallback(
     async (documentId: string) => {
       try {
-        const response = await fetch(`/api/documents/${documentId}/download`, {
+        // First try to get S3 pre-signed URL
+        const response = await fetch(`/api/documents/${documentId}/download-url`, {
           credentials: 'include' // Use cookie authentication
         });
 
         if (!response.ok) {
-          throw new Error('Failed to download document');
+          throw new Error('Failed to get download URL');
         }
 
-        // Get filename from Content-Disposition header or use default
-        const contentDisposition = response.headers.get('Content-Disposition');
-        let filename = 'document';
-        if (contentDisposition) {
-          const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
-          if (filenameMatch) {
-            filename = filenameMatch[1];
+        const data = await response.json();
+
+        if (data.isLocal) {
+          // Fallback to direct download for local-only files
+          const downloadResponse = await fetch(`/api/documents/${documentId}/download`, {
+            credentials: 'include'
+          });
+
+          if (!downloadResponse.ok) {
+            throw new Error('Failed to download document');
           }
-        }
 
-        // Create blob and download
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+          const blob = await downloadResponse.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = data.filename || 'document';
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+        } else {
+          // Use S3 pre-signed URL for download
+          // Create a hidden link and trigger download
+          const a = document.createElement('a');
+          a.href = data.url;
+          a.download = data.filename || 'document';
+          a.target = '_blank';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
 
         message.success(t('uploadModal.success.downloaded'));
       } catch (error) {
@@ -231,6 +207,71 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
     },
     [t, message]
   );
+
+  /**
+   * Handle delete action - Show confirmation modal
+   */
+  const handleDelete = useCallback(
+    (documentId: string) => {
+      setDocumentToDelete(documentId);
+      setDeleteConfirmVisible(true);
+    },
+    []
+  );
+
+  /**
+   * Confirm delete - Actually delete the document
+   */
+  const confirmDelete = useCallback(
+    async () => {
+      if (!documentToDelete) return;
+
+      try {
+        setDeleting(true);
+        const response = await fetch(`/api/documents/${documentToDelete}`, {
+          method: 'DELETE',
+          credentials: 'include' // Use cookie authentication
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to delete document');
+        }
+
+        message.success(t('uploadModal.success.deleted'));
+
+        // Refresh document list by fetching updated documents
+        try {
+          const response = await fetch(`/api/cases/${caseFileId}/documents`, {
+            credentials: 'include'
+          });
+          if (response.ok) {
+            const docs = await response.json();
+            setDocuments(docs);
+          }
+        } catch (error) {
+          console.error('[UploadModal] Failed to refresh documents:', error);
+        }
+
+        // Close confirmation modal
+        setDeleteConfirmVisible(false);
+        setDocumentToDelete(null);
+      } catch (error) {
+        console.error('[UploadModal] Delete error:', error);
+        message.error(t('uploadModal.errors.deleteFailed'));
+      } finally {
+        setDeleting(false);
+      }
+    },
+    [documentToDelete, t, message, caseFileId]
+  );
+
+  /**
+   * Cancel delete - Close confirmation modal
+   */
+  const cancelDelete = useCallback(() => {
+    setDeleteConfirmVisible(false);
+    setDocumentToDelete(null);
+  }, []);
 
   /**
    * Handle tab change
@@ -271,9 +312,33 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
             onPageChange={handlePageChange}
             onPreview={handlePreview}
             onDownload={handleDownload}
+            onDelete={handleDelete}
           />
         </div>
       </ModalWrapper>
+
+      {/* Document Preview Modal */}
+      {previewDocumentId && (
+        <DocumentPreview
+          documentId={previewDocumentId}
+          visible={!!previewDocumentId}
+          onClose={handleClosePreview}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        visible={deleteConfirmVisible}
+        title={t('uploadModal.delete.confirmTitle')}
+        onOk={confirmDelete}
+        onCancel={cancelDelete}
+        okText={t('uploadModal.delete.confirmOk')}
+        cancelText={t('uploadModal.delete.confirmCancel')}
+        okButtonProps={{ status: 'danger', loading: deleting }}
+        cancelButtonProps={{ disabled: deleting }}
+      >
+        <p>{t('uploadModal.delete.confirmMessage')}</p>
+      </Modal>
     </>
   );
 };
