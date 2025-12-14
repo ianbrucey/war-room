@@ -37,6 +37,7 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
   const [uploading, setUploading] = useState<Map<string, number>>(new Map());
   const [activeTab, setActiveTab] = useState<'documents' | 'failed'>('documents');
   const [page, setPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
   const [previewDocumentId, setPreviewDocumentId] = useState<string | null>(null);
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<string | null>(null);
@@ -321,6 +322,14 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
     setPage(newPage);
   }, []);
 
+  /**
+   * Handle search query change
+   */
+  const handleSearchChange = useCallback((query: string) => {
+    setSearchQuery(query);
+    setPage(1); // Reset to first page when searching
+  }, []);
+
 
 
   return (
@@ -349,6 +358,8 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
               page={page}
               pageSize={pageSize}
               onPageChange={handlePageChange}
+              searchQuery={searchQuery}
+              onSearchChange={handleSearchChange}
               onPreview={handlePreview}
               onDownload={handleDownload}
               onDelete={handleDelete}

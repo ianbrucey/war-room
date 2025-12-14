@@ -4,7 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Pagination, Tabs } from '@arco-design/web-react';
+import { Input, Pagination, Tabs } from '@arco-design/web-react';
+import { IconSearch } from '@arco-design/web-react/icon';
 import type { ICaseDocument } from '@process/documents/types';
 import React, { useMemo } from 'react';
 import { DocumentListItem } from './DocumentListItem';
@@ -21,6 +22,8 @@ interface DocumentListSectionProps {
   onPreview: (documentId: string) => void;
   onDownload: (documentId: string) => void;
   onDelete: (documentId: string) => void;
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
 }
 
 /**
@@ -36,15 +39,30 @@ export const DocumentListSection: React.FC<DocumentListSectionProps> = ({
   onPageChange,
   onPreview,
   onDownload,
-  onDelete
+  onDelete,
+  searchQuery,
+  onSearchChange
 }) => {
-  // Filter documents based on active tab
+  // Filter documents based on active tab and search query
   const filteredDocuments = useMemo(() => {
+    let filtered = documents;
+
+    // Filter by tab
     if (activeTab === 'failed') {
-      return documents.filter(doc => doc.processing_status === 'failed');
+      filtered = filtered.filter(doc => doc.processing_status === 'failed');
     }
-    return documents;
-  }, [documents, activeTab]);
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(doc =>
+        doc.filename.toLowerCase().includes(query) ||
+        doc.document_type?.toLowerCase().includes(query)
+      );
+    }
+
+    return filtered;
+  }, [documents, activeTab, searchQuery]);
 
   // Paginate documents
   const paginatedDocuments = useMemo(() => {
@@ -58,12 +76,22 @@ export const DocumentListSection: React.FC<DocumentListSectionProps> = ({
 
   return (
     <div className="document-list-section">
+      {/* Search Input */}
+      <Input
+        prefix={<IconSearch />}
+        placeholder="Search documents by filename or type..."
+        value={searchQuery}
+        onChange={onSearchChange}
+        allowClear
+        style={{ marginBottom: '16px' }}
+      />
+
       <Tabs activeTab={activeTab} onChange={onTabChange}>
         <TabPane key="documents" title={`Documents (${allDocsCount})`}>
           <div className="document-list">
             {paginatedDocuments.length === 0 ? (
               <div className="loading-state">
-                <p>No documents uploaded yet</p>
+                <p>{searchQuery ? 'No documents match your search' : 'No documents uploaded yet'}</p>
               </div>
             ) : (
               paginatedDocuments.map(doc => (
