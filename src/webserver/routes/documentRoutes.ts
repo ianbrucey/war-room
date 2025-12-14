@@ -336,9 +336,38 @@ router.delete('/documents/:documentId', async (req: Request, res: Response) => {
       console.log(`[DocumentIntake] Local folder not found: ${docFolderPath}`);
     }
 
-    // TODO: Delete from Gemini file store if needed
-    // This would require tracking the file store ID in the database
-    // For now, files in the store will remain (they don't cost anything)
+    // Delete from Gemini File Search store if document was indexed
+    if (document.gemini_file_uri && document.rag_indexed) {
+      try {
+        const { GoogleGenAI } = require('@google/genai');
+        const geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY;
+
+        if (geminiApiKey) {
+          const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+
+          // Extract file name from URI (format: files/{store_id}/{timestamp} or similar)
+          // The gemini_file_uri format may vary, so we'll try to delete by name
+          console.log(`[DocumentIntake] Attempting to delete from File Search: ${document.gemini_file_uri}`);
+
+          try {
+            // Note: The File Search API doesn't have a direct "delete document" method in the docs
+            // Documents are managed at the store level. For now, we'll log this for future implementation
+            // when the SDK provides document-level deletion or we implement store cleanup
+            console.log(`[DocumentIntake] File Search document deletion not yet implemented. URI: ${document.gemini_file_uri}`);
+            console.log(`[DocumentIntake] Note: File will remain in File Search store but database record will be deleted`);
+          } catch (fileSearchError) {
+            console.error('[DocumentIntake] File Search delete failed:', fileSearchError);
+          }
+        } else {
+          console.warn('[DocumentIntake] No Gemini API key found, skipping File Search deletion');
+        }
+      } catch (error) {
+        console.error('[DocumentIntake] Error initializing File Search deletion:', error);
+        // Continue with database deletion even if File Search fails
+      }
+    } else {
+      console.log('[DocumentIntake] Document not indexed in File Search, skipping');
+    }
 
     // Delete from database
     console.log(`[DocumentIntake] Deleting from database: ${documentId}`);

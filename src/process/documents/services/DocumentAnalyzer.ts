@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { GoogleGenerativeAI, type GenerativeModel } from '@google/generative-ai';
+import { execSync } from 'child_process';
 import { readFile, writeFile } from 'fs/promises';
-import { join } from 'path';
+import { dirname, join } from 'path';
 import { CaseFileRepository } from '../../../webserver/auth/repository/CaseFileRepository';
 import { DocumentRepository } from '../../../webserver/auth/repository/DocumentRepository';
 import type { IDocumentMetadata } from '../types';
@@ -15,20 +15,16 @@ import { FileSearchIndexer } from './FileSearchIndexer';
 /**
  * Document Analyzer Service
  *
- * Uses Gemini SDK to analyze extracted text and generate structured metadata
+ * Uses Gemini CLI to analyze extracted text and generate structured metadata
  */
 export class DocumentAnalyzer {
-  private genAI: GoogleGenerativeAI;
-  private model: GenerativeModel;
-
   /**
    * Initialize Document Analyzer with Gemini API key
-   * 
-   * @param geminiApiKey - Google Gemini API key
+   *
+   * @param geminiApiKey - Google Gemini API key (not used with CLI, but kept for compatibility)
    */
   constructor(private geminiApiKey: string) {
-    this.genAI = new GoogleGenerativeAI(geminiApiKey);
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    // Gemini CLI uses GEMINI_API_KEY from environment
   }
 
   /**
@@ -59,12 +55,13 @@ export class DocumentAnalyzer {
       // Update status to analyzing
       DocumentRepository.updateStatus(documentId, 'analyzing');
 
-      // Generate summary using Gemini
+      // Generate summary using Gemini CLI
       const metadata = await this.generateMetadata(
         documentId,
         document.filename,
         document.file_type,
-        extractedText
+        extractedText,
+        extractedTextPath
       );
 
       // Get case file to get workspace path
@@ -108,27 +105,29 @@ export class DocumentAnalyzer {
   }
 
   /**
-   * Generate structured metadata using Gemini
-   * 
+   * Generate structured metadata using Gemini CLI
+   *
    * @param documentId - Document ID
    * @param filename - Original filename
    * @param fileType - File type
    * @param extractedText - Extracted document text
+   * @param extractedTextPath - Path to extracted text file
    * @returns Structured metadata
    */
   private async generateMetadata(
     documentId: string,
     filename: string,
     fileType: string,
-    extractedText: string
+    extractedText: string,
+    extractedTextPath: string
   ): Promise<IDocumentMetadata> {
     const prompt = this.buildSummarizationPrompt(extractedText);
 
-    console.log('[DocumentIntake] Calling Gemini for document summary...');
+    console.log('[DocumentIntake] Calling Gemini CLI for document summary...');
 
-    // Call Gemini with retry logic
-    const response = await this.callGeminiWithRetry(prompt);
-    
+    // Call Gemini CLI with retry logic
+    const response = await this.callGeminiWithRetry(prompt, extractedTextPath);
+
     // Parse JSON response
     const aiSummary = this.parseGeminiResponse(response);
 
@@ -218,24 +217,39 @@ IMPORTANT:
   }
 
   /**
-   * Call Gemini API with retry logic
-   * 
+   * Call Gemini CLI with retry logic
+   *
    * @param prompt - Prompt to send
+   * @param extractedTextPath - Path to extracted text file
    * @param maxRetries - Maximum retry attempts
-   * @returns API response text
+   * @returns Parsed JSON response
    */
-  private async callGeminiWithRetry(prompt: string, maxRetries = 3): Promise<string> {
+  private async callGeminiWithRetry(
+    prompt: string,
+    extractedTextPath: string,
+    maxRetries = 3
+  ): Promise<string> {
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        const result = await this.model.generateContent(prompt);
-        const response = await result.response;
-        return response.text();
+        console.log(`[DocumentIntake] Calling Gemini CLI (attempt ${attempt}/${maxRetries})...`);
+
+        // Use Gemini CLI with --include-directories flag
+        const result = execSync(
+          `gemini -m gemini-2.5-flash -p "${prompt.replace(/"/g, '\\"')} @${extractedTextPath}" --include-directories ${dirname(extractedTextPath)}`,
+          {
+            encoding: 'utf-8',
+            timeout: 120000, // 2 minute timeout
+            maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+          }
+        );
+
+        return result.trim();
       } catch (error: any) {
         lastError = error;
-        console.warn(`[DocumentIntake] Gemini API attempt ${attempt} failed:`, error.message);
-        
+        console.warn(`[DocumentIntake] Gemini CLI attempt ${attempt} failed:`, error.message);
+
         if (attempt < maxRetries) {
           // Exponential backoff: 2^attempt seconds
           const delay = Math.pow(2, attempt) * 1000;
@@ -245,7 +259,7 @@ IMPORTANT:
       }
     }
 
-    throw new Error(`Gemini API failed after ${maxRetries} attempts: ${lastError?.message}`);
+    throw new Error(`Gemini CLI failed after ${maxRetries} attempts: ${lastError?.message}`);
   }
 
   /**

@@ -7,7 +7,7 @@
 import ModalWrapper from '@/renderer/components/base/ModalWrapper';
 import DocumentPreview from '@/renderer/components/DocumentPreview';
 import type { FileMetadata } from '@/renderer/services/FileService';
-import { Message, Modal } from '@arco-design/web-react';
+import { Message, Modal, Spin } from '@arco-design/web-react';
 import type { ICaseDocument } from '@process/documents/types';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -41,7 +41,40 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [loading, setLoading] = useState(true);
   const pageSize = 10;
+
+  /**
+   * Initial fetch when modal opens
+   */
+  useEffect(() => {
+    if (!visible) {
+      // Reset loading state when modal closes
+      setLoading(true);
+      return;
+    }
+
+    // Fetch documents immediately when modal opens
+    const fetchDocuments = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/cases/${caseFileId}/documents`, {
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const docs = await response.json();
+          setDocuments(docs);
+        }
+      } catch (error) {
+        console.error('[UploadModal] Failed to fetch documents:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDocuments();
+  }, [visible, caseFileId]);
 
   /**
    * Poll for document status updates
@@ -303,17 +336,24 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
         <div className="upload-modal-body">
           <DropzoneSection onFilesAdded={handleFilesAdded} />
 
-          <DocumentListSection
-            documents={documents}
-            activeTab={activeTab}
-            onTabChange={handleTabChange}
-            page={page}
-            pageSize={pageSize}
-            onPageChange={handlePageChange}
-            onPreview={handlePreview}
-            onDownload={handleDownload}
-            onDelete={handleDelete}
-          />
+          {loading ? (
+            <div className="document-list-loading">
+              <Spin size={32} />
+              <p>{t('uploadModal.loading', 'Loading documents...')}</p>
+            </div>
+          ) : (
+            <DocumentListSection
+              documents={documents}
+              activeTab={activeTab}
+              onTabChange={handleTabChange}
+              page={page}
+              pageSize={pageSize}
+              onPageChange={handlePageChange}
+              onPreview={handlePreview}
+              onDownload={handleDownload}
+              onDelete={handleDelete}
+            />
+          )}
         </div>
       </ModalWrapper>
 

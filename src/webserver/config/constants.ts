@@ -131,9 +131,11 @@ export const SECURITY_CONFIG = {
     // Referrer 策略（Referrer policy）
     REFERRER_POLICY: 'strict-origin-when-cross-origin',
     // 开发环境 CSP（Content-Security-Policy for development）
-    CSP_DEV: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' ws: wss:;",
+    // Allows MinIO/S3 endpoints for document preview (iframe, img, media)
+    CSP_DEV: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' ws: wss: https:; frame-src 'self' https://minio.herd.test https://*.linodeobjects.com; media-src 'self' https://minio.herd.test https://*.linodeobjects.com;",
     // 生产环境 CSP（Content-Security-Policy for production）
-    CSP_PROD: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self';",
+    // Allows S3 endpoints for document preview (iframe, img, media)
+    CSP_PROD: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https:; frame-src 'self' https://*.amazonaws.com https://*.linodeobjects.com; media-src 'self' https://*.amazonaws.com https://*.linodeobjects.com;",
   },
   CSRF: {
     COOKIE_NAME: CSRF_COOKIE_NAME,

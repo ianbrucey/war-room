@@ -122,6 +122,7 @@ const Layout: React.FC<{
                     if (isMobile) setCollapsed(true);
                   },
                   collapsed,
+                  ref: (sider as any).ref,
                 } as any)
               : sider}
           </ArcoLayout.Content>
