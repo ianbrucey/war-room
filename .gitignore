@@ -153,3 +153,11 @@ specs/**/draft-*
 specs/**/work-*
 .spec-cache/
 .tmp/
+
+# Electron cache - do not commit
+${env.ELECTRON_CACHE}/
+.electron/
+electron-cache/
+*.zip
+!*.zip.asc
+
