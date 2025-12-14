@@ -77,30 +77,31 @@ export const DocumentListItem: React.FC<DocumentListItemProps> = ({
   onDelete
 }) => {
   const isComplete = document.processing_status === 'complete';
+  const isFailed = document.processing_status === 'failed';
 
   return (
     <div className="document-list-item">
       <div className="file-icon">
         📄
       </div>
-      
+
       <div className="file-info">
         <div className="file-name">{document.filename}</div>
         <div className="file-meta">
           {formatTimestamp(document.uploaded_at)}
         </div>
       </div>
-      
+
       <div className="progress-section">
         <ProgressIndicator
           status={document.processing_status}
         />
       </div>
-      
+
       <div className="status-badge">
         <Badge status={getStatusColor(document.processing_status)} text={getStatusLabel(document.processing_status)} />
       </div>
-      
+
       {isComplete && (
         <div className="action-buttons">
           <Button
@@ -117,6 +118,19 @@ export const DocumentListItem: React.FC<DocumentListItemProps> = ({
           >
             Download
           </Button>
+          <Button
+            type="text"
+            status="danger"
+            icon={<DeleteOne />}
+            onClick={() => onDelete(document.id)}
+          >
+            Delete
+          </Button>
+        </div>
+      )}
+
+      {isFailed && (
+        <div className="action-buttons">
           <Button
             type="text"
             status="danger"
