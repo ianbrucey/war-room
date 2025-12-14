@@ -99,15 +99,18 @@ export const DocumentListSection: React.FC<DocumentListSectionProps> = ({
         </TabPane>
       </Tabs>
 
-      {filteredDocuments.length > pageSize && (
-        <Pagination
-          current={page}
-          pageSize={pageSize}
-          total={filteredDocuments.length}
-          onChange={onPageChange}
-          showTotal
-          sizeCanChange={false}
-        />
+      {filteredDocuments.length > 0 && (
+        <div className="pagination-wrapper">
+          <Pagination
+            current={page}
+            pageSize={pageSize}
+            total={filteredDocuments.length}
+            onChange={onPageChange}
+            showTotal
+            sizeCanChange={false}
+            simple={filteredDocuments.length <= pageSize}
+          />
+        </div>
       )}
     </div>
   );

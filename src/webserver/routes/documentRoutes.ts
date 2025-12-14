@@ -326,18 +326,23 @@ router.delete('/documents/:documentId', async (req: Request, res: Response) => {
       console.log('[DocumentIntake] No S3 key, skipping S3 delete');
     }
 
-    // Delete local files
-    const docFolderPath = path.join(caseFile.workspace_path, 'documents', document.folder_name);
-    console.log(`[DocumentIntake] Checking local folder: ${docFolderPath}`);
-    if (fs.existsSync(docFolderPath)) {
-      fs.rmSync(docFolderPath, { recursive: true, force: true });
-      console.log(`[DocumentIntake] Deleted document folder: ${docFolderPath}`);
-    } else {
-      console.log(`[DocumentIntake] Local folder not found: ${docFolderPath}`);
+    // Delete local files (gracefully handle missing files)
+    try {
+      const docFolderPath = path.join(caseFile.workspace_path, 'documents', document.folder_name);
+      console.log(`[DocumentIntake] Checking local folder: ${docFolderPath}`);
+      if (fs.existsSync(docFolderPath)) {
+        fs.rmSync(docFolderPath, { recursive: true, force: true });
+        console.log(`[DocumentIntake] Deleted document folder: ${docFolderPath}`);
+      } else {
+        console.log(`[DocumentIntake] Local folder not found (already deleted or never created): ${docFolderPath}`);
+      }
+    } catch (localDeleteError) {
+      console.warn('[DocumentIntake] Local file deletion failed, continuing with database deletion:', localDeleteError);
+      // Continue with database deletion even if local files can't be deleted
     }
 
     // Delete from Gemini File Search store if document was indexed
-    if (document.gemini_file_uri && document.rag_indexed) {
+    if (document.gemini_file_uri && document.rag_indexed && document.file_search_store_id) {
       try {
         const { GoogleGenAI } = require('@google/genai');
         const geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY;
@@ -345,28 +350,36 @@ router.delete('/documents/:documentId', async (req: Request, res: Response) => {
         if (geminiApiKey) {
           const ai = new GoogleGenAI({ apiKey: geminiApiKey });
 
-          // Extract file name from URI (format: files/{store_id}/{timestamp} or similar)
-          // The gemini_file_uri format may vary, so we'll try to delete by name
-          console.log(`[DocumentIntake] Attempting to delete from File Search: ${document.gemini_file_uri}`);
+          console.log(`[DocumentIntake] Attempting to delete document from File Search store`);
+          console.log(`[DocumentIntake] Store ID: ${document.file_search_store_id}`);
+          console.log(`[DocumentIntake] Document URI: ${document.gemini_file_uri}`);
 
           try {
-            // Note: The File Search API doesn't have a direct "delete document" method in the docs
-            // Documents are managed at the store level. For now, we'll log this for future implementation
-            // when the SDK provides document-level deletion or we implement store cleanup
-            console.log(`[DocumentIntake] File Search document deletion not yet implemented. URI: ${document.gemini_file_uri}`);
-            console.log(`[DocumentIntake] Note: File will remain in File Search store but database record will be deleted`);
-          } catch (fileSearchError) {
-            console.error('[DocumentIntake] File Search delete failed:', fileSearchError);
+            // Delete the document from the File Search store
+            // API: DELETE https://generativelanguage.googleapis.com/v1beta/{name=fileSearchStores/*/documents/*}
+            await ai.fileSearchStores.documents.delete({
+              name: `fileSearchStores/${document.file_search_store_id}/documents/${document.gemini_file_uri}`,
+            });
+
+            console.log(`[DocumentIntake] Successfully deleted document from File Search store`);
+          } catch (fileSearchError: any) {
+            // Gracefully handle deletion errors (e.g., document already deleted, store doesn't exist)
+            if (fileSearchError?.message?.includes('NOT_FOUND') || fileSearchError?.message?.includes('404')) {
+              console.log(`[DocumentIntake] Document not found in File Search store (may have been already deleted)`);
+            } else {
+              console.warn('[DocumentIntake] File Search document deletion failed:', fileSearchError?.message || fileSearchError);
+            }
+            // Continue with database deletion even if File Search deletion fails
           }
         } else {
           console.warn('[DocumentIntake] No Gemini API key found, skipping File Search deletion');
         }
       } catch (error) {
-        console.error('[DocumentIntake] Error initializing File Search deletion:', error);
-        // Continue with database deletion even if File Search fails
+        console.warn('[DocumentIntake] Error during File Search deletion:', error);
+        // Continue with database deletion even if File Search initialization fails
       }
     } else {
-      console.log('[DocumentIntake] Document not indexed in File Search, skipping');
+      console.log('[DocumentIntake] Document not indexed in File Search or missing store ID, no cleanup needed');
     }
 
     // Delete from database
