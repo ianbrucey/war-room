@@ -6,6 +6,7 @@
 
 import { bridge } from '@office-ai/platform';
 import type { WebSocketServer } from 'ws';
+import { initializeSummaryProgress } from './websocket/caseSummaryProgress';
 import { initializeDocumentProgress } from './websocket/documentProgress';
 import { WebSocketManager } from './websocket/WebSocketManager';
 
@@ -19,6 +20,13 @@ export function initWebAdapter(wss: WebSocketServer): void {
 
   // Initialize document progress WebSocket emitter
   initializeDocumentProgress({
+    emitToCaseFile: (caseFileId, event, data) => {
+      wsManager.emitToCaseFile(caseFileId, event, data);
+    },
+  });
+
+  // Initialize case summary progress WebSocket emitter
+  initializeSummaryProgress({
     emitToCaseFile: (caseFileId, event, data) => {
       wsManager.emitToCaseFile(caseFileId, event, data);
     },

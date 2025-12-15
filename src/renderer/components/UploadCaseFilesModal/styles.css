@@ -8,7 +8,8 @@
   gap: 24px;
   padding: 24px;
   height: calc(90vh - 80px);
-  overflow: hidden; /* Don't scroll the body, let children scroll */
+  overflow-y: auto; /* Enable vertical scrolling */
+  overflow-x: hidden;
 }
 
 /* Dropzone Section */
@@ -75,12 +76,12 @@
 
 /* Document List Section (for Agent 2) */
 .document-list-section {
-  flex: 1;
-  display: flex;
+
   flex-direction: column;
   gap: 16px;
-  min-height: 0; /* Critical for flex child overflow */
-  overflow: hidden; /* Contain children */
+  min-height: 300px;
+ 
+  overflow: scroll; /* Contain children */
 }
 
 .document-list {
@@ -161,6 +162,38 @@
   padding: 16px 0;
   border-top: 1px solid var(--border-base);
   background-color: var(--bg-base);
+}
+
+/* Case Summary Controls */
+.case-summary-controls {
+  padding: 16px 0;
+  flex-shrink: 0;
+  border-top: 1px solid var(--border-base);
+  margin-top: 16px;
+}
+
+.summary-header {
+  margin-bottom: 16px;
+}
+
+.summary-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.summary-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.summary-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0;
 }
 
 /* Loading State */

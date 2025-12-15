@@ -1,0 +1,152 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Test fixtures for Case Summary Generation",
+  
+  "testCases": {
+    "case_with_3_documents": {
+      "id": "case_test_001",
+      "title": "Smith v. ABC Corporation",
+      "case_number": "24-CV-1234",
+      "workspace_path": "/tmp/test-workspace-smith",
+      "documents": [
+        {
+          "id": "doc_001",
+          "filename": "Complaint.pdf",
+          "folder_name": "complaint-pdf",
+          "document_type": "Complaint",
+          "processing_status": "complete",
+          "metadata": {
+            "summary": {
+              "executive_summary": "Plaintiff John Smith alleges personal injury from slip and fall at defendant's retail store on January 15, 2024.",
+              "main_arguments": ["Negligent maintenance", "Failure to warn", "Premises liability"]
+            },
+            "entities": {
+              "parties": [
+                {"name": "John Smith", "role": "Plaintiff", "mentions": 12},
+                {"name": "ABC Corporation", "role": "Defendant", "mentions": 8}
+              ],
+              "dates": [
+                {"date": "2024-01-15", "context": "Date of incident"},
+                {"date": "2024-03-01", "context": "Complaint filed"}
+              ]
+            }
+          }
+        },
+        {
+          "id": "doc_002",
+          "filename": "Incident_Report.pdf",
+          "folder_name": "incident-report-pdf",
+          "document_type": "Evidence",
+          "processing_status": "complete",
+          "metadata": {
+            "summary": {
+              "executive_summary": "Store incident report documenting wet floor in aisle 5 at 2:15 PM on January 15, 2024.",
+              "main_arguments": ["Wet floor present", "No warning signs visible", "Customer reported injury"]
+            },
+            "entities": {
+              "parties": [
+                {"name": "John Smith", "role": "Injured party", "mentions": 3},
+                {"name": "Manager Jane Doe", "role": "Reporter", "mentions": 2}
+              ],
+              "dates": [
+                {"date": "2024-01-15", "context": "Incident date and time: 2:15 PM"}
+              ]
+            }
+          }
+        },
+        {
+          "id": "doc_003",
+          "filename": "Medical_Records.pdf",
+          "folder_name": "medical-records-pdf",
+          "document_type": "Evidence",
+          "processing_status": "complete",
+          "metadata": {
+            "summary": {
+              "executive_summary": "Emergency room records showing treatment for fractured wrist and contusions following slip and fall.",
+              "main_arguments": ["Fractured right wrist", "Multiple contusions", "2 weeks immobilization recommended"]
+            },
+            "entities": {
+              "parties": [
+                {"name": "John Smith", "role": "Patient", "mentions": 15},
+                {"name": "Dr. Robert Chen", "role": "Treating physician", "mentions": 4}
+              ],
+              "dates": [
+                {"date": "2024-01-15", "context": "ER admission"},
+                {"date": "2024-01-29", "context": "Follow-up appointment"}
+              ]
+            }
+          }
+        }
+      ]
+    },
+    
+    "case_with_no_documents": {
+      "id": "case_test_002",
+      "title": "Empty Case",
+      "workspace_path": "/tmp/test-workspace-empty",
+      "documents": []
+    },
+    
+    "case_with_stale_summary": {
+      "id": "case_test_003",
+      "title": "Case with Existing Summary",
+      "workspace_path": "/tmp/test-workspace-stale",
+      "case_summary_status": "stale",
+      "case_summary_generated_at": 1702500000000,
+      "case_summary_version": 1,
+      "case_summary_document_count": 2,
+      "documents": [
+        {"id": "doc_a", "processing_status": "complete", "uploaded_at": 1702400000000},
+        {"id": "doc_b", "processing_status": "complete", "uploaded_at": 1702400000000},
+        {"id": "doc_c", "processing_status": "complete", "uploaded_at": 1702600000000}
+      ],
+      "newDocumentsSinceLastSummary": ["doc_c"]
+    }
+  },
+
+  "expectedOutputs": {
+    "summary_schema_sections": [
+      "Case Overview",
+      "Parties",
+      "Claims & Causes of Action",
+      "Key Facts (Undisputed)",
+      "Disputed Facts",
+      "Timeline",
+      "Evidence Index",
+      "Relief Sought",
+      "Open Questions",
+      "Agent Notes"
+    ],
+    
+    "metadata_block_fields": [
+      "schema_version",
+      "generated_at",
+      "generator",
+      "documents_included",
+      "last_document_processed",
+      "processing_method"
+    ]
+  },
+
+  "websocketEvents": {
+    "summary:generating": {
+      "caseId": "string",
+      "status": "generating",
+      "progress": "number (0-100)",
+      "currentBatch": "number",
+      "totalBatches": "number"
+    },
+    "summary:complete": {
+      "caseId": "string",
+      "status": "generated",
+      "version": "number",
+      "documentCount": "number"
+    },
+    "summary:failed": {
+      "caseId": "string",
+      "status": "failed",
+      "error": "string"
+    }
+  }
+}
+

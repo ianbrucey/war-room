@@ -635,9 +635,64 @@ const migration_v12: IMigration = {
 };
 
 /**
+ * Migration v14: Add case summary tracking columns to case_files
+ * These columns track the status and metadata of AI-generated case summaries
+ */
+const migration_v14: IMigration = {
+  version: 14,
+  name: 'Add case summary tracking columns to case_files',
+  up: (db) => {
+    // Check which columns already exist
+    const tableInfo = db.prepare('PRAGMA table_info(case_files)').all() as Array<{ name: string }>;
+    const existingColumns = new Set(tableInfo.map((col) => col.name));
+
+    // Add case_summary_status column if it doesn't exist
+    if (!existingColumns.has('case_summary_status')) {
+      db.exec(`ALTER TABLE case_files ADD COLUMN case_summary_status TEXT DEFAULT NULL CHECK(case_summary_status IS NULL OR case_summary_status IN ('generating', 'generated', 'stale', 'failed'));`);
+      console.log('[Migration v14] Added case_summary_status column to case_files');
+    }
+
+    // Add case_summary_generated_at column if it doesn't exist
+    if (!existingColumns.has('case_summary_generated_at')) {
+      db.exec(`ALTER TABLE case_files ADD COLUMN case_summary_generated_at INTEGER DEFAULT NULL;`);
+      console.log('[Migration v14] Added case_summary_generated_at column to case_files');
+    }
+
+    // Add case_summary_version column if it doesn't exist
+    if (!existingColumns.has('case_summary_version')) {
+      db.exec(`ALTER TABLE case_files ADD COLUMN case_summary_version INTEGER DEFAULT 0;`);
+      console.log('[Migration v14] Added case_summary_version column to case_files');
+    }
+
+    // Add case_summary_document_count column if it doesn't exist
+    if (!existingColumns.has('case_summary_document_count')) {
+      db.exec(`ALTER TABLE case_files ADD COLUMN case_summary_document_count INTEGER DEFAULT 0;`);
+      console.log('[Migration v14] Added case_summary_document_count column to case_files');
+    }
+
+    // Add index for summary status lookups
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_case_files_summary_status ON case_files(case_summary_status);
+    `);
+    console.log('[Migration v14] Added case summary tracking columns and index to case_files table');
+  },
+  down: (db) => {
+    // Note: SQLite doesn't support DROP COLUMN directly
+    // For rollback, we would need to recreate the table without these columns
+    // For now, we'll just log a warning
+    console.warn('[Migration v14 Rollback] SQLite does not support DROP COLUMN. Manual intervention required.');
+    console.warn('[Migration v14 Rollback] Columns to remove: case_summary_status, case_summary_generated_at, case_summary_version, case_summary_document_count');
+
+    // Drop the index
+    db.exec(`DROP INDEX IF EXISTS idx_case_files_summary_status;`);
+    console.log('[Migration v14 Rollback] Dropped idx_case_files_summary_status index');
+  },
+};
+
+/**
  * All migrations in order
  */
-export const ALL_MIGRATIONS: IMigration[] = [migration_v1, migration_v2, migration_v3, migration_v4, migration_v5, migration_v6, migration_v7, migration_v8, migration_v9, migration_v10, migration_v11, migration_v12];
+export const ALL_MIGRATIONS: IMigration[] = [migration_v1, migration_v2, migration_v3, migration_v4, migration_v5, migration_v6, migration_v7, migration_v8, migration_v9, migration_v10, migration_v11, migration_v12, migration_v14];
 
 /**
  * Get migrations needed to upgrade from one version to another

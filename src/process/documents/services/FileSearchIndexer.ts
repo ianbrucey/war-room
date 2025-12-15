@@ -63,6 +63,13 @@ export class FileSearchIndexer {
 
       // emitDocumentComplete(documentId, caseFileId, doc.filename);
       console.log(`[DocumentIntake] Document indexed: ${documentId}`);
+
+      // Mark case summary as stale if it exists
+      const caseFile = CaseFileRepository.findById(caseFileId);
+      if (caseFile && caseFile.case_summary_status === 'generated') {
+        CaseFileRepository.markSummaryStale(caseFileId);
+        console.log(`[DocumentIntake] Marked case summary as stale for case: ${caseFileId}`);
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error(`[DocumentIntake] Indexing failed for document: ${documentId}`, error);

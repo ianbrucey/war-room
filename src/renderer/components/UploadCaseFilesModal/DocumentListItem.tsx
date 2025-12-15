@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Badge, Button } from '@arco-design/web-react';
-import { DeleteOne, Download, Eyes } from '@icon-park/react';
 import type { ICaseDocument, ProcessingStatus } from '@process/documents/types';
 import React from 'react';
+import { Badge, Button } from '@arco-design/web-react';
+import { Eyes, Download, DeleteOne } from '@icon-park/react';
 import { ProgressIndicator } from './ProgressIndicator';
 
 interface DocumentListItemProps {

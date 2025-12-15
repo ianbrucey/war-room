@@ -1,0 +1,159 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Case Summary Generation API Contract",
+  "version": "1.0.0",
+  "basePath": "/api/cases",
+  
+  "endpoints": {
+    "generateSummary": {
+      "method": "POST",
+      "path": "/:caseId/summary/generate",
+      "description": "Generate initial case summary from all processed documents",
+      "authentication": "Required (Bearer token)",
+      "request": {
+        "params": {
+          "caseId": { "type": "string", "description": "Case file ID (UUID)" }
+        },
+        "body": null
+      },
+      "response": {
+        "202": {
+          "description": "Summary generation started",
+          "body": {
+            "success": true,
+            "message": "Case summary generation started",
+            "caseId": "string",
+            "status": "generating"
+          }
+        },
+        "400": {
+          "description": "No processed documents available",
+          "body": {
+            "success": false,
+            "error": "No processed documents found for this case"
+          }
+        },
+        "409": {
+          "description": "Summary already generating or exists",
+          "body": {
+            "success": false,
+            "error": "Summary already exists. Use /update or /regenerate endpoint"
+          }
+        },
+        "404": {
+          "description": "Case not found",
+          "body": {
+            "success": false,
+            "error": "Case not found"
+          }
+        }
+      },
+      "sideEffects": [
+        "Sets case_summary_status to 'generating'",
+        "Emits WebSocket event 'summary:generating'",
+        "On success: Creates case_summary.md, sets status to 'generated'",
+        "On failure: Sets status to 'failed'"
+      ]
+    },
+
+    "updateSummary": {
+      "method": "POST",
+      "path": "/:caseId/summary/update",
+      "description": "Incrementally update summary with new documents only",
+      "authentication": "Required (Bearer token)",
+      "request": {
+        "params": {
+          "caseId": { "type": "string", "description": "Case file ID (UUID)" }
+        },
+        "body": null
+      },
+      "response": {
+        "202": {
+          "description": "Summary update started",
+          "body": {
+            "success": true,
+            "message": "Case summary update started",
+            "caseId": "string",
+            "status": "generating",
+            "newDocumentsCount": "number"
+          }
+        },
+        "400": {
+          "description": "No new documents to incorporate",
+          "body": {
+            "success": false,
+            "error": "No new documents to incorporate"
+          }
+        },
+        "404": {
+          "description": "Case not found or no existing summary",
+          "body": {
+            "success": false,
+            "error": "No existing summary to update. Use /generate endpoint"
+          }
+        }
+      },
+      "sideEffects": [
+        "Backs up existing summary to case_summary.md.bak",
+        "Sets case_summary_status to 'generating'",
+        "On success: Updates case_summary.md, sets status to 'generated'",
+        "On failure: Restores from backup, sets status to 'failed'"
+      ]
+    },
+
+    "regenerateSummary": {
+      "method": "POST",
+      "path": "/:caseId/summary/regenerate",
+      "description": "Full rebuild of summary from all documents",
+      "authentication": "Required (Bearer token)",
+      "request": {
+        "params": {
+          "caseId": { "type": "string", "description": "Case file ID (UUID)" }
+        },
+        "body": null
+      },
+      "response": {
+        "202": {
+          "description": "Summary regeneration started",
+          "body": {
+            "success": true,
+            "message": "Case summary regeneration started",
+            "caseId": "string",
+            "status": "generating"
+          }
+        }
+      },
+      "sideEffects": [
+        "Backs up existing summary to case_summary.md.bak",
+        "Ignores existing summary content",
+        "Processes ALL documents fresh"
+      ]
+    },
+
+    "getSummaryStatus": {
+      "method": "GET",
+      "path": "/:caseId/summary/status",
+      "description": "Get current summary generation status",
+      "authentication": "Required (Bearer token)",
+      "request": {
+        "params": {
+          "caseId": { "type": "string", "description": "Case file ID (UUID)" }
+        }
+      },
+      "response": {
+        "200": {
+          "body": {
+            "caseId": "string",
+            "status": "null | 'generating' | 'generated' | 'stale' | 'failed'",
+            "generatedAt": "number | null (Unix ms)",
+            "version": "number",
+            "documentCount": "number",
+            "currentDocumentCount": "number (total processed docs in case)",
+            "isStale": "boolean"
+          }
+        }
+      }
+    }
+  }
+}
+

@@ -84,6 +84,11 @@ export interface ICaseFileRow {
   user_id: string;
   created_at: number;
   updated_at: number;
+  // Case Summary Fields
+  case_summary_status?: string | null;
+  case_summary_generated_at?: number | null;
+  case_summary_version?: number | null;
+  case_summary_document_count?: number | null;
 }
 
 /**
@@ -143,6 +148,10 @@ export function caseFileToRow(caseFile: ICaseFile): ICaseFileRow {
     user_id: caseFile.user_id,
     created_at: caseFile.created_at,
     updated_at: caseFile.updated_at,
+    case_summary_status: caseFile.case_summary_status,
+    case_summary_generated_at: caseFile.case_summary_generated_at,
+    case_summary_version: caseFile.case_summary_version,
+    case_summary_document_count: caseFile.case_summary_document_count,
   };
 }
 
@@ -158,6 +167,10 @@ export function rowToCaseFile(row: ICaseFileRow): ICaseFile {
     user_id: row.user_id,
     created_at: row.created_at,
     updated_at: row.updated_at,
+    case_summary_status: row.case_summary_status as 'generating' | 'generated' | 'stale' | 'failed' | null | undefined,
+    case_summary_generated_at: row.case_summary_generated_at,
+    case_summary_version: row.case_summary_version,
+    case_summary_document_count: row.case_summary_document_count,
   };
 }
 
@@ -258,8 +271,9 @@ export function rowToMessage(row: IMessageRow): TMessage {
  */
 
 export type {
-  IConfigStorageRefer,
-  // 复用的业务类型
-  TChatConversation,
-  TMessage,
+    IConfigStorageRefer,
+    // 复用的业务类型
+    TChatConversation,
+    TMessage
 };
+

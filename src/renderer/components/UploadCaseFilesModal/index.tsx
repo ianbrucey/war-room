@@ -11,6 +11,7 @@ import { Message, Modal, Spin } from '@arco-design/web-react';
 import type { ICaseDocument } from '@process/documents/types';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { CaseSummaryControls } from './CaseSummaryControls';
 import { DocumentListSection } from './DocumentListSection';
 import { DropzoneSection } from './DropzoneSection';
 import './styles.css';
@@ -45,6 +46,17 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
   const [loading, setLoading] = useState(true);
   const pageSize = 10;
 
+  // Case summary state
+  const [summaryStatus, setSummaryStatus] = useState<'generating' | 'generated' | 'stale' | 'failed' | null>(null);
+  const [summaryGeneratedAt, setSummaryGeneratedAt] = useState<number | null>(null);
+  const [summaryVersion, setSummaryVersion] = useState(0);
+  const [summaryDocumentCount, setSummaryDocumentCount] = useState(0);
+  const [generationProgress, setGenerationProgress] = useState<{
+    percent: number;
+    currentBatch: number;
+    totalBatches: number;
+  } | undefined>(undefined);
+
   /**
    * Initial fetch when modal opens
    */
@@ -74,7 +86,29 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
       }
     };
 
+    // Fetch summary status
+    const fetchSummaryStatus = async () => {
+      try {
+        const response = await fetch(`/api/cases/${caseFileId}/summary/status`, {
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.status) {
+            setSummaryStatus(data.status.status);
+            setSummaryGeneratedAt(data.status.generatedAt);
+            setSummaryVersion(data.status.version);
+            setSummaryDocumentCount(data.status.documentCount);
+          }
+        }
+      } catch (error) {
+        console.error('[UploadModal] Failed to fetch summary status:', error);
+      }
+    };
+
     fetchDocuments();
+    fetchSummaryStatus();
   }, [visible, caseFileId]);
 
   /**
@@ -330,7 +364,91 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
     setPage(1); // Reset to first page when searching
   }, []);
 
+  /**
+   * Handle generate summary
+   */
+  const handleGenerateSummary = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/cases/${caseFileId}/summary/generate`, {
+        method: 'POST',
+        credentials: 'include',
+      });
 
+      if (response.ok) {
+        message.success('Summary generation started');
+        setSummaryStatus('generating');
+        setGenerationProgress({ percent: 0, currentBatch: 0, totalBatches: 1 });
+      } else {
+        const error = await response.json();
+        message.error(error.error || 'Failed to start summary generation');
+      }
+    } catch (error) {
+      console.error('[UploadModal] Failed to generate summary:', error);
+      message.error('Failed to start summary generation');
+    }
+  }, [caseFileId, message]);
+
+  /**
+   * Handle update summary
+   */
+  const handleUpdateSummary = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/cases/${caseFileId}/summary/update`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        message.success('Summary update started');
+        setSummaryStatus('generating');
+        setGenerationProgress({ percent: 0, currentBatch: 0, totalBatches: 1 });
+      } else {
+        const error = await response.json();
+        message.error(error.error || 'Failed to start summary update');
+      }
+    } catch (error) {
+      console.error('[UploadModal] Failed to update summary:', error);
+      message.error('Failed to start summary update');
+    }
+  }, [caseFileId, message]);
+
+  /**
+   * Handle regenerate summary
+   */
+  const handleRegenerateSummary = useCallback(async () => {
+    Modal.confirm({
+      title: 'Regenerate Summary',
+      content: 'This will rebuild the entire summary from scratch. Continue?',
+      onOk: async () => {
+        try {
+          const response = await fetch(`/api/cases/${caseFileId}/summary/regenerate`, {
+            method: 'POST',
+            credentials: 'include',
+          });
+
+          if (response.ok) {
+            message.success('Summary regeneration started');
+            setSummaryStatus('generating');
+            setGenerationProgress({ percent: 0, currentBatch: 0, totalBatches: 1 });
+          } else {
+            const error = await response.json();
+            message.error(error.error || 'Failed to start summary regeneration');
+          }
+        } catch (error) {
+          console.error('[UploadModal] Failed to regenerate summary:', error);
+          message.error('Failed to start summary regeneration');
+        }
+      },
+    });
+  }, [caseFileId, message]);
+
+  /**
+   * Handle view summary
+   */
+  const handleViewSummary = useCallback(() => {
+    // TODO: Implement summary viewer
+    message.info('Summary viewer coming soon');
+  }, [message]);
 
   return (
     <>
@@ -351,19 +469,35 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
               <p>{t('uploadModal.loading', 'Loading documents...')}</p>
             </div>
           ) : (
-            <DocumentListSection
-              documents={documents}
-              activeTab={activeTab}
-              onTabChange={handleTabChange}
-              page={page}
-              pageSize={pageSize}
-              onPageChange={handlePageChange}
-              searchQuery={searchQuery}
-              onSearchChange={handleSearchChange}
-              onPreview={handlePreview}
-              onDownload={handleDownload}
-              onDelete={handleDelete}
-            />
+            <>
+              <DocumentListSection
+                documents={documents}
+                activeTab={activeTab}
+                onTabChange={handleTabChange}
+                page={page}
+                pageSize={pageSize}
+                onPageChange={handlePageChange}
+                searchQuery={searchQuery}
+                onSearchChange={handleSearchChange}
+                onPreview={handlePreview}
+                onDownload={handleDownload}
+                onDelete={handleDelete}
+              />
+
+              <CaseSummaryControls
+                caseId={caseFileId}
+                summaryStatus={summaryStatus}
+                summaryGeneratedAt={summaryGeneratedAt}
+                summaryVersion={summaryVersion}
+                summaryDocumentCount={summaryDocumentCount}
+                currentDocumentCount={documents.filter(d => d.processing_status === 'complete').length}
+                onGenerate={handleGenerateSummary}
+                onUpdate={handleUpdateSummary}
+                onRegenerate={handleRegenerateSummary}
+                onViewSummary={handleViewSummary}
+                generationProgress={generationProgress}
+              />
+            </>
           )}
         </div>
       </ModalWrapper>

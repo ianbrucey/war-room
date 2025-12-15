@@ -205,6 +205,11 @@ export interface ICaseFile {
   user_id: string;
   created_at: number;
   updated_at: number;
+  // Case Summary Fields
+  case_summary_status?: 'generating' | 'generated' | 'stale' | 'failed' | null;
+  case_summary_generated_at?: number | null;
+  case_summary_version?: number;
+  case_summary_document_count?: number;
 }
 
 export interface IPaginatedResult<T> {
