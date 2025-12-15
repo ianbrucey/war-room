@@ -148,7 +148,7 @@ OUTPUT STRUCTURE:
 }
 \`\`\`
 
-Now analyze the provided metadata files and generate the case summary following this exact structure.`;
+The document metadata files will be provided to you directly via file paths. Analyze each metadata.json file and generate the case summary following this exact structure.`;
 
 /**
  * Prompt template for incremental updates (merge with existing summary)
@@ -166,8 +166,8 @@ CRITICAL RULES:
 EXISTING SUMMARY:
 {existing_summary_content}
 
-NEW DOCUMENTS TO INCORPORATE:
+NEW DOCUMENTS TO INCORPORATE (provided as file paths):
 {new_metadata_files}
 
-OUTPUT: Updated case_summary.md with the same structure, incorporating new information while preserving existing facts.`;
+The new document metadata files will be provided to you directly. Analyze each metadata.json file and output an updated case_summary.md with the same structure, incorporating new information while preserving existing facts.`;
 

@@ -5,7 +5,8 @@
  */
 
 import { execSync } from 'child_process';
-import { copyFile, readFile, writeFile } from 'fs/promises';
+import { copyFile, readFile, unlink, writeFile } from 'fs/promises';
+import { tmpdir } from 'os';
 import { join } from 'path';
 import { CaseFileRepository } from '../../../webserver/auth/repository/CaseFileRepository';
 import { DocumentRepository } from '../../../webserver/auth/repository/DocumentRepository';
@@ -63,7 +64,7 @@ export class CaseSummaryGenerator {
       // Process in batches
       const summary = await this.processInBatches(
         metadataFiles,
-        completedDocs.map((d: any) => d.id),
+        caseFile.workspace_path,
         onProgress
       );
 
@@ -152,7 +153,7 @@ export class CaseSummaryGenerator {
       const updatedSummary = await this.mergeWithExisting(
         existingSummary,
         newMetadataFiles,
-        newDocs.map((d: any) => d.id)
+        caseFile.workspace_path
       );
 
       // Write updated summary
@@ -217,27 +218,30 @@ export class CaseSummaryGenerator {
   }
 
   /**
-   * Load metadata.json files for given documents
+   * Load metadata.json file paths for given documents
    *
    * @private
    */
   private async loadMetadataFiles(
     workspacePath: string,
     documents: Array<{ id: string; folder_name: string; filename: string }>
-  ): Promise<Array<{ docId: string; filename: string; content: string }>> {
-    const metadataFiles: Array<{ docId: string; filename: string; content: string }> = [];
+  ): Promise<Array<{ docId: string; filename: string; filePath: string }>> {
+    const metadataFiles: Array<{ docId: string; filename: string; filePath: string }> = [];
 
     for (const doc of documents) {
       try {
         const metadataPath = join(workspacePath, 'documents', doc.folder_name, 'metadata.json');
-        const content = await readFile(metadataPath, 'utf-8');
+
+        // Verify file exists (but don't read content - Gemini will read it directly)
+        await readFile(metadataPath, 'utf-8');
+
         metadataFiles.push({
           docId: doc.id,
           filename: doc.filename,
-          content,
+          filePath: metadataPath,
         });
       } catch (error) {
-        console.warn(`[CaseSummaryGenerator] Could not load metadata for ${doc.filename}:`, error);
+        console.warn(`[CaseSummaryGenerator] Could not access metadata for ${doc.filename}:`, error);
         // Continue with other documents
       }
     }
@@ -251,8 +255,8 @@ export class CaseSummaryGenerator {
    * @private
    */
   private async processInBatches(
-    metadataFiles: Array<{ docId: string; filename: string; content: string }>,
-    documentIds: string[],
+    metadataFiles: Array<{ docId: string; filename: string; filePath: string }>,
+    workspacePath: string,
     onProgress?: (percent: number, currentBatch: number, totalBatches: number) => void
   ): Promise<string> {
     const totalBatches = Math.ceil(metadataFiles.length / this.BATCH_SIZE);
@@ -266,16 +270,19 @@ export class CaseSummaryGenerator {
 
       console.log(`[CaseSummaryGenerator] Processing batch ${batchNum}/${totalBatches} (${batch.length} documents)`);
 
-      // Create temporary directory with metadata files for this batch
-      const batchContent = batch.map(f => `File: ${f.filename}\n${f.content}`).join('\n\n---\n\n');
+      // Build file list for prompt
+      const fileList = batch.map(f => `- ${f.filename}`).join('\n');
 
-      // Build prompt
+      // Build prompt with file references
       const prompt = cumulativeSummary
-        ? `${CASE_SUMMARY_GENERATION_PROMPT}\n\nPREVIOUS SUMMARY:\n${cumulativeSummary}\n\nNEW DOCUMENTS:\n${batchContent}`
-        : `${CASE_SUMMARY_GENERATION_PROMPT}\n\nDOCUMENTS:\n${batchContent}`;
+        ? `${CASE_SUMMARY_GENERATION_PROMPT}\n\nPREVIOUS SUMMARY:\n${cumulativeSummary}\n\nNEW DOCUMENTS TO ANALYZE:\n${fileList}`
+        : `${CASE_SUMMARY_GENERATION_PROMPT}\n\nDOCUMENTS TO ANALYZE:\n${fileList}`;
 
-      // Call Gemini CLI
-      const batchSummary = await this.callGeminiCLI(prompt);
+      // Extract file paths for Gemini CLI
+      const filePaths = batch.map(f => f.filePath);
+
+      // Call Gemini CLI with file paths
+      const batchSummary = await this.callGeminiCLI(prompt, filePaths, workspacePath);
 
       cumulativeSummary = batchSummary;
 
@@ -301,33 +308,53 @@ export class CaseSummaryGenerator {
    */
   private async mergeWithExisting(
     existingSummary: string,
-    newMetadataFiles: Array<{ docId: string; filename: string; content: string }>,
-    newDocumentIds: string[]
+    newMetadataFiles: Array<{ docId: string; filename: string; filePath: string }>,
+    workspacePath: string
   ): Promise<string> {
     console.log(`[CaseSummaryGenerator] Merging ${newMetadataFiles.length} new documents with existing summary`);
 
-    const newDocsContent = newMetadataFiles.map(f => `File: ${f.filename}\n${f.content}`).join('\n\n---\n\n');
+    // Build file list for prompt
+    const fileList = newMetadataFiles.map(f => `- ${f.filename}`).join('\n');
 
     const prompt = CASE_SUMMARY_UPDATE_PROMPT
       .replace('{existing_summary_content}', existingSummary)
-      .replace('{new_metadata_files}', newDocsContent);
+      .replace('{new_metadata_files}', fileList);
 
-    return await this.callGeminiCLI(prompt);
+    // Extract file paths for Gemini CLI
+    const filePaths = newMetadataFiles.map(f => f.filePath);
+
+    return await this.callGeminiCLI(prompt, filePaths, workspacePath);
   }
 
   /**
-   * Call Gemini CLI with prompt
+   * Call Gemini CLI with prompt and file paths
+   *
+   * Uses a temporary file for the prompt to avoid shell escaping issues
    *
    * @private
    */
-  private async callGeminiCLI(prompt: string): Promise<string> {
-    try {
-      // Escape prompt for shell
-      const escapedPrompt = prompt.replace(/"/g, '\\"').replace(/\$/g, '\\$').replace(/`/g, '\\`');
+  private async callGeminiCLI(
+    prompt: string,
+    filePaths: string[],
+    workspacePath: string
+  ): Promise<string> {
+    const tempPromptFile = join(tmpdir(), `case-summary-prompt-${Date.now()}.txt`);
 
-      const command = `gemini -m gemini-2.5-flash -p "${escapedPrompt}"`;
+    try {
+      // Write prompt to temporary file to avoid shell escaping issues
+      await writeFile(tempPromptFile, prompt, 'utf-8');
+
+      // Build file arguments using @ syntax: @file1 @file2 @file3
+      const fileArgs = filePaths.map(p => `@${p}`).join(' ');
+
+      // Include the documents directory so Gemini can access all metadata files
+      const documentsDir = join(workspacePath, 'documents');
+
+      // Build command using stdin to pass the prompt (avoids all shell escaping issues)
+      const command = `cat "${tempPromptFile}" | gemini -m gemini-2.5-flash ${fileArgs} --include-directories ${documentsDir}`;
 
       console.log('[CaseSummaryGenerator] Calling Gemini CLI...');
+      console.log(`[CaseSummaryGenerator] Processing ${filePaths.length} files from ${documentsDir}`);
 
       const output = execSync(command, {
         encoding: 'utf-8',
@@ -340,6 +367,13 @@ export class CaseSummaryGenerator {
     } catch (error) {
       console.error('[CaseSummaryGenerator] Gemini CLI call failed:', error);
       throw new Error(`Failed to generate summary: ${error}`);
+    } finally {
+      // Clean up temp file
+      try {
+        await unlink(tempPromptFile);
+      } catch (cleanupError) {
+        console.warn('[CaseSummaryGenerator] Failed to clean up temp prompt file:', cleanupError);
+      }
     }
   }
 
