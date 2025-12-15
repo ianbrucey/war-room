@@ -136,6 +136,74 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
   }, [visible, caseFileId]);
 
   /**
+   * Listen for summary progress WebSocket events
+   */
+  useEffect(() => {
+    if (!visible) return;
+
+    // Get WebSocket connection
+    const ws = (window as any).__websocket;
+    if (!ws) {
+      console.warn('[UploadModal] WebSocket connection not available');
+      return;
+    }
+
+    // Subscribe to case file updates
+    ws.send(JSON.stringify({
+      type: 'subscribe-case-file',
+      caseFileId
+    }));
+
+    console.log('[UploadModal] Subscribed to summary progress for case:', caseFileId);
+
+    // Listen for summary progress events
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        if (data.event === 'summary:progress') {
+          const progressData = data.data;
+          console.log('[UploadModal] Received summary progress:', progressData);
+
+          // Update progress based on event type
+          if (progressData.type === 'summary:generating') {
+            setSummaryStatus('generating');
+            setGenerationProgress({
+              percent: progressData.progress,
+              currentBatch: progressData.currentBatch || 0,
+              totalBatches: progressData.totalBatches || 1,
+            });
+          } else if (progressData.type === 'summary:complete') {
+            setSummaryStatus('generated');
+            setSummaryVersion(progressData.version || 1);
+            setSummaryDocumentCount(progressData.documentCount || 0);
+            setGenerationProgress(undefined);
+            message.success('Case summary generated successfully!');
+          } else if (progressData.type === 'summary:failed') {
+            setSummaryStatus('failed');
+            setGenerationProgress(undefined);
+            message.error(progressData.error || 'Summary generation failed');
+          }
+        }
+      } catch (error) {
+        console.error('[UploadModal] Failed to parse WebSocket message:', error);
+      }
+    };
+
+    ws.addEventListener('message', handleMessage);
+
+    // Cleanup
+    return () => {
+      ws.removeEventListener('message', handleMessage);
+      ws.send(JSON.stringify({
+        type: 'unsubscribe-case-file',
+        caseFileId
+      }));
+      console.log('[UploadModal] Unsubscribed from summary progress');
+    };
+  }, [visible, caseFileId, message]);
+
+  /**
    * Upload a single file to the backend API
    */
   const uploadFile = async (fileMetadata: FileMetadata): Promise<string | null> => {
