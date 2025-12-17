@@ -16,6 +16,12 @@ const Sider: React.FC<{ onSessionClick?: () => void; collapsed?: boolean }> = ({
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const isSettings = pathname.startsWith('/settings');
+  const isCasesPage = pathname === '/cases';
+
+  // Hide sidebar completely on cases page
+  if (isCasesPage) {
+    return null;
+  }
 
   const handleLogout = async () => {
     try {

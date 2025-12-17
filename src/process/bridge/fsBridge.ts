@@ -4,12 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { AIONUI_TIMESTAMP_SEPARATOR } from '@/common/constants';
 import fs from 'fs/promises';
 import path from 'path';
 import { ipcBridge } from '../../common';
-import { readDirectoryRecursive } from '../utils';
 import { getSystemDir } from '../initStorage';
-import { AIONUI_TIMESTAMP_SEPARATOR } from '@/common/constants';
+import { readDirectoryRecursive } from '../utils';
 
 export function initFsBridge(): void {
   ipcBridge.fs.getFilesByDir.provider(async ({ dir }) => {
@@ -232,6 +232,40 @@ export function initFsBridge(): void {
     } catch (error) {
       console.error('Failed to rename entry:', error);
       return { success: false, msg: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  });
+
+  // Read file content for preview (读取文件内容用于预览)
+  ipcBridge.fs.readFileContent.provider(async ({ filePath }) => {
+    try {
+      // Get file extension for MIME type detection
+      const ext = path.extname(filePath).toLowerCase();
+
+      // Map common extensions to MIME types
+      const mimeTypes: Record<string, string> = {
+        '.md': 'text/markdown',
+        '.markdown': 'text/markdown',
+        '.html': 'text/html',
+        '.htm': 'text/html',
+        '.txt': 'text/plain',
+        '.json': 'application/json',
+        '.css': 'text/css',
+        '.js': 'text/javascript',
+        '.ts': 'text/typescript',
+        '.xml': 'application/xml',
+        '.yaml': 'text/yaml',
+        '.yml': 'text/yaml',
+      };
+
+      const mimeType = mimeTypes[ext] || 'text/plain';
+
+      // Read file content as UTF-8
+      const content = await fs.readFile(filePath, 'utf-8');
+
+      return { content, mimeType };
+    } catch (error) {
+      console.error('Failed to read file content:', error);
+      throw error;
     }
   });
 }

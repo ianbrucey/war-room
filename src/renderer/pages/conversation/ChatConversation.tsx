@@ -7,9 +7,11 @@
 import { ipcBridge } from '@/common';
 import type { TChatConversation } from '@/common/storage';
 import { uuid } from '@/common/utils';
+import FilePreviewPanel from '@/renderer/components/FilePreviewPanel';
+import { iconColors } from '@/renderer/theme/colors';
 import { Dropdown, Menu, Tooltip, Typography } from '@arco-design/web-react';
 import { History, Plus } from '@icon-park/react';
-import React, { useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import useSWR from 'swr';
@@ -17,9 +19,8 @@ import { emitter } from '../../utils/emitter';
 import AcpChat from './acp/AcpChat';
 import ChatLayout from './ChatLayout';
 import ChatSider from './ChatSider';
-import GeminiChat from './gemini/GeminiChat';
 import CodexChat from './codex/CodexChat';
-import { iconColors } from '@/renderer/theme/colors';
+import GeminiChat from './gemini/GeminiChat';
 
 const AssociatedConversation: React.FC<{ conversation_id: string }> = ({ conversation_id }) => {
   const { data } = useSWR(['getAssociateConversation', conversation_id], () => ipcBridge.conversation.getAssociateConversation.invoke({ conversation_id }));
@@ -89,6 +90,11 @@ const ChatConversation: React.FC<{
   conversation?: TChatConversation;
 }> = ({ conversation }) => {
   const { t } = useTranslation();
+	  const [previewFile, setPreviewFile] = useState<{ filePath: string; filename: string } | null>(null);
+
+	  const handleFilePreview = useCallback((filePath: string, filename: string) => {
+	    setPreviewFile({ filePath, filename });
+	  }, []);
 
   const conversationNode = useMemo(() => {
     if (!conversation) return null;
@@ -104,7 +110,7 @@ const ChatConversation: React.FC<{
     }
   }, [conversation]);
 
-  const sliderTitle = useMemo(() => {
+	  const sliderTitle = useMemo(() => {
     return (
       <div className='flex items-center justify-between'>
         <span className='text-16px font-bold text-t-primary'>{t('conversation.workspace.title')}</span>
@@ -116,13 +122,25 @@ const ChatConversation: React.FC<{
         )}
       </div>
     );
-  }, [conversation]);
+	  }, [conversation, t]);
 
-  return (
-    <ChatLayout title={conversation?.name} backend={conversation?.type === 'acp' ? conversation?.extra?.backend : conversation?.type === 'codex' ? 'codex' : undefined} siderTitle={sliderTitle} sider={<ChatSider conversation={conversation} />}>
-      {conversationNode}
-    </ChatLayout>
-  );
+	  useEffect(() => {
+	    // Reset preview when switching conversations
+	    setPreviewFile(null);
+	  }, [conversation?.id]);
+
+		  return (
+		    <ChatLayout
+		      title={conversation?.name}
+		      backend={conversation?.type === 'acp' ? conversation?.extra?.backend : conversation?.type === 'codex' ? 'codex' : undefined}
+		      siderTitle={sliderTitle}
+		      sider={<ChatSider conversation={conversation} onFilePreview={handleFilePreview} />}
+		      preview={previewFile ? <FilePreviewPanel filePath={previewFile.filePath} filename={previewFile.filename} /> : undefined}
+		      onFilePreview={handleFilePreview}
+		    >
+		      {conversationNode}
+		    </ChatLayout>
+		  );
 };
 
 export default ChatConversation;

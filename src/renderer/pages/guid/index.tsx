@@ -14,8 +14,12 @@ import CodexLogo from '@/renderer/assets/logos/codex.svg';
 import GeminiLogo from '@/renderer/assets/logos/gemini.svg';
 import IflowLogo from '@/renderer/assets/logos/iflow.svg';
 import QwenLogo from '@/renderer/assets/logos/qwen.svg';
+import ConversationPanel from '@/renderer/components/ConversationPanel';
 import FilePreview from '@/renderer/components/FilePreview';
+import LeftPanel from '@/renderer/components/LeftPanel';
+import WorkspacePanel from '@/renderer/components/WorkspacePanel';
 import { useLayoutContext } from '@/renderer/context/LayoutContext';
+import { usePanelContext } from '@/renderer/context/PanelContext';
 import { useCompositionInput } from '@/renderer/hooks/useCompositionInput';
 import { useDragUpload } from '@/renderer/hooks/useDragUpload';
 import { geminiModeList } from '@/renderer/hooks/useModeModeList';
@@ -25,7 +29,7 @@ import { allSupportedExts, type FileMetadata, getCleanFileNames } from '@/render
 import { iconColors } from '@/renderer/theme/colors';
 import { hasSpecificModelCapability } from '@/renderer/utils/modelCapabilities';
 import type { AcpBackend } from '@/types/acpTypes';
-import { Button, ConfigProvider, Dropdown, Input, Menu, Tooltip } from '@arco-design/web-react';
+import { Layout as ArcoLayout, Button, ConfigProvider, Dropdown, Input, Menu, Tooltip } from '@arco-design/web-react';
 import { ArrowUp, FolderOpen, MenuUnfold, Plus, Up } from '@icon-park/react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -154,6 +158,31 @@ const Guid: React.FC = () => {
   };
   const navigate = useNavigate();
   const layout = useLayoutContext();
+
+  // Panel state from context
+  const {
+    activePanel,
+    panelWidth,
+    setPanelWidth,
+    resetPanelWidth,
+    MIN_WIDTH,
+    MAX_WIDTH
+  } = usePanelContext();
+
+  // Render panel content based on active panel
+  const renderPanelContent = () => {
+    switch (activePanel) {
+      case 'conversations':
+        return <ConversationPanel />;
+      case 'workspace':
+        // No workspace on guid page yet, show placeholder
+        return <WorkspacePanel conversation_id="" workspace={dir} />;
+      case 'preview':
+        return <div className='p-16px'>File Preview (Coming Soon)</div>;
+      default:
+        return null;
+    }
+  };
 
   // 处理粘贴的文件
   const handleFilesAdded = useCallback((pastedFiles: FileMetadata[]) => {
@@ -404,14 +433,29 @@ const Guid: React.FC = () => {
     return () => clearTimeout(initialDelay);
   }, [t]);
   return (
-    <ConfigProvider getPopupContainer={() => guidContainerRef.current || document.body}>
-      <div ref={guidContainerRef} className='h-full flex-center flex-col' style={{ position: 'relative' }}>
-        {layout?.isMobile && layout?.siderCollapsed && (
-          <button type='button' className='mobile-toggle-btn fixed top-0 left-0 z-50 flex items-center justify-center w-16 h-16' style={{ background: 'transparent', border: 'none', outline: 'none', padding: 0, margin: 0 }} onClick={() => layout.setSiderCollapsed(false)}>
-            <MenuUnfold theme='outline' size={24} fill={iconColors.secondary} strokeWidth={3} />
-          </button>
-        )}
-        <div className={styles.guidLayout}>
+    <ArcoLayout className='size-full'>
+      {/* LEFT: Dynamic Panel */}
+      <LeftPanel
+        activePanel={activePanel}
+        width={panelWidth}
+        onWidthChange={setPanelWidth}
+        onResetWidth={resetPanelWidth}
+        minWidth={MIN_WIDTH}
+        maxWidth={MAX_WIDTH}
+      >
+        {renderPanelContent()}
+      </LeftPanel>
+
+      {/* RIGHT: Main Content */}
+      <ArcoLayout.Content className='flex flex-col flex-1'>
+        <ConfigProvider getPopupContainer={() => guidContainerRef.current || document.body}>
+          <div ref={guidContainerRef} className='h-full flex-center flex-col' style={{ position: 'relative' }}>
+            {layout?.isMobile && layout?.siderCollapsed && (
+              <button type='button' className='mobile-toggle-btn fixed top-0 left-0 z-50 flex items-center justify-center w-16 h-16' style={{ background: 'transparent', border: 'none', outline: 'none', padding: 0, margin: 0 }} onClick={() => layout.setSiderCollapsed(false)}>
+                <MenuUnfold theme='outline' size={24} fill={iconColors.secondary} strokeWidth={3} />
+              </button>
+            )}
+            <div className={styles.guidLayout}>
           <p className={`text-2xl font-semibold mb-8 text-0 text-center`}>{t('conversation.welcome.title')}</p>
 
           {/* Agent 选择器 - 在标题下方 */}
@@ -649,6 +693,8 @@ const Guid: React.FC = () => {
         </div>
       </div>
     </ConfigProvider>
+      </ArcoLayout.Content>
+    </ArcoLayout>
   );
 };
 

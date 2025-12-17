@@ -9,6 +9,7 @@ import type { IDirOrFile } from '@/common/ipcBridge';
 import { ConfigStorage } from '@/common/storage';
 import FlexFullContainer from '@/renderer/components/FlexFullContainer';
 import { UploadCaseFilesModal } from '@/renderer/components/UploadCaseFilesModal';
+import { WorkspaceFilePreview } from '@/renderer/components/WorkspaceFilePreview';
 import { usePasteService } from '@/renderer/hooks/usePasteService';
 import { iconColors } from '@/renderer/theme/colors';
 import { emitter, useAddEventListener } from '@/renderer/utils/emitter';
@@ -24,6 +25,8 @@ interface WorkspaceProps {
   workspace: string;
   conversation_id: string;
   eventPrefix?: 'gemini' | 'acp' | 'codex';
+  /** Optional callback to surface previewable files in the middle preview panel */
+  onFilePreview?: (filePath: string, filename: string) => void;
 }
 
 const useLoading = () => {
@@ -47,7 +50,7 @@ const useLoading = () => {
   return [loading, setLoadingHandler] as const;
 };
 
-const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, eventPrefix = 'gemini' }) => {
+const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, eventPrefix = 'gemini', onFilePreview }) => {
   const { t } = useTranslation();
   const { caseFileId } = useParams<{ caseFileId?: string }>();
   const [selected, setSelected] = useState<string[]>([]);
@@ -85,6 +88,12 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
     target: null,
     loading: false,
   });
+  // File preview modal state (文件预览弹窗状态)
+  const [filePreview, setFilePreview] = useState<{ visible: boolean; filePath: string; filename: string }>({
+    visible: false,
+    filePath: '',
+    filename: '',
+  });
   const extractNodeData = useCallback((node: NodeInstance | null | undefined): IDirOrFile | null => {
     // 统一从 Tree 节点中提取数据引用，避免在调用处反复断言 / Centralize dataRef extraction to avoid repeated casts
     if (!node) return null;
@@ -107,6 +116,83 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
   // Detect correct path separator by platform (根据路径判断平台分隔符)
   const getPathSeparator = useCallback((targetPath: string) => {
     return targetPath.includes('\\') ? '\\' : '/';
+  }, []);
+
+  // Check if a file can be previewed in-app (检查文件是否可在应用内预览)
+  const isPreviewableFile = useCallback((filePath: string): boolean => {
+    const ext = filePath.split('.').pop()?.toLowerCase();
+    return ['md', 'markdown', 'html', 'htm'].includes(ext || '');
+  }, []);
+
+  // Open file preview either via inline panel (when callback provided) or modal fallback
+  const openFilePreview = useCallback(
+    (fullPath: string, filename: string) => {
+      if (onFilePreview) {
+        onFilePreview(fullPath, filename);
+        return;
+      }
+      setFilePreview({
+        visible: true,
+        filePath: fullPath,
+        filename,
+      });
+    },
+    [onFilePreview]
+  );
+
+  // Close file preview modal (关闭文件预览弹窗)
+  const closeFilePreview = useCallback(() => {
+    setFilePreview({
+      visible: false,
+      filePath: '',
+      filename: '',
+    });
+  }, []);
+
+  /**
+   * Filter out excluded files and folders from the workspace tree
+   * Excludes: AGENTS.md, WARP.md, GEMINI.md, documents folder, and dotfiles
+   */
+  const filterExcludedFiles = useCallback((nodes: IDirOrFile[]): IDirOrFile[] => {
+    const excludedFiles = ['AGENTS.md', 'WARP.md', 'GEMINI.md'];
+    const excludedFolders = ['documents'];
+
+    const shouldExclude = (node: IDirOrFile): boolean => {
+      const name = node.name;
+
+      // Exclude dotfiles (files/folders starting with .)
+      if (name.startsWith('.')) {
+        return true;
+      }
+
+      // Exclude specific files
+      if (excludedFiles.includes(name)) {
+        return true;
+      }
+
+      // Exclude specific folders
+      if (!node.isFile && excludedFolders.includes(name)) {
+        return true;
+      }
+
+      return false;
+    };
+
+    const filterTree = (items: IDirOrFile[]): IDirOrFile[] => {
+      return items
+        .filter((item) => !shouldExclude(item))
+        .map((item) => {
+          if (item.children && item.children.length > 0) {
+            return {
+              ...item,
+              children: filterTree(item.children),
+            };
+          }
+          return item;
+        });
+    };
+
+    return filterTree(nodes);
   }, []);
 
   const [searchText, setSearchText] = useState('');
@@ -204,7 +290,10 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
       return ipcBridge.conversation.getWorkspace
         .invoke({ path, workspace, conversation_id, search: search || '' })
         .then((res) => {
-          setFiles(res);
+          // Filter out excluded files and folders
+          const filteredFiles = filterExcludedFiles(res);
+          setFiles(filteredFiles);
+
           // 只在搜索时才重置 Tree key，否则保持选中状态
           if (search) {
             setTreeKey(Math.random());
@@ -219,14 +308,14 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
             return [];
           };
 
-          setExpandedKeys(getFirstLevelKeys(res));
-          return res;
+          setExpandedKeys(getFirstLevelKeys(filteredFiles));
+          return filteredFiles;
         })
         .finally(() => {
           setLoading(false);
         });
     },
-    [conversation_id, workspace]
+    [conversation_id, workspace, filterExcludedFiles]
   );
 
   const refreshWorkspace = useCallback(() => {
@@ -1068,7 +1157,13 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
                   className='flex items-center gap-4px'
                   style={{ color: 'inherit' }}
                   onDoubleClick={() => {
-                    void ipcBridge.shell.openFile.invoke(path);
+                    // Preview markdown/HTML files in-app, open others externally
+                    // 预览 markdown/HTML 文件在应用内，其他文件用外部程序打开
+                    if (isFile && isPreviewableFile(path)) {
+                      openFilePreview(path, node.dataRef.name);
+                    } else {
+                      void ipcBridge.shell.openFile.invoke(path);
+                    }
                   }}
                   onContextMenu={(event) => {
                     event.preventDefault();
@@ -1162,7 +1257,9 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
             loadMore={(treeNode) => {
               const path = treeNode.props.dataRef.fullPath;
               return ipcBridge.conversation.getWorkspace.invoke({ conversation_id, workspace, path }).then((res) => {
-                treeNode.props.dataRef.children = res[0].children;
+                // Filter out excluded files from lazy-loaded children
+                const filteredChildren = filterExcludedFiles(res[0].children || []);
+                treeNode.props.dataRef.children = filteredChildren;
                 setFiles([...files]);
               });
             }}
@@ -1170,6 +1267,14 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
         )}
       </FlexFullContainer>
       {caseFileId && <UploadCaseFilesModal visible={uploadModalVisible} caseFileId={caseFileId} onClose={() => setUploadModalVisible(false)} />}
+
+      {/* Workspace File Preview Modal */}
+      <WorkspaceFilePreview
+        visible={filePreview.visible}
+        filePath={filePreview.filePath}
+        filename={filePreview.filename}
+        onClose={closeFilePreview}
+      />
     </div>
   );
 };

@@ -81,11 +81,13 @@ const useScrollIntoView = (id: string) => {
   }, [id]);
 };
 
-const ChatHistory: React.FC<{ onSessionClick?: () => void; collapsed?: boolean }> = ({ onSessionClick, collapsed = false }) => {
+const ChatHistory: React.FC<{ onSessionClick?: () => void; collapsed?: boolean; caseFileId?: string }> = ({ onSessionClick, collapsed = false, caseFileId: propCaseFileId }) => {
   const [chatHistory, setChatHistory] = useState<TChatConversation[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState<string>('');
-  const { id, caseFileId } = useParams<{ id?: string; caseFileId?: string }>();
+  const { id, caseFileId: routeCaseFileId } = useParams<{ id?: string; caseFileId?: string }>();
+  // Use prop caseFileId if provided, otherwise fall back to route param
+  const caseFileId = propCaseFileId || routeCaseFileId;
   const { t } = useTranslation();
   const navigate = useNavigate();
 
@@ -114,7 +116,12 @@ const ChatHistory: React.FC<{ onSessionClick?: () => void; collapsed?: boolean }
       fetchPromise
         .then((history) => {
           if (history && Array.isArray(history) && history.length > 0) {
-            const sortedHistory = history.sort((a, b) => (b.createTime - a.createTime < 0 ? -1 : 1));
+            // Sort by modifyTime (most recently active first), fallback to createTime
+            const sortedHistory = history.sort((a, b) => {
+              const aTime = a.modifyTime || a.createTime;
+              const bTime = b.modifyTime || b.createTime;
+              return bTime - aTime;
+            });
             setChatHistory(sortedHistory);
           } else {
             setChatHistory([]);
@@ -195,13 +202,13 @@ const ChatHistory: React.FC<{ onSessionClick?: () => void; collapsed?: boolean }
       <Tooltip key={conversation.id} disabled={!collapsed} content={conversation.name || t('conversation.welcome.newConversation')} position='right'>
         <div
           id={'c-' + conversation.id}
-          className={classNames('hover:bg-hover px-12px py-8px rd-8px flex justify-start items-center group cursor-pointer relative overflow-hidden group shrink-0 conversation-item [&.conversation-item+&.conversation-item]:mt-2px', {
+          className={classNames('hover:bg-hover px-12px py-8px rd-8px flex justify-start items-center group cursor-pointer relative overflow-hidden group shrink-0 conversation-item [&.conversation-item+&.conversation-item]:mt-2px text-t-primary', {
             '!bg-active ': isSelected,
           })}
           onClick={handleSelect.bind(null, conversation)}
         >
           <MessageOne theme='outline' size='20' className='mt-2px ml-2px mr-8px flex' />
-          <FlexFullContainer className='h-24px'>{isEditing ? <Input className='text-14px lh-24px h-24px' value={editingName} onChange={setEditingName} onKeyDown={handleEditKeyDown} onBlur={handleEditSave} autoFocus size='small' /> : <div className='text-nowrap overflow-hidden inline-block w-full text-14px lh-24px whitespace-nowrap'>{conversation.name}</div>}</FlexFullContainer>
+          <FlexFullContainer className='h-24px'>{isEditing ? <Input className='text-14px lh-24px h-24px text-t-primary' value={editingName} onChange={setEditingName} onKeyDown={handleEditKeyDown} onBlur={handleEditSave} autoFocus size='small' /> : <div className='text-nowrap overflow-hidden inline-block w-full text-14px lh-24px whitespace-nowrap text-t-primary'>{conversation.name}</div>}</FlexFullContainer>
           <div
             className={classNames('absolute right--15px top-0px h-full w-70px items-center justify-center hidden group-hover:flex !collapsed-hidden')}
             style={{
@@ -250,30 +257,28 @@ const ChatHistory: React.FC<{ onSessionClick?: () => void; collapsed?: boolean }
     );
   };
 
-  return (
-    <FlexFullContainer>
-      <div
-        className={classNames('size-full', {
-          'flex-center size-full': !chatHistory.length,
-          'flex flex-col overflow-y-auto': !!chatHistory.length,
-        })}
-      >
-        {!chatHistory.length ? (
-          <Empty className={'collapsed-hidden'} description={t('conversation.history.noHistory')} />
-        ) : (
-          chatHistory.map((item) => {
-            const timeline = formatTimeline(item);
-            return (
-              <React.Fragment key={item.id}>
-                {timeline && <div className='collapsed-hidden px-12px py-8px text-13px text-t-secondary font-bold'>{timeline}</div>}
-                {renderConversation(item)}
-              </React.Fragment>
-            );
-          })
-        )}
-      </div>
-    </FlexFullContainer>
-  );
+	  return (
+	    <div
+	      className={classNames('size-full', {
+	        'flex-center': !chatHistory.length,
+	        'flex flex-col overflow-y-auto': !!chatHistory.length,
+	      })}
+	    >
+	      {!chatHistory.length ? (
+	        <Empty className={'collapsed-hidden'} description={t('conversation.history.noHistory')} />
+	      ) : (
+	        chatHistory.map((item) => {
+	          const timeline = formatTimeline(item);
+	          return (
+	            <React.Fragment key={item.id}>
+	              {timeline && <div className='collapsed-hidden px-12px py-8px text-13px text-t-secondary font-bold'>{timeline}</div>}
+	              {renderConversation(item)}
+	            </React.Fragment>
+	          );
+	        })
+	      )}
+	    </div>
+	  );
 };
 
 export default ChatHistory;

@@ -1,77 +1,15 @@
-import FlexFullContainer from '@/renderer/components/FlexFullContainer';
-import { removeStack } from '@/renderer/utils/common';
-import { Layout as ArcoLayout } from '@arco-design/web-react';
-import { ExpandLeft, ExpandRight, MenuUnfold } from '@icon-park/react';
-import React, { useEffect, useState } from 'react';
-import { useLayoutContext } from '@/renderer/context/LayoutContext';
+import ConversationPanel from '@/renderer/components/ConversationPanel';
+import LeftPanel from '@/renderer/components/LeftPanel';
+import WorkspacePanel from '@/renderer/components/WorkspacePanel';
+import { usePanelContext } from '@/renderer/context/PanelContext';
+import React from 'react';
 
 import ClaudeLogo from '@/renderer/assets/logos/claude.svg';
 import CodexLogo from '@/renderer/assets/logos/codex.svg';
 import GeminiLogo from '@/renderer/assets/logos/gemini.svg';
 import IflowLogo from '@/renderer/assets/logos/iflow.svg';
 import QwenLogo from '@/renderer/assets/logos/qwen.svg';
-import { iconColors } from '@/renderer/theme/colors';
 import { ACP_BACKENDS_ALL } from '@/types/acpTypes';
-import classNames from 'classnames';
-
-const addEventListener = <K extends keyof DocumentEventMap>(key: K, handler: (e: DocumentEventMap[K]) => void): (() => void) => {
-  document.addEventListener(key, handler);
-  return () => {
-    document.removeEventListener(key, handler);
-  };
-};
-
-const useSiderWidthWithDrag = (defaultWidth: number) => {
-  const [siderWidth, setSiderWidth] = useState(defaultWidth);
-
-  const handleDragStart = (e: React.MouseEvent) => {
-    const startX = e.clientX;
-    const target = e.target as HTMLElement;
-
-    const initDragStyle = () => {
-      const originalUserSelect = document.body.style.userSelect;
-      target.classList.add('bg-6/40');
-      document.body.style.userSelect = 'none';
-      document.body.style.cursor = 'col-resize';
-      return () => {
-        target.classList.remove('bg-6/40');
-        document.body.style.userSelect = originalUserSelect;
-        document.body.style.cursor = '';
-        target.style.transform = '';
-      };
-    };
-
-    const remove = removeStack(
-      initDragStyle(),
-      addEventListener('mousemove', (e: MouseEvent) => {
-        const deltaX = startX - e.clientX;
-        const newWidth = Math.max(200, Math.min(500, siderWidth + deltaX));
-        target.style.transform = `translateX(${siderWidth - newWidth}px)`;
-      }),
-      addEventListener('mouseup', (e) => {
-        const deltaX = startX - e.clientX;
-        const newWidth = Math.max(200, Math.min(500, siderWidth + deltaX));
-        setSiderWidth(newWidth);
-        remove();
-      })
-    );
-  };
-
-  const dragContext = (
-    <div
-      className={`absolute left-0 top-0 bottom-0 w-6px cursor-col-resize  z-10 hover:bg-6/20`}
-      onMouseDown={handleDragStart}
-      style={{
-        borderLeft: '1px solid var(--bg-3)',
-      }}
-      onDoubleClick={() => {
-        setSiderWidth(defaultWidth);
-      }}
-    />
-  );
-
-  return { siderWidth, dragContext };
-};
 
 const ChatLayout: React.FC<{
   children: React.ReactNode;
@@ -79,71 +17,118 @@ const ChatLayout: React.FC<{
   sider: React.ReactNode;
   siderTitle?: React.ReactNode;
   backend?: string;
+  /** Optional middle-pane preview content (e.g. workspace file preview) */
+  preview?: React.ReactNode;
+  /** Callback used by workspace panel to trigger preview updates */
+  onFilePreview?: (filePath: string, filename: string) => void;
 }> = (props) => {
-  const [rightSiderCollapsed, setRightSiderCollapsed] = useState(false);
-
-  const { siderWidth, dragContext } = useSiderWidthWithDrag(266);
   const { backend } = props;
-  const layout = useLayoutContext();
 
-  // 启动时检测移动端并自动收起右侧边栏
-  useEffect(() => {
-    const checkMobileOnLoad = () => {
-      // 检测屏幕宽度小于768px（平板和手机的常见分界）
-      const isMobile = window.innerWidth < 768;
-      if (isMobile) {
-        setRightSiderCollapsed(true);
-      }
-    };
+  // Panel state from context
+  const {
+    activePanel,
+    panelWidth,
+    setPanelWidth,
+    resetPanelWidth,
+    MIN_WIDTH,
+    MAX_WIDTH
+  } = usePanelContext();
 
-    // 只在组件首次加载时执行一次
-    checkMobileOnLoad();
-  }, []); // 空依赖数组确保只在组件初始化时执行一次
+  // Get conversation_id and workspace from props.sider (ChatSider component)
+  // This is a temporary solution - ideally we'd pass these as props
+  const conversation_id = (props.sider as any)?.props?.conversation?.id || '';
+  const workspace = (props.sider as any)?.props?.conversation?.extra?.workspace || '';
+
+  // Backend logo helper
+  const getBackendLogo = () => {
+    switch (backend) {
+      case 'claude': return ClaudeLogo;
+      case 'gemini': return GeminiLogo;
+      case 'qwen': return QwenLogo;
+      case 'iflow': return IflowLogo;
+      case 'codex': return CodexLogo;
+      default: return '';
+    }
+  };
+
+  // Render panel content based on active panel
+  const renderPanelContent = () => {
+    switch (activePanel) {
+      case 'conversations':
+        return <ConversationPanel />;
+      case 'workspace':
+        return <WorkspacePanel conversation_id={conversation_id} workspace={workspace} onFilePreview={props.onFilePreview} />;
+      case 'preview':
+        return <div className='p-16px'>File Preview (Coming Soon)</div>;
+      default:
+        return null;
+    }
+  };
 
   return (
-    <ArcoLayout className={'size-full'}>
-      <ArcoLayout.Content
-        className='flex flex-col flex-1'
-        onClick={() => {
-          const isMobile = window.innerWidth < 768;
-          if (isMobile && !rightSiderCollapsed) {
-            setRightSiderCollapsed(true);
-          }
-        }}
+    <div className='size-full flex flex-row'>
+      {/* LEFT: Dynamic Panel */}
+      <LeftPanel
+        activePanel={activePanel}
+        width={panelWidth}
+        onWidthChange={setPanelWidth}
+        onResetWidth={resetPanelWidth}
+        minWidth={MIN_WIDTH}
+        maxWidth={MAX_WIDTH}
       >
-        <ArcoLayout.Header className={classNames('h-52px flex items-center justify-between p-16px gap-16px  !bg-1 chat-layout-header')}>
-          <FlexFullContainer className='h-full' containerClassName='flex items-center'>
-            {layout?.isMobile && layout?.siderCollapsed && (
-              <span className='inline-flex items-center justify-center w-18px h-18px mr-4px cursor-pointer' onClick={() => layout.setSiderCollapsed(false)} style={{ lineHeight: 0, transform: 'translateY(1px)' }}>
-                <MenuUnfold theme='outline' size={18} fill={iconColors.secondary} strokeWidth={3} />
-              </span>
-            )}
-            <span className='ml-8px font-bold text-16px lh-[1] text-t-primary inline-block overflow-hidden text-ellipsis whitespace-nowrap w-full max-w-60%'>{props.title}</span>
-          </FlexFullContainer>
-          <div className='flex items-center gap-16px'>
+        {renderPanelContent()}
+      </LeftPanel>
+
+      {/* RIGHT: Main content area with preview + chat panel */}
+      <div className='flex flex-row flex-1 min-w-0 bg-2 p-12px gap-12px overflow-hidden'>
+        {/* Middle: file preview area */}
+        <div className='flex-1 min-w-0 bg-1 rounded-12px overflow-hidden'>
+          {props.preview || (
+            <div className='size-full flex items-center justify-center text-13px text-t-secondary px-16px'>
+              <span>Select a file in the workspace to preview it here.</span>
+            </div>
+          )}
+        </div>
+
+        {/* Right: Chat Panel - card-like container */}
+        <div
+          className='flex flex-col bg-1 rounded-12px overflow-hidden'
+          style={{
+            width: '380px',
+            maxWidth: '420px',
+            minWidth: '340px',
+            flexShrink: 0,
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
+          }}
+        >
+          {/* Chat Panel Header */}
+          <div className='flex items-center justify-between px-16px py-12px border-b border-[var(--bg-3)] flex-shrink-0'>
+            <div className='flex items-center gap-8px'>
+              <span className='font-semibold text-14px text-t-primary'>{props.title || 'Chat'}</span>
+            </div>
             {backend && (
-              <div className='ml-16px flex items-center gap-2 bg-2 w-fit rounded-full px-[8px] py-[2px]'>
-                <img src={backend === 'claude' ? ClaudeLogo : backend === 'gemini' ? GeminiLogo : backend === 'qwen' ? QwenLogo : backend === 'iflow' ? IflowLogo : backend === 'codex' ? CodexLogo : ''} alt={`${backend} logo`} width={16} height={16} style={{ objectFit: 'contain' }} />
-                <span className='font-medium text-t-primary'>{ACP_BACKENDS_ALL[backend as keyof typeof ACP_BACKENDS_ALL]?.name || backend}</span>
+              <div className='flex items-center gap-6px bg-2 rounded-full px-8px py-2px'>
+                <img
+                  src={getBackendLogo()}
+                  alt={`${backend} logo`}
+                  width={14}
+                  height={14}
+                  style={{ objectFit: 'contain' }}
+                />
+                <span className='text-12px text-t-secondary'>
+                  {ACP_BACKENDS_ALL[backend as keyof typeof ACP_BACKENDS_ALL]?.name || backend}
+                </span>
               </div>
             )}
-            {rightSiderCollapsed ? <ExpandRight onClick={() => setRightSiderCollapsed(false)} className='cursor-pointer flex' theme='outline' size='24' fill={iconColors.secondary} strokeWidth={3} /> : <ExpandLeft onClick={() => setRightSiderCollapsed(true)} className='cursor-pointer flex' theme='outline' size='24' fill={iconColors.secondary} strokeWidth={3} />}
           </div>
-        </ArcoLayout.Header>
-        <ArcoLayout.Content className='flex flex-col flex-1 bg-1 overflow-hidden'>{props.children}</ArcoLayout.Content>
-      </ArcoLayout.Content>
 
-      <ArcoLayout.Sider width={siderWidth} collapsedWidth={0} collapsed={rightSiderCollapsed} className={'!bg-1 relative'}>
-        {/* Drag handle */}
-        {/* <div className={`absolute left-0 top-0 bottom-0 w-6px cursor-col-resize transition-all duration-200 z-10 ${isDragging ? 'bg-#86909C/40' : 'hover:bg-#86909C/20'}`} onMouseDown={handleDragStart} onDoubleClick={handleDoubleClick} /> */}
-        {dragContext}
-        <ArcoLayout.Header className={'flex items-center justify-start p-16px gap-16px h-56px'}>
-          <div className='w-full'>{props.siderTitle}</div>
-          {/* <ExpandLeft theme='outline' size='24' fill='#86909C' className='cursor-pointer' strokeWidth={3} onClick={() => setRightSiderCollapsed(true)} /> */}
-        </ArcoLayout.Header>
-        <ArcoLayout.Content className={'h-[calc(100%-106px)] bg-1'}>{props.sider}</ArcoLayout.Content>
-      </ArcoLayout.Sider>
-    </ArcoLayout>
+          {/* Chat Content */}
+          <div className='flex-1 flex flex-col min-h-0 overflow-hidden'>
+            {props.children}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

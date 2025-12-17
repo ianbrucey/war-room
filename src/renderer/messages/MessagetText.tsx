@@ -5,14 +5,14 @@
  */
 
 import type { IMessageText } from '@/common/chatLib';
-import classNames from 'classnames';
-import React, { useMemo, useState } from 'react';
-import MarkdownView from '../components/Markdown';
-import CollapsibleContent from '../components/CollapsibleContent';
-import { Copy } from '@icon-park/react';
-import { useTranslation } from 'react-i18next';
 import { iconColors } from '@/renderer/theme/colors';
 import { Tooltip } from '@arco-design/web-react';
+import { Copy } from '@icon-park/react';
+import classNames from 'classnames';
+import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import CollapsibleContent from '../components/CollapsibleContent';
+import MarkdownView from '../components/Markdown';
 
 const useFormatContent = (content: string) => {
   return useMemo(() => {

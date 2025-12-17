@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { ipcBridge } from '@/common';
 import { withCsrfToken } from '@/webserver/middleware/csrfClient';
 import { Button, Card, Empty, Form, Input, Modal, Spin } from '@arco-design/web-react';
 import { IconPlus } from '@arco-design/web-react/icon';
@@ -92,8 +93,33 @@ export default function CaseSelection() {
     }
   };
 
-  const handleSelectCase = (caseFileId: string) => {
-    navigate(`/${caseFileId}/guid`);
+  const handleSelectCase = async (caseFileId: string) => {
+    try {
+      // Get conversations for this case
+      const conversations = await ipcBridge.database.getConversationsByCase.invoke({
+        caseFileId,
+        page: 0,
+        pageSize: 100,
+      });
+
+      if (conversations && conversations.length > 0) {
+        // Sort by modifyTime to get the most recently active conversation
+        const sorted = conversations.sort((a, b) => {
+          const aTime = a.modifyTime || a.createTime;
+          const bTime = b.modifyTime || b.createTime;
+          return bTime - aTime;
+        });
+        // Navigate to the most recently active conversation
+        navigate(`/${caseFileId}/conversation/${sorted[0].id}`);
+      } else {
+        // No conversations yet, go to guid to start a new one
+        navigate(`/${caseFileId}/guid`);
+      }
+    } catch (error) {
+      console.error('[CaseSelection] Failed to get conversations:', error);
+      // Fallback to guid page on error
+      navigate(`/${caseFileId}/guid`);
+    }
   };
 
   return (
