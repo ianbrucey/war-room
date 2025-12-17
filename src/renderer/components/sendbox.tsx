@@ -133,7 +133,7 @@ const SendBox: React.FC<{
         </div>
 
         {/* Input Area */}
-        <div className='relative w-full'>
+        <div className='w-full'>
           <Input.TextArea
             autoFocus
             disabled={disabled}
@@ -142,9 +142,8 @@ const SendBox: React.FC<{
             className='!bg-transparent !border-none !shadow-none !active:shadow-none !focus:shadow-none text-14px px-3 py-3 !resize-none'
             style={{
               width: '100%',
-              minHeight: '100px',
-              maxHeight: '400px',
-              paddingBottom: '40px', // Space for the send button
+              minHeight: '80px',
+              maxHeight: '300px',
             }}
             onChange={(v) => {
               setInput(v);
@@ -152,31 +151,13 @@ const SendBox: React.FC<{
             onPaste={onPaste}
             onFocus={onFocus}
             {...compositionHandlers}
-            autoSize={{ minRows: 4, maxRows: 15 }}
+            autoSize={{ minRows: 3, maxRows: 12 }}
             onKeyDown={createKeyDownHandler(sendMessageHandler)}
           />
-
-          {/* Floating Send Button */}
-          <div className='absolute bottom-3 right-3 z-10 flex items-center gap-2'>
-            {actionsRight}
-            {isLoading || loading ? (
-              <Button shape='circle' type='secondary' className='bg-animate' icon={<div className='mx-auto size-12px bg-6' onClick={stopHandler}></div>}></Button>
-            ) : (
-              <Button
-                shape='circle'
-                type='primary'
-                className='shadow-lg'
-                icon={<ArrowUp theme='outline' size='16' fill='white' strokeWidth={3} />}
-                onClick={() => {
-                  sendMessageHandler();
-                }}
-              />
-            )}
-          </div>
         </div>
 
         {/* Bottom Context/Files Bar */}
-        {(prefix && (
+        {prefix && (
           <div
             className='px-3 py-2 border-t border-border bg-fill-1'
             style={{
@@ -185,7 +166,31 @@ const SendBox: React.FC<{
           >
             {prefix}
           </div>
-        ))}
+        )}
+
+        {/* Bottom Action Bar */}
+        <div
+          className='flex items-center justify-end px-3 py-2 gap-2 border-t'
+          style={{
+            borderTop: '1px solid var(--color-border-2)',
+            backgroundColor: 'var(--color-fill-2)',
+          }}
+        >
+          {actionsRight}
+          {isLoading || loading ? (
+            <Button shape='circle' type='secondary' className='bg-animate' icon={<div className='mx-auto size-12px bg-6' onClick={stopHandler}></div>}></Button>
+          ) : (
+            <Button
+              shape='circle'
+              type='primary'
+              className='shadow-lg'
+              icon={<ArrowUp theme='outline' size='16' fill='white' strokeWidth={3} />}
+              onClick={() => {
+                sendMessageHandler();
+              }}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

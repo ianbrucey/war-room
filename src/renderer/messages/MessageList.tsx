@@ -150,7 +150,7 @@ const MessageList: React.FC<{ className?: string }> = () => {
 
   return (
     <div className='relative flex-1 h-full'>
-      <div className='flex-1 overflow-auto h-full pb-10px box-border' ref={ref} onScroll={handleScroll}>
+      <div className='flex-1 overflow-auto h-full pb-10px box-border' style={{ padding: '20px'}} ref={ref} onScroll={handleScroll}>
         {/* 使用 PreviewGroup 包裹所有消息，实现跨消息预览图片 Use PreviewGroup to wrap all messages for cross-message image preview */}
         <Image.PreviewGroup actionsLayout={['zoomIn', 'zoomOut', 'originalSize', 'rotateLeft', 'rotateRight']}>
           <ImagePreviewContext.Provider value={{ inPreviewGroup: true }}>
