@@ -7,27 +7,46 @@
 import { ipcBridge } from '@/common';
 import MarkdownView from '@/renderer/components/Markdown';
 import { Empty, Spin } from '@arco-design/web-react';
+import { Close } from '@icon-park/react';
+import classNames from 'classnames';
 import React, { useEffect, useState } from 'react';
 
+export interface PreviewTab {
+  filePath: string;
+  filename: string;
+}
+
 interface FilePreviewPanelProps {
-  /** Full path to the file on disk */
-  filePath?: string;
-  /** Display filename */
-  filename?: string;
+  /** Array of open tabs */
+  tabs: PreviewTab[];
+  /** Currently active tab index */
+  activeTab: number;
+  /** Callback when tab is selected */
+  onTabSelect: (index: number) => void;
+  /** Callback when tab is closed */
+  onTabClose: (index: number) => void;
 }
 
 /**
- * Inline File Preview Panel
+ * Inline File Preview Panel with Tabs
  *
  * Renders markdown and HTML files directly in the middle pane of the
- * conversation layout. This mirrors the behaviour of WorkspaceFilePreview
- * but without using a modal.
+ * conversation layout. Supports multiple tabs for switching between files.
  */
-const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({ filePath, filename }) => {
+const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
+  tabs,
+  activeTab,
+  onTabSelect,
+  onTabClose
+}) => {
   const [loading, setLoading] = useState(false);
   const [content, setContent] = useState<string>('');
   const [mimeType, setMimeType] = useState<string>('text/plain');
   const [error, setError] = useState<string | null>(null);
+
+  const currentTab = tabs[activeTab];
+  const filePath = currentTab?.filePath;
+  const filename = currentTab?.filename;
 
   useEffect(() => {
     if (!filePath) {
@@ -82,7 +101,7 @@ const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({ filePath, filename 
     );
   };
 
-  if (!filePath) {
+  if (tabs.length === 0) {
     return (
       <div className='size-full flex items-center justify-center px-16px text-13px text-t-secondary'>
         <Empty description='Select a file in the workspace to preview it here.' />
@@ -91,13 +110,42 @@ const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({ filePath, filename 
   }
 
   return (
-    <div className='size-full flex flex-col bg-1 border-l border-[var(--bg-3)]'>
-      <div className='flex items-center justify-between px-12px py-8px border-b border-[var(--bg-3)]'>
-        <span className='text-13px font-medium text-t-primary truncate' title={filePath}>
-          {filename || filePath}
-        </span>
+    <div className='size-full flex flex-col'>
+      {/* Tab Bar */}
+      <div className='flex items-center border-b border-[var(--bg-3)] bg-2 overflow-x-auto flex-shrink-0'>
+        {tabs.map((tab, index) => (
+          <div
+            key={tab.filePath}
+            className={classNames(
+              'flex items-center gap-6px px-12px py-8px cursor-pointer border-r border-[var(--bg-3)] min-w-0 max-w-180px group',
+              {
+                'bg-1': index === activeTab,
+                'hover:bg-hover': index !== activeTab,
+              }
+            )}
+            onClick={() => onTabSelect(index)}
+          >
+            <span
+              className='text-13px truncate flex-1 text-t-primary'
+              title={tab.filePath}
+            >
+              {tab.filename}
+            </span>
+            <button
+              className='flex items-center justify-center w-16px h-16px rounded-4px hover:bg-[var(--bg-4)] opacity-0 group-hover:opacity-100 transition-opacity border-none bg-transparent cursor-pointer flex-shrink-0'
+              onClick={(e) => {
+                e.stopPropagation();
+                onTabClose(index);
+              }}
+            >
+              <Close theme='outline' size='12' className='text-t-secondary' />
+            </button>
+          </div>
+        ))}
       </div>
-      <div className='flex-1 overflow-auto px-12px py-8px'>
+
+      {/* Content Area */}
+      <div className='flex-1 overflow-auto px-12px py-8px min-h-0'>
         {loading && (
           <div className='flex flex-col items-center justify-center h-full gap-8px'>
             <Spin size={24} />

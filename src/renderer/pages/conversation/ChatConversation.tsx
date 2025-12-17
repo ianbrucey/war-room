@@ -7,7 +7,7 @@
 import { ipcBridge } from '@/common';
 import type { TChatConversation } from '@/common/storage';
 import { uuid } from '@/common/utils';
-import FilePreviewPanel from '@/renderer/components/FilePreviewPanel';
+import FilePreviewPanel, { PreviewTab } from '@/renderer/components/FilePreviewPanel';
 import { iconColors } from '@/renderer/theme/colors';
 import { Dropdown, Menu, Tooltip, Typography } from '@arco-design/web-react';
 import { History, Plus } from '@icon-park/react';
@@ -90,11 +90,43 @@ const ChatConversation: React.FC<{
   conversation?: TChatConversation;
 }> = ({ conversation }) => {
   const { t } = useTranslation();
-	  const [previewFile, setPreviewFile] = useState<{ filePath: string; filename: string } | null>(null);
 
-	  const handleFilePreview = useCallback((filePath: string, filename: string) => {
-	    setPreviewFile({ filePath, filename });
-	  }, []);
+  // Tabbed file preview state
+  const [previewTabs, setPreviewTabs] = useState<PreviewTab[]>([]);
+  const [activeTabIndex, setActiveTabIndex] = useState(0);
+
+  const handleFilePreview = useCallback((filePath: string, filename: string) => {
+    setPreviewTabs((prev) => {
+      // Check if file is already open
+      const existingIndex = prev.findIndex((tab) => tab.filePath === filePath);
+      if (existingIndex >= 0) {
+        // File already open, just switch to it
+        setActiveTabIndex(existingIndex);
+        return prev;
+      }
+      // Add new tab and switch to it
+      const newTabs = [...prev, { filePath, filename }];
+      setActiveTabIndex(newTabs.length - 1);
+      return newTabs;
+    });
+  }, []);
+
+  const handleTabSelect = useCallback((index: number) => {
+    setActiveTabIndex(index);
+  }, []);
+
+  const handleTabClose = useCallback((index: number) => {
+    setPreviewTabs((prev) => {
+      const newTabs = prev.filter((_, i) => i !== index);
+      // Adjust active tab if needed
+      if (newTabs.length === 0) {
+        setActiveTabIndex(0);
+      } else if (index <= activeTabIndex) {
+        setActiveTabIndex(Math.max(0, activeTabIndex - 1));
+      }
+      return newTabs;
+    });
+  }, [activeTabIndex]);
 
   const conversationNode = useMemo(() => {
     if (!conversation) return null;
@@ -124,23 +156,31 @@ const ChatConversation: React.FC<{
     );
 	  }, [conversation, t]);
 
-	  useEffect(() => {
-	    // Reset preview when switching conversations
-	    setPreviewFile(null);
-	  }, [conversation?.id]);
+  useEffect(() => {
+    // Reset preview tabs when switching conversations
+    setPreviewTabs([]);
+    setActiveTabIndex(0);
+  }, [conversation?.id]);
 
-		  return (
-		    <ChatLayout
-		      title={conversation?.name}
-		      backend={conversation?.type === 'acp' ? conversation?.extra?.backend : conversation?.type === 'codex' ? 'codex' : undefined}
-		      siderTitle={sliderTitle}
-		      sider={<ChatSider conversation={conversation} onFilePreview={handleFilePreview} />}
-		      preview={previewFile ? <FilePreviewPanel filePath={previewFile.filePath} filename={previewFile.filename} /> : undefined}
-		      onFilePreview={handleFilePreview}
-		    >
-		      {conversationNode}
-		    </ChatLayout>
-		  );
+  return (
+    <ChatLayout
+      title={conversation?.name}
+      backend={conversation?.type === 'acp' ? conversation?.extra?.backend : conversation?.type === 'codex' ? 'codex' : undefined}
+      siderTitle={sliderTitle}
+      sider={<ChatSider conversation={conversation} onFilePreview={handleFilePreview} />}
+      preview={
+        <FilePreviewPanel
+          tabs={previewTabs}
+          activeTab={activeTabIndex}
+          onTabSelect={handleTabSelect}
+          onTabClose={handleTabClose}
+        />
+      }
+      onFilePreview={handleFilePreview}
+    >
+      {conversationNode}
+    </ChatLayout>
+  );
 };
 
 export default ChatConversation;
