@@ -2,7 +2,7 @@ import ConversationPanel from '@/renderer/components/ConversationPanel';
 import LeftPanel from '@/renderer/components/LeftPanel';
 import WorkspacePanel from '@/renderer/components/WorkspacePanel';
 import { usePanelContext } from '@/renderer/context/PanelContext';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import ClaudeLogo from '@/renderer/assets/logos/claude.svg';
 import CodexLogo from '@/renderer/assets/logos/codex.svg';
@@ -10,6 +10,11 @@ import GeminiLogo from '@/renderer/assets/logos/gemini.svg';
 import IflowLogo from '@/renderer/assets/logos/iflow.svg';
 import QwenLogo from '@/renderer/assets/logos/qwen.svg';
 import { ACP_BACKENDS_ALL } from '@/types/acpTypes';
+
+const CHAT_PANEL_WIDTH_KEY = 'chatPanelWidth';
+const DEFAULT_CHAT_WIDTH = 380;
+const MIN_CHAT_WIDTH = 320;
+const MAX_CHAT_WIDTH = 600;
 
 const ChatLayout: React.FC<{
   children: React.ReactNode;
@@ -24,7 +29,7 @@ const ChatLayout: React.FC<{
 }> = (props) => {
   const { backend } = props;
 
-  // Panel state from context
+  // Panel state from context (for left panel)
   const {
     activePanel,
     panelWidth,
@@ -33,6 +38,45 @@ const ChatLayout: React.FC<{
     MIN_WIDTH,
     MAX_WIDTH
   } = usePanelContext();
+
+  // Chat panel width state (persisted to localStorage)
+  const [chatWidth, setChatWidth] = useState(() => {
+    const saved = localStorage.getItem(CHAT_PANEL_WIDTH_KEY);
+    return saved ? parseInt(saved, 10) : DEFAULT_CHAT_WIDTH;
+  });
+
+  useEffect(() => {
+    localStorage.setItem(CHAT_PANEL_WIDTH_KEY, chatWidth.toString());
+  }, [chatWidth]);
+
+  // Drag handler for chat panel resize
+  const handleChatDragStart = (e: React.MouseEvent) => {
+    const startX = e.clientX;
+    const startWidth = chatWidth;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      // Drag LEFT to increase width (since panel is on the right)
+      const deltaX = startX - moveEvent.clientX;
+      const newWidth = Math.max(MIN_CHAT_WIDTH, Math.min(MAX_CHAT_WIDTH, startWidth + deltaX));
+      setChatWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+
+  const handleChatResetWidth = () => {
+    setChatWidth(DEFAULT_CHAT_WIDTH);
+  };
 
   // Get conversation_id and workspace from props.sider (ChatSider component)
   // This is a temporary solution - ideally we'd pass these as props
@@ -90,17 +134,25 @@ const ChatLayout: React.FC<{
           )}
         </div>
 
-        {/* Right: Chat Panel - card-like container */}
+        {/* Right: Chat Panel - card-like container with drag handle */}
         <div
-          className='flex flex-col bg-1 rounded-12px overflow-hidden'
+          className='flex flex-col bg-1 rounded-12px overflow-hidden relative'
           style={{
-            width: '380px',
-            maxWidth: '420px',
-            minWidth: '340px',
+            width: `${chatWidth}px`,
             flexShrink: 0,
             boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
           }}
         >
+          {/* Drag Handle - left edge of chat panel */}
+          <div
+            className='absolute left-0 top-0 bottom-0 w-6px cursor-col-resize z-10 hover:bg-[var(--color-border-2)] transition-colors'
+            onMouseDown={handleChatDragStart}
+            onDoubleClick={handleChatResetWidth}
+            style={{
+              borderLeft: '1px solid var(--bg-3)',
+            }}
+          />
+
           {/* Chat Panel Header */}
           <div className='flex items-center justify-between px-16px py-12px border-b border-[var(--bg-3)] flex-shrink-0'>
             <div className='flex items-center gap-8px'>
