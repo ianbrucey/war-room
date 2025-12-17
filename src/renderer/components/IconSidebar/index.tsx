@@ -17,6 +17,7 @@ import classNames from 'classnames';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import JQLogo from '../../../../public/en/JQ.png';
 
 export type PanelId = 'conversations' | 'workspace' | 'preview' | null;
 
@@ -63,6 +64,19 @@ const IconSidebar: React.FC<IconSidebarProps> = ({ activePanel, onPanelToggle, c
 
   return (
     <div className='size-full flex flex-col items-center py-12px gap-8px bg-2'>
+      {/* Logo */}
+      <Tooltip content='JusticeQuest' position='right'>
+        <div
+          className='w-48px h-48px flex items-center justify-center cursor-pointer transition-all hover:opacity-80 mb-8px'
+          onClick={() => {
+            // Could show about modal or navigate to home
+            console.log('Logo clicked');
+          }}
+        >
+          <img src={JQLogo} alt='JusticeQuest' className='w-64px h-48px object-contain' />
+        </div>
+      </Tooltip>
+
       {/* Conversations Icon */}
       <Tooltip content={t('conversation.history.title') || 'Conversations'} position='right'>
         <div

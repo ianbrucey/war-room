@@ -1,8 +1,10 @@
+import ConversationHeader from '@/renderer/components/ConversationHeader';
 import ConversationPanel from '@/renderer/components/ConversationPanel';
 import LeftPanel from '@/renderer/components/LeftPanel';
 import WorkspacePanel from '@/renderer/components/WorkspacePanel';
 import { usePanelContext } from '@/renderer/context/PanelContext';
 import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 
 import ClaudeLogo from '@/renderer/assets/logos/claude.svg';
 import CodexLogo from '@/renderer/assets/logos/codex.svg';
@@ -28,6 +30,7 @@ const ChatLayout: React.FC<{
   onFilePreview?: (filePath: string, filename: string) => void;
 }> = (props) => {
   const { backend } = props;
+  const { caseFileId } = useParams<{ caseFileId?: string }>();
 
   // Panel state from context (for left panel)
   const {
@@ -110,21 +113,26 @@ const ChatLayout: React.FC<{
   };
 
   return (
-    <div className='size-full flex flex-row'>
-      {/* LEFT: Dynamic Panel */}
-      <LeftPanel
-        activePanel={activePanel}
-        width={panelWidth}
-        onWidthChange={setPanelWidth}
-        onResetWidth={resetPanelWidth}
-        minWidth={MIN_WIDTH}
-        maxWidth={MAX_WIDTH}
-      >
-        {renderPanelContent()}
-      </LeftPanel>
+    <div className='size-full flex flex-col'>
+      {/* TOP: Conversation Header */}
+      {caseFileId && <ConversationHeader caseFileId={caseFileId} />}
 
-      {/* RIGHT: Main content area with preview + chat panel */}
-      <div className='flex flex-row flex-1 min-w-0 bg-2 p-12px gap-12px overflow-hidden'>
+      {/* MAIN: Layout with left panel and content */}
+      <div className='flex flex-row flex-1 min-w-0 overflow-hidden'>
+        {/* LEFT: Dynamic Panel */}
+        <LeftPanel
+          activePanel={activePanel}
+          width={panelWidth}
+          onWidthChange={setPanelWidth}
+          onResetWidth={resetPanelWidth}
+          minWidth={MIN_WIDTH}
+          maxWidth={MAX_WIDTH}
+        >
+          {renderPanelContent()}
+        </LeftPanel>
+
+        {/* RIGHT: Main content area with preview + chat panel */}
+        <div className='flex flex-row flex-1 min-w-0 bg-2 p-12px gap-12px overflow-hidden'>
         {/* Middle: file preview area */}
         <div className='flex-1 min-w-0 bg-1 rounded-12px overflow-hidden'>
           {props.preview || (
@@ -179,6 +187,7 @@ const ChatLayout: React.FC<{
             {props.children}
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

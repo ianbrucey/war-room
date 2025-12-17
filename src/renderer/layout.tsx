@@ -80,12 +80,12 @@ const LayoutInner: React.FC<{
   return (
     <LayoutContext.Provider value={{ isMobile, siderCollapsed: collapsed, setSiderCollapsed: setCollapsed }}>
       <ArcoLayout className={'size-full layout'}>
-        {/* Icon Sidebar (60px) - Hide on cases page */}
+        {/* Icon Sidebar (80px) - Hide on cases page */}
         {!isCasesPage && (
           <ArcoLayout.Sider
             collapsedWidth={0}
             collapsed={false}
-            width={60}
+            width={80}
             className='!bg-2 layout-icon-sidebar'
           >
             <IconSidebar

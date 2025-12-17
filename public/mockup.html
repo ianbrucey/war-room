@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slash Cases Mockup</title>
+    <!-- Importing Inter font for that premium look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Shared Styles */
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 40px;
+            background-color: #f5f6f8;
+            color: #333;
+        }
+
+        .controls {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .toggle-btn {
+            padding: 10px 20px;
+            margin: 0 10px;
+            border: 2px solid #e5e7eb;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #6b7280;
+            transition: all 0.2s;
+        }
+
+        .toggle-btn.active {
+            border-color: #000;
+            color: #000;
+            background: #f9fafb;
+        }
+
+        .view-section {
+            display: none;
+            max-width: 1200px;
+            margin: 0 auto;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* CONCEPT A: Vibrant / Glassmorphism */
+        .concept-a {
+            background: linear-gradient(135deg, #1A1A2E 0%, #16213E 100%);
+            color: #fff;
+            padding: 60px;
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            min-height: 600px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .concept-a::before {
+            content: '';
+            position: absolute;
+            top: -100px;
+            right: -50px;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(76, 175, 80, 0.2) 0%, rgba(0,0,0,0) 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .concept-a-header {
+            text-align: center;
+            margin-bottom: 60px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .concept-a-logo {
+            height: 60px;
+            margin-bottom: 24px;
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+        }
+
+        .concept-a-title {
+            font-size: 3rem;
+            font-weight: 800;
+            margin: 0 0 12px 0;
+            background: linear-gradient(90deg, #ffffff 0%, #a5b4fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.02em;
+        }
+
+        .concept-a-subtitle {
+            font-size: 1.1rem;
+            color: rgba(255,255,255,0.7);
+            margin: 0;
+        }
+
+        .concept-a-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .concept-a-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 32px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .concept-a-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-8px);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        .concept-a-card.create-new {
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+        }
+
+        .concept-a-card.create-new:hover {
+            border-color: #4caf50;
+            background: rgba(76, 175, 80, 0.05);
+            color: #4caf50;
+        }
+
+        .folder-icon-circle {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            font-size: 24px;
+        }
+
+        .concept-a h3 {
+            margin: 0 0 8px 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .concept-a-meta {
+            margin-top: auto;
+            padding-top: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.875rem;
+            color: rgba(255,255,255,0.5);
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .active-tag {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            padding: 4px 12px;
+            border-radius: 100px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        /* CONCEPT B: Clean / Professional */
+        .concept-b {
+            background: #ffffff;
+            color: #1f2937;
+            padding: 60px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 24px 60px -12px rgba(0, 0, 0, 0.05);
+            min-height: 600px;
+        }
+
+        .concept-b-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f3f4f6;
+        }
+
+        .concept-b-branding {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .concept-b-logo {
+            height: 40px;
+            width: auto;
+        }
+
+        .concept-b-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #111827;
+            margin: 0;
+        }
+
+        .concept-b-btn {
+            background-color: #111827;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+        }
+
+        .concept-b-btn:hover {
+            background-color: #374151;
+            transform: translateY(-1px);
+        }
+
+        .concept-b-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .concept-b-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 24px;
+            background-color: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .concept-b-item:hover {
+            border-color: #111827;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            transform: scale(1.01);
+            position: relative;
+            z-index: 5;
+        }
+
+        .concept-b-item-main {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .concept-b-icon-placeholder {
+            width: 48px;
+            height: 48px;
+            background-color: #f9fafb;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #9ca3af;
+            font-size: 20px;
+        }
+
+        .concept-b-item-info h4 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .concept-b-item-info p {
+            margin: 4px 0 0 0;
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+
+        .concept-b-arrow {
+            color: #d1d5db;
+            font-size: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="controls">
+        <button class="toggle-btn active" onclick="showConcept('A')">Concept A: Modern</button>
+        <button class="toggle-btn" onclick="showConcept('B')">Concept B: Professional</button>
+    </div>
+
+    <!-- CONCEPT A -->
+    <div id="concept-A" class="view-section active">
+        <div class="concept-a">
+            <div class="concept-a-header">
+                <img src="en/JQ.png" alt="Logo" class="concept-a-logo">
+                <h1 class="concept-a-title">Welcome Back, Agent</h1>
+                <p class="concept-a-subtitle">Select an active case file to begin your session or initiate a new investigation.</p>
+            </div>
+
+            <div class="concept-a-grid">
+                <!-- Create New -->
+                <div class="concept-a-card create-new">
+                    <div style="font-size: 40px; margin-bottom: 10px;">+</div>
+                    <h3>Initialize New Case</h3>
+                    <span style="font-size: 0.9rem; opacity: 0.7;">Start a fresh investigation</span>
+                </div>
+
+                <!-- Case 1 -->
+                <div class="concept-a-card">
+                    <div class="folder-icon-circle">📂</div>
+                    <h3>Investigation: Omega Red</h3>
+                    <p style="color: rgba(255,255,255,0.4); margin: 0;">CASE-2025-001</p>
+                    <div class="concept-a-meta">
+                        <span>🕒 2 mins ago</span>
+                        <span class="active-tag">Active</span>
+                    </div>
+                </div>
+
+                <!-- Case 2 -->
+                <div class="concept-a-card">
+                    <div class="folder-icon-circle">📂</div>
+                    <h3>Audit: Project Blue Book</h3>
+                    <p style="color: rgba(255,255,255,0.4); margin: 0;">CASE-2024-892</p>
+                    <div class="concept-a-meta">
+                        <span>🕒 4 hours ago</span>
+                    </div>
+                </div>
+
+                <!-- Case 3 -->
+                <div class="concept-a-card">
+                    <div class="folder-icon-circle">📂</div>
+                    <h3>Personnel Review: J. Doe</h3>
+                    <p style="color: rgba(255,255,255,0.4); margin: 0;">HR-2025-112</p>
+                    <div class="concept-a-meta">
+                        <span>🕒 1 day ago</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONCEPT B -->
+    <div id="concept-B" class="view-section">
+        <div class="concept-b">
+            <div class="concept-b-header">
+                <div class="concept-b-branding">
+                    <img src="en/JQ.png" alt="Logo" class="concept-b-logo">
+                    <h2 class="concept-b-title">Case Files</h2>
+                </div>
+                <button class="concept-b-btn">+ New Case</button>
+            </div>
+
+            <div class="concept-b-list">
+                <div class="concept-b-item">
+                    <div class="concept-b-item-main">
+                        <div class="concept-b-icon-placeholder">📂</div>
+                        <div class="concept-b-item-info">
+                            <h4>Investigation: Omega Red</h4>
+                            <p>CASE-2025-001 • Last updated 2 mins ago</p>
+                        </div>
+                    </div>
+                    <div class="concept-b-arrow">→</div>
+                </div>
+
+                <div class="concept-b-item">
+                    <div class="concept-b-item-main">
+                        <div class="concept-b-icon-placeholder">📂</div>
+                        <div class="concept-b-item-info">
+                            <h4>Audit: Project Blue Book</h4>
+                            <p>CASE-2024-892 • Last updated 4 hours ago</p>
+                        </div>
+                    </div>
+                    <div class="concept-b-arrow">→</div>
+                </div>
+
+                <div class="concept-b-item">
+                    <div class="concept-b-item-main">
+                        <div class="concept-b-icon-placeholder">📂</div>
+                        <div class="concept-b-item-info">
+                            <h4>Personnel Review: J. Doe</h4>
+                            <p>HR-2025-112 • Last updated 1 day ago</p>
+                        </div>
+                    </div>
+                    <div class="concept-b-arrow">→</div>
+                </div>
+
+                <div class="concept-b-item">
+                    <div class="concept-b-item-main">
+                        <div class="concept-b-icon-placeholder">📂</div>
+                        <div class="concept-b-item-info">
+                            <h4>Network Security Analysis</h4>
+                            <p>SEC-2025-044 • Last updated 3 days ago</p>
+                        </div>
+                    </div>
+                    <div class="concept-b-arrow">→</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showConcept(concept) {
+            // Hide all
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.toggle-btn').forEach(el => el.classList.remove('active'));
+            
+            // Show selected
+            document.getElementById('concept-' + concept).classList.add('active');
+            
+            // Find button by text roughly
+            const btns = document.querySelectorAll('.toggle-btn');
+            if(concept === 'A') btns[0].classList.add('active');
+            if(concept === 'B') btns[1].classList.add('active');
+        }
+    </script>
+</body>
+</html>
