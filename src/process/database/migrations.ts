@@ -690,9 +690,55 @@ const migration_v14: IMigration = {
 };
 
 /**
+ * Migration v14 -> v15: Add case grounding tracking
+ * Add narrative_updated_at and grounding_status columns to case_files table
+ */
+const migration_v15: IMigration = {
+  version: 15,
+  name: 'Add case grounding tracking',
+  up: (db) => {
+    // Get existing columns to avoid duplicate column errors
+    const existingColumns = new Set(
+      db
+        .prepare(`PRAGMA table_info(case_files)`)
+        .all()
+        .map((col: any) => col.name)
+    );
+
+    // Add narrative_updated_at column if it doesn't exist
+    if (!existingColumns.has('narrative_updated_at')) {
+      db.exec(`ALTER TABLE case_files ADD COLUMN narrative_updated_at INTEGER DEFAULT NULL;`);
+      console.log('[Migration v15] Added narrative_updated_at column to case_files');
+    }
+
+    // Add grounding_status column if it doesn't exist
+    if (!existingColumns.has('grounding_status')) {
+      db.exec(`ALTER TABLE case_files ADD COLUMN grounding_status TEXT DEFAULT 'ungrounded';`);
+      console.log('[Migration v15] Added grounding_status column to case_files');
+    }
+
+    // Add index for grounding status lookups
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_case_files_grounding_status ON case_files(grounding_status);
+    `);
+    console.log('[Migration v15] Added case grounding tracking columns and index to case_files table');
+  },
+  down: (db) => {
+    // Note: SQLite doesn't support DROP COLUMN directly
+    // For rollback, we would need to recreate the table without these columns
+    console.warn('[Migration v15 Rollback] SQLite does not support DROP COLUMN. Manual intervention required.');
+    console.warn('[Migration v15 Rollback] Columns to remove: narrative_updated_at, grounding_status');
+
+    // Drop the index
+    db.exec(`DROP INDEX IF EXISTS idx_case_files_grounding_status;`);
+    console.log('[Migration v15 Rollback] Dropped idx_case_files_grounding_status index');
+  },
+};
+
+/**
  * All migrations in order
  */
-export const ALL_MIGRATIONS: IMigration[] = [migration_v1, migration_v2, migration_v3, migration_v4, migration_v5, migration_v6, migration_v7, migration_v8, migration_v9, migration_v10, migration_v11, migration_v12, migration_v14];
+export const ALL_MIGRATIONS: IMigration[] = [migration_v1, migration_v2, migration_v3, migration_v4, migration_v5, migration_v6, migration_v7, migration_v8, migration_v9, migration_v10, migration_v11, migration_v12, migration_v14, migration_v15];
 
 /**
  * Get migrations needed to upgrade from one version to another

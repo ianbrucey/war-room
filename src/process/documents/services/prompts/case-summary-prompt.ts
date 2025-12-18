@@ -170,4 +170,3 @@ NEW DOCUMENTS TO INCORPORATE (provided as file paths):
 {new_metadata_files}
 
 The new document metadata files will be provided to you directly. Analyze each metadata.json file and output an updated case_summary.md with the same structure, incorporating new information while preserving existing facts.`;
-

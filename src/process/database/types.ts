@@ -89,6 +89,9 @@ export interface ICaseFileRow {
   case_summary_generated_at?: number | null;
   case_summary_version?: number | null;
   case_summary_document_count?: number | null;
+  // Case Grounding Fields
+  narrative_updated_at?: number | null;
+  grounding_status?: string | null;
 }
 
 /**
@@ -152,6 +155,8 @@ export function caseFileToRow(caseFile: ICaseFile): ICaseFileRow {
     case_summary_generated_at: caseFile.case_summary_generated_at,
     case_summary_version: caseFile.case_summary_version,
     case_summary_document_count: caseFile.case_summary_document_count,
+    narrative_updated_at: caseFile.narrative_updated_at,
+    grounding_status: caseFile.grounding_status,
   };
 }
 
@@ -171,6 +176,8 @@ export function rowToCaseFile(row: ICaseFileRow): ICaseFile {
     case_summary_generated_at: row.case_summary_generated_at,
     case_summary_version: row.case_summary_version,
     case_summary_document_count: row.case_summary_document_count,
+    narrative_updated_at: row.narrative_updated_at,
+    grounding_status: row.grounding_status as 'ungrounded' | 'narrative_only' | 'docs_only' | 'grounded' | undefined,
   };
 }
 
@@ -271,9 +278,8 @@ export function rowToMessage(row: IMessageRow): TMessage {
  */
 
 export type {
-    IConfigStorageRefer,
-    // 复用的业务类型
-    TChatConversation,
-    TMessage
+  IConfigStorageRefer,
+  // 复用的业务类型
+  TChatConversation,
+  TMessage,
 };
-

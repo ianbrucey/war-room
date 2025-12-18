@@ -257,28 +257,28 @@ const ChatHistory: React.FC<{ onSessionClick?: () => void; collapsed?: boolean; 
     );
   };
 
-	  return (
-	    <div
-	      className={classNames('size-full', {
-	        'flex-center': !chatHistory.length,
-	        'flex flex-col overflow-y-auto': !!chatHistory.length,
-	      })}
-	    >
-	      {!chatHistory.length ? (
-	        <Empty className={'collapsed-hidden'} description={t('conversation.history.noHistory')} />
-	      ) : (
-	        chatHistory.map((item) => {
-	          const timeline = formatTimeline(item);
-	          return (
-	            <React.Fragment key={item.id}>
-	              {timeline && <div className='collapsed-hidden px-12px py-8px text-13px text-t-secondary font-bold'>{timeline}</div>}
-	              {renderConversation(item)}
-	            </React.Fragment>
-	          );
-	        })
-	      )}
-	    </div>
-	  );
+  return (
+    <div
+      className={classNames('size-full', {
+        'flex-center': !chatHistory.length,
+        'flex flex-col overflow-y-auto': !!chatHistory.length,
+      })}
+    >
+      {!chatHistory.length ? (
+        <Empty className={'collapsed-hidden'} description={t('conversation.history.noHistory')} />
+      ) : (
+        chatHistory.map((item) => {
+          const timeline = formatTimeline(item);
+          return (
+            <React.Fragment key={item.id}>
+              {timeline && <div className='collapsed-hidden px-12px py-8px text-13px text-t-secondary font-bold'>{timeline}</div>}
+              {renderConversation(item)}
+            </React.Fragment>
+          );
+        })
+      )}
+    </div>
+  );
 };
 
 export default ChatHistory;

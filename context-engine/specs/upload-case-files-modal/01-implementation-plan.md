@@ -271,7 +271,7 @@ const paginatedDocs = documents.slice(
 
 **Implementation:**
 ```typescript
-<Tooltip content={t('conversation.workspace.uploadCaseFiles')}>
+<Tooltip content={t('conversation.explorer.uploadCaseFiles')}>
   <span>
     <FileAddition
       className='cursor-pointer flex'

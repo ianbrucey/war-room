@@ -1,0 +1,138 @@
+/**
+ * @license
+ * Copyright 2025 AionUi (aionui.com)
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.case-grounding-card {
+  margin: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+}
+
+.case-grounding-card-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 48px;
+}
+
+.case-grounding-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.case-grounding-card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-1);
+}
+
+.case-grounding-card-dismiss {
+  color: var(--color-text-3);
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.case-grounding-card-dismiss:hover {
+  opacity: 1;
+}
+
+.case-grounding-card-body {
+  padding: 8px 0;
+}
+
+.case-grounding-card-description {
+  color: var(--color-text-2);
+  font-size: 14px;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.grounding-step {
+  padding: 16px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.2s;
+}
+
+.grounding-step:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.grounding-step.complete {
+  background: rgba(0, 180, 42, 0.05);
+  border-color: rgba(0, 180, 42, 0.2);
+}
+
+.grounding-step.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.grounding-step-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.grounding-step-icon {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.grounding-step-circle {
+  font-size: 20px;
+  color: var(--color-text-3);
+}
+
+.grounding-step-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.grounding-step-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-1);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.grounding-step-subtitle {
+  font-size: 13px;
+  color: var(--color-text-3);
+  line-height: 1.4;
+}
+
+.grounding-step-stale {
+  font-size: 12px;
+  color: var(--color-warning-6);
+  font-weight: 500;
+}
+
+/* Button overrides for compact size */
+.grounding-step .arco-btn-primary {
+  height: 28px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.grounding-step .arco-btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+

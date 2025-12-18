@@ -62,7 +62,7 @@ export const useAudioRecorder = (): UseAudioRecorderReturn => {
 
   const cleanup = () => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
     if (audioContextRef.current) {
@@ -128,14 +128,14 @@ export const useAudioRecorder = (): UseAudioRecorderReturn => {
       mediaRecorder.ondataavailable = async (event) => {
         console.log('[useAudioRecorder] Audio chunk received, size:', event.data.size);
         if (event.data.size > 0) {
-            const buffer = await event.data.arrayBuffer();
-            // Convert ArrayBuffer to regular array for JSON serialization
-            // Note: This is inefficient for large data but fits current bridge
-            const data = Array.from(new Uint8Array(buffer));
-            console.log('[useAudioRecorder] Sending chunk to backend, length:', data.length);
-            voice.chunk.invoke({ data }).catch((err) => {
-              console.error('[useAudioRecorder] Failed to send chunk:', err);
-            });
+          const buffer = await event.data.arrayBuffer();
+          // Convert ArrayBuffer to regular array for JSON serialization
+          // Note: This is inefficient for large data but fits current bridge
+          const data = Array.from(new Uint8Array(buffer));
+          console.log('[useAudioRecorder] Sending chunk to backend, length:', data.length);
+          voice.chunk.invoke({ data }).catch((err) => {
+            console.error('[useAudioRecorder] Failed to send chunk:', err);
+          });
         }
       };
 
@@ -144,8 +144,8 @@ export const useAudioRecorder = (): UseAudioRecorderReturn => {
         setIsRecording(false);
         setIsProcessing(true); // Start processing spinner
         voice.end.invoke().catch((err) => {
-            console.error('[useAudioRecorder] Failed to end recording:', err);
-            setIsProcessing(false); // Stop spinner on error
+          console.error('[useAudioRecorder] Failed to end recording:', err);
+          setIsProcessing(false); // Stop spinner on error
         });
         cleanup();
       };
@@ -162,7 +162,6 @@ export const useAudioRecorder = (): UseAudioRecorderReturn => {
 
       // Start visualizer loop
       analyzeVolume();
-
     } catch (err) {
       console.error('[useAudioRecorder] Failed to start recording:', err);
       setError('Could not access microphone');

@@ -15,19 +15,15 @@ interface UseWebSocketProgressOptions {
 
 /**
  * Custom hook to listen for document progress events via WebSocket
- * 
+ *
  * Subscribes to case file updates when enabled and calls the onProgress
  * callback when document:progress events are received.
- * 
+ *
  * @param caseFileId - Case file ID to subscribe to
  * @param enabled - Whether to enable the subscription
  * @param onProgress - Callback to handle progress events
  */
-export const useWebSocketProgress = ({
-  caseFileId,
-  enabled,
-  onProgress
-}: UseWebSocketProgressOptions) => {
+export const useWebSocketProgress = ({ caseFileId, enabled, onProgress }: UseWebSocketProgressOptions) => {
   useEffect(() => {
     if (!enabled) return;
 
@@ -39,10 +35,12 @@ export const useWebSocketProgress = ({
     }
 
     // Subscribe to case file updates
-    ws.send(JSON.stringify({
-      type: 'subscribe-case-file',
-      caseFileId
-    }));
+    ws.send(
+      JSON.stringify({
+        type: 'subscribe-case-file',
+        caseFileId,
+      })
+    );
 
     console.log('[WebSocket] Subscribed to case file:', caseFileId);
 
@@ -64,10 +62,12 @@ export const useWebSocketProgress = ({
     // Cleanup
     return () => {
       ws.removeEventListener('message', handleMessage);
-      ws.send(JSON.stringify({
-        type: 'unsubscribe-case-file',
-        caseFileId
-      }));
+      ws.send(
+        JSON.stringify({
+          type: 'unsubscribe-case-file',
+          caseFileId,
+        })
+      );
       console.log('[WebSocket] Unsubscribed from case file:', caseFileId);
     };
   }, [caseFileId, enabled, onProgress]);

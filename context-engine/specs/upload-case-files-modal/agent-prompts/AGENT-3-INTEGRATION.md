@@ -27,7 +27,7 @@ import { UploadCaseFilesModal } from '@/renderer/components/UploadCaseFilesModal
 const [uploadModalVisible, setUploadModalVisible] = useState(false);
 
 // In the header section (after Refresh icon):
-<Tooltip content={t('conversation.workspace.uploadCaseFiles')}>
+<Tooltip content={t('conversation.explorer.uploadCaseFiles')}>
   <span>
     <FileAddition
       className='cursor-pointer flex'

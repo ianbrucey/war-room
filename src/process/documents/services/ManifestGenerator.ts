@@ -37,7 +37,7 @@ export class ManifestGenerator {
         case_file_id: caseFileId,
         last_updated: new Date().toISOString(),
         document_count: documents.length,
-        documents: documents.map(doc => this.buildManifestDocument(doc)),
+        documents: documents.map((doc) => this.buildManifestDocument(doc)),
       };
 
       const workspacePath = caseFile.workspace_path;

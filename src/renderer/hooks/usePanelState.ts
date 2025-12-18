@@ -1,8 +1,8 @@
 /**
  * usePanelState - Manages left panel state (which panel is open, width)
- * 
+ *
  * Features:
- * - Tracks active panel ID ('conversations', 'workspace', 'preview', null)
+ * - Tracks active panel ID ('conversations', 'explorer', 'preview', null)
  * - Persists state to localStorage
  * - Manages panel width (200-600px)
  * - Ensures only one panel open at a time
@@ -10,7 +10,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-export type PanelId = 'conversations' | 'workspace' | 'preview' | null;
+export type PanelId = 'conversations' | 'explorer' | 'preview' | null;
 
 interface PanelState {
   activePanel: PanelId;
@@ -109,4 +109,3 @@ export const usePanelState = () => {
     DEFAULT_WIDTH,
   };
 };
-

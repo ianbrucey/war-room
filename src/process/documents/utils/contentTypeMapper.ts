@@ -99,13 +99,7 @@ export function getContentType(filename: string): string {
  * @returns True if the content can be previewed inline
  */
 export function isPreviewable(contentType: string): boolean {
-  return (
-    contentType.startsWith('image/') ||
-    contentType.startsWith('video/') ||
-    contentType.startsWith('audio/') ||
-    contentType === 'application/pdf' ||
-    contentType.startsWith('text/')
-  );
+  return contentType.startsWith('image/') || contentType.startsWith('video/') || contentType.startsWith('audio/') || contentType === 'application/pdf' || contentType.startsWith('text/');
 }
 
 /**

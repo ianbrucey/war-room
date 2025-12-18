@@ -5,6 +5,8 @@
  */
 
 import type { TProviderWithModel } from '@/common/storage';
+import { Tag } from '@arco-design/web-react';
+import { Edit } from '@icon-park/react';
 import FlexFullContainer from '@renderer/components/FlexFullContainer';
 import MessageList from '@renderer/messages/MessageList';
 import { MessageListProvider, useMessageLstCache } from '@renderer/messages/hooks';
@@ -17,7 +19,9 @@ const GeminiChat: React.FC<{
   conversation_id: string;
   model: TProviderWithModel;
   workspace: string;
-}> = ({ conversation_id, model, workspace }) => {
+  isNarrativeMode?: boolean;
+  onNarrativeComplete?: (narrative: string) => void;
+}> = ({ conversation_id, model, workspace, isNarrativeMode = false, onNarrativeComplete }) => {
   useMessageLstCache(conversation_id);
   const updateLocalImage = LocalImageView.useUpdateLocalImage();
   useEffect(() => {
@@ -26,11 +30,20 @@ const GeminiChat: React.FC<{
 
   return (
     <div className='flex-1 flex flex-col min-h-0 overflow-hidden'>
+      {/* Narrative mode indicator */}
+      {isNarrativeMode && (
+        <div className='px-16px py-8px bg-[var(--color-primary-light-1)] border-b border-[var(--color-border-2)]'>
+          <Tag color='orangered' icon={<Edit />}>
+            📝 Recording your story... Type "done" when finished
+          </Tag>
+        </div>
+      )}
+
       <FlexFullContainer className='flex-1 min-h-0'>
         <MessageList className='flex-1 px-12px'></MessageList>
       </FlexFullContainer>
       <div className='px-12px pb-12px'>
-        <GeminiSendBox conversation_id={conversation_id} model={model}></GeminiSendBox>
+        <GeminiSendBox conversation_id={conversation_id} model={model} isNarrativeMode={isNarrativeMode} onNarrativeComplete={onNarrativeComplete} />
       </div>
     </div>
   );

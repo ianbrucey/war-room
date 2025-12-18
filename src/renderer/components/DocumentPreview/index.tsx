@@ -103,73 +103,44 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({ documentId, vi
 
     switch (previewData.previewType) {
       case 'pdf':
-        return (
-          <iframe
-            src={previewData.url}
-            className="preview-iframe"
-            title={previewData.filename}
-          />
-        );
+        return <iframe src={previewData.url} className='preview-iframe' title={previewData.filename} />;
 
       case 'image':
         return (
-          <div className="preview-image-container">
-            <img
-              src={previewData.url}
-              alt={previewData.filename}
-              className="preview-image"
-            />
+          <div className='preview-image-container'>
+            <img src={previewData.url} alt={previewData.filename} className='preview-image' />
           </div>
         );
 
       case 'video':
         return (
-          <video
-            src={previewData.url}
-            controls
-            autoPlay={false}
-            className="preview-video"
-          >
+          <video src={previewData.url} controls autoPlay={false} className='preview-video'>
             Your browser does not support video playback.
           </video>
         );
 
       case 'audio':
         return (
-          <div className="preview-audio-container">
-            <div className="audio-icon">🔊</div>
-            <div className="audio-filename">{previewData.filename}</div>
-            <audio
-              src={previewData.url}
-              controls
-              className="preview-audio"
-            >
+          <div className='preview-audio-container'>
+            <div className='audio-icon'>🔊</div>
+            <div className='audio-filename'>{previewData.filename}</div>
+            <audio src={previewData.url} controls className='preview-audio'>
               Your browser does not support audio playback.
             </audio>
           </div>
         );
 
       case 'text':
-        return (
-          <iframe
-            src={previewData.url}
-            className="preview-iframe preview-text"
-            title={previewData.filename}
-          />
-        );
+        return <iframe src={previewData.url} className='preview-iframe preview-text' title={previewData.filename} />;
 
       case 'office':
         // For Word documents, suggest download or external viewer
         return (
-          <div className="preview-unavailable">
-            <div className="preview-icon">📄</div>
-            <p className="preview-message">
-              Word documents cannot be previewed directly.
-            </p>
-            <p className="preview-submessage">
-              Click the download button to view the file.
-            </p>
-            <button onClick={handleDownload} className="download-button">
+          <div className='preview-unavailable'>
+            <div className='preview-icon'>📄</div>
+            <p className='preview-message'>Word documents cannot be previewed directly.</p>
+            <p className='preview-submessage'>Click the download button to view the file.</p>
+            <button onClick={handleDownload} className='download-button'>
               <Download /> Download File
             </button>
           </div>
@@ -177,15 +148,11 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({ documentId, vi
 
       default:
         return (
-          <div className="preview-unavailable">
-            <div className="preview-icon">📁</div>
-            <p className="preview-message">
-              Preview not available for this file type.
-            </p>
-            <p className="preview-submessage">
-              Click the download button to view the file.
-            </p>
-            <button onClick={handleDownload} className="download-button">
+          <div className='preview-unavailable'>
+            <div className='preview-icon'>📁</div>
+            <p className='preview-message'>Preview not available for this file type.</p>
+            <p className='preview-submessage'>Click the download button to view the file.</p>
+            <button onClick={handleDownload} className='download-button'>
               <Download /> Download File
             </button>
           </div>
@@ -194,41 +161,31 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({ documentId, vi
   };
 
   return (
-    <Modal
-      visible={visible}
-      onCancel={onClose}
-      footer={null}
-      closable={false}
-      maskClosable={true}
-      style={{ width: '90vw', maxWidth: '1200px', height: '90vh', maxHeight: '900px' }}
-      wrapClassName="document-preview-modal-wrap"
-    >
-      <div className="document-preview-modal">
-        <div className="preview-header">
-          <span className="preview-filename">
-            {previewData?.filename || 'Loading...'}
-          </span>
-          <div className="preview-header-actions">
+    <Modal visible={visible} onCancel={onClose} footer={null} closable={false} maskClosable={true} style={{ width: '90vw', maxWidth: '1200px', height: '90vh', maxHeight: '900px' }} wrapClassName='document-preview-modal-wrap'>
+      <div className='document-preview-modal'>
+        <div className='preview-header'>
+          <span className='preview-filename'>{previewData?.filename || 'Loading...'}</span>
+          <div className='preview-header-actions'>
             {previewData && (
-              <button onClick={handleDownload} className="header-download-btn" title="Download">
+              <button onClick={handleDownload} className='header-download-btn' title='Download'>
                 <Download size={18} />
               </button>
             )}
-            <button onClick={onClose} className="preview-close" title="Close">
+            <button onClick={onClose} className='preview-close' title='Close'>
               <Close size={20} />
             </button>
           </div>
         </div>
-        <div className="preview-content">
+        <div className='preview-content'>
           {loading && (
-            <div className="preview-loading">
+            <div className='preview-loading'>
               <Spin size={40} />
               <p>Loading preview...</p>
             </div>
           )}
           {error && (
-            <div className="preview-error">
-              <div className="error-icon">⚠️</div>
+            <div className='preview-error'>
+              <div className='error-icon'>⚠️</div>
               <p>{error}</p>
             </div>
           )}

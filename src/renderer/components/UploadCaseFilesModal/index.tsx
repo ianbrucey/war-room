@@ -9,7 +9,7 @@ import DocumentPreview from '@/renderer/components/DocumentPreview';
 import type { FileMetadata } from '@/renderer/services/FileService';
 import { Message, Modal, Spin } from '@arco-design/web-react';
 import type { ICaseDocument } from '@process/documents/types';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CaseSummaryControls } from './CaseSummaryControls';
 import { DocumentListSection } from './DocumentListSection';
@@ -27,13 +27,10 @@ interface FileWithObject extends FileMetadata {
   file?: File;
 }
 
-export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
-  visible,
-  caseFileId,
-  onClose
-}) => {
+export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({ visible, caseFileId, onClose }) => {
   const { t } = useTranslation();
-  const [message, contextHolder] = Message.useMessage();
+  const [message, messageContextHolder] = Message.useMessage();
+  const [modal, modalContextHolder] = Modal.useModal();
   const [documents, setDocuments] = useState<ICaseDocument[]>([]);
   const [uploading, setUploading] = useState<Map<string, number>>(new Map());
   const [activeTab, setActiveTab] = useState<'documents' | 'failed'>('documents');
@@ -51,11 +48,14 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
   const [summaryGeneratedAt, setSummaryGeneratedAt] = useState<number | null>(null);
   const [summaryVersion, setSummaryVersion] = useState(0);
   const [summaryDocumentCount, setSummaryDocumentCount] = useState(0);
-  const [generationProgress, setGenerationProgress] = useState<{
-    percent: number;
-    currentBatch: number;
-    totalBatches: number;
-  } | undefined>(undefined);
+  const [generationProgress, setGenerationProgress] = useState<
+    | {
+        percent: number;
+        currentBatch: number;
+        totalBatches: number;
+      }
+    | undefined
+  >(undefined);
 
   /**
    * Initial fetch when modal opens
@@ -72,7 +72,7 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
       try {
         setLoading(true);
         const response = await fetch(`/api/cases/${caseFileId}/documents`, {
-          credentials: 'include'
+          credentials: 'include',
         });
 
         if (response.ok) {
@@ -90,7 +90,7 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
     const fetchSummaryStatus = async () => {
       try {
         const response = await fetch(`/api/cases/${caseFileId}/summary/status`, {
-          credentials: 'include'
+          credentials: 'include',
         });
 
         if (response.ok) {
@@ -120,7 +120,7 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
     const pollInterval = setInterval(async () => {
       try {
         const response = await fetch(`/api/cases/${caseFileId}/documents`, {
-          credentials: 'include' // Use cookie authentication
+          credentials: 'include', // Use cookie authentication
         });
 
         if (response.ok) {
@@ -135,8 +135,87 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
     return () => clearInterval(pollInterval);
   }, [visible, caseFileId]);
 
+  // Track previous status for detecting completion
+  const previousStatusRef = useRef<string | null>(null);
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
+
   /**
-   * Listen for summary progress WebSocket events
+   * Fetch summary status (used for polling)
+   */
+  const fetchSummaryStatusForPolling = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/cases/${caseFileId}/summary/status`, {
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.status) {
+          const newStatus = data.status.status;
+          const wasGenerating = previousStatusRef.current === 'generating';
+          const isNowComplete = newStatus === 'generated';
+
+          // Detect completion
+          if (wasGenerating && isNowComplete) {
+            // Stop polling
+            if (pollingRef.current) {
+              clearInterval(pollingRef.current);
+              pollingRef.current = null;
+            }
+            // Show success modal using hook
+            modal.success({
+              title: 'Summary Complete!',
+              content: 'Your case summary has been generated successfully. The AI now has context about your case.',
+              okText: 'OK',
+            });
+          }
+
+          previousStatusRef.current = newStatus;
+          setSummaryStatus(newStatus);
+          setSummaryGeneratedAt(data.status.generatedAt);
+          setSummaryVersion(data.status.version);
+          setSummaryDocumentCount(data.status.documentCount);
+
+          // Clear progress if not generating
+          if (newStatus !== 'generating') {
+            setGenerationProgress(undefined);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[UploadModal] Failed to poll summary status:', error);
+    }
+  }, [caseFileId]);
+
+  /**
+   * Poll for summary status when generating
+   */
+  useEffect(() => {
+    if (!visible) return;
+
+    if (summaryStatus === 'generating' && !pollingRef.current) {
+      console.log('[UploadModal] Starting polling for summary completion');
+      pollingRef.current = setInterval(() => {
+        void fetchSummaryStatusForPolling();
+      }, 3000); // Poll every 3 seconds
+    }
+
+    // Stop polling if not generating
+    if (summaryStatus !== 'generating' && pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, [visible, summaryStatus, fetchSummaryStatusForPolling]);
+
+  /**
+   * Listen for summary progress WebSocket events (as backup to polling)
    */
   useEffect(() => {
     if (!visible) return;
@@ -149,24 +228,28 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
     }
 
     // Subscribe to case file updates
-    ws.send(JSON.stringify({
-      type: 'subscribe-case-file',
-      caseFileId
-    }));
+    ws.send(
+      JSON.stringify({
+        type: 'subscribe-case-file',
+        caseFileId,
+      })
+    );
 
     console.log('[UploadModal] Subscribed to summary progress for case:', caseFileId);
 
     // Listen for summary progress events
     const handleMessage = (event: MessageEvent) => {
       try {
-        const data = JSON.parse(event.data);
+        const parsed = JSON.parse(event.data);
 
-        if (data.event === 'summary:progress') {
-          const progressData = data.data;
+        // Backend sends { name: 'summary:progress', data: {...} }
+        if (parsed.name === 'summary:progress') {
+          const progressData = parsed.data;
           console.log('[UploadModal] Received summary progress:', progressData);
 
           // Update progress based on event type
           if (progressData.type === 'summary:generating') {
+            previousStatusRef.current = 'generating';
             setSummaryStatus('generating');
             setGenerationProgress({
               percent: progressData.progress,
@@ -174,11 +257,11 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
               totalBatches: progressData.totalBatches || 1,
             });
           } else if (progressData.type === 'summary:complete') {
+            // Let polling handle the completion modal to avoid duplicates
             setSummaryStatus('generated');
             setSummaryVersion(progressData.version || 1);
             setSummaryDocumentCount(progressData.documentCount || 0);
             setGenerationProgress(undefined);
-            message.success('Case summary generated successfully!');
           } else if (progressData.type === 'summary:failed') {
             setSummaryStatus('failed');
             setGenerationProgress(undefined);
@@ -195,10 +278,12 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
     // Cleanup
     return () => {
       ws.removeEventListener('message', handleMessage);
-      ws.send(JSON.stringify({
-        type: 'unsubscribe-case-file',
-        caseFileId
-      }));
+      ws.send(
+        JSON.stringify({
+          type: 'unsubscribe-case-file',
+          caseFileId,
+        })
+      );
       console.log('[UploadModal] Unsubscribed from summary progress');
     };
   }, [visible, caseFileId, message]);
@@ -220,14 +305,11 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
       formData.append('file', fileWithObject.file, fileMetadata.name);
 
       // Upload to backend (uses cookie authentication automatically)
-      const uploadResponse = await fetch(
-        `/api/cases/${caseFileId}/documents/upload`,
-        {
-          method: 'POST',
-          credentials: 'include', // Include cookies for authentication
-          body: formData
-        }
-      );
+      const uploadResponse = await fetch(`/api/cases/${caseFileId}/documents/upload`, {
+        method: 'POST',
+        credentials: 'include', // Include cookies for authentication
+        body: formData,
+      });
 
       if (!uploadResponse.ok) {
         const errorData = await uploadResponse.json().catch(() => ({ error: uploadResponse.statusText }));
@@ -247,38 +329,41 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
   /**
    * Handle files added via drag-and-drop or browse
    */
-  const handleFilesAdded = useCallback(async (files: FileMetadata[]) => {
-    for (const file of files) {
-      const documentId = await uploadFile(file);
-      if (documentId) {
-        // Add to documents list with pending status
-        setDocuments(prev => [...prev, {
-          id: documentId,
-          case_file_id: caseFileId,
-          filename: file.name,
-          folder_name: file.name.replace(/[^a-zA-Z0-9.-]/g, '_'),
-          file_type: file.name.split('.').pop() || 'unknown',
-          processing_status: 'pending',
-          has_text_extraction: 0,
-          has_metadata: 0,
-          rag_indexed: 0,
-          uploaded_at: Date.now()
-        }]);
+  const handleFilesAdded = useCallback(
+    async (files: FileMetadata[]) => {
+      for (const file of files) {
+        const documentId = await uploadFile(file);
+        if (documentId) {
+          // Add to documents list with pending status
+          setDocuments((prev) => [
+            ...prev,
+            {
+              id: documentId,
+              case_file_id: caseFileId,
+              filename: file.name,
+              folder_name: file.name.replace(/[^a-zA-Z0-9.-]/g, '_'),
+              file_type: file.name.split('.').pop() || 'unknown',
+              processing_status: 'pending',
+              has_text_extraction: 0,
+              has_metadata: 0,
+              rag_indexed: 0,
+              uploaded_at: Date.now(),
+            },
+          ]);
 
-        message.success(`Uploaded ${file.name}`);
+          message.success(`Uploaded ${file.name}`);
+        }
       }
-    }
-  }, [caseFileId, message]);
+    },
+    [caseFileId, message]
+  );
 
   /**
    * Handle preview action - Open document preview modal with S3 pre-signed URL
    */
-  const handlePreview = useCallback(
-    (documentId: string) => {
-      setPreviewDocumentId(documentId);
-    },
-    []
-  );
+  const handlePreview = useCallback((documentId: string) => {
+    setPreviewDocumentId(documentId);
+  }, []);
 
   /**
    * Close preview modal
@@ -295,7 +380,7 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
       try {
         // First try to get S3 pre-signed URL
         const response = await fetch(`/api/documents/${documentId}/download-url`, {
-          credentials: 'include' // Use cookie authentication
+          credentials: 'include', // Use cookie authentication
         });
 
         if (!response.ok) {
@@ -307,7 +392,7 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
         if (data.isLocal) {
           // Fallback to direct download for local-only files
           const downloadResponse = await fetch(`/api/documents/${documentId}/download`, {
-            credentials: 'include'
+            credentials: 'include',
           });
 
           if (!downloadResponse.ok) {
@@ -347,59 +432,53 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
   /**
    * Handle delete action - Show confirmation modal
    */
-  const handleDelete = useCallback(
-    (documentId: string) => {
-      setDocumentToDelete(documentId);
-      setDeleteConfirmVisible(true);
-    },
-    []
-  );
+  const handleDelete = useCallback((documentId: string) => {
+    setDocumentToDelete(documentId);
+    setDeleteConfirmVisible(true);
+  }, []);
 
   /**
    * Confirm delete - Actually delete the document
    */
-  const confirmDelete = useCallback(
-    async () => {
-      if (!documentToDelete) return;
+  const confirmDelete = useCallback(async () => {
+    if (!documentToDelete) return;
 
-      try {
-        setDeleting(true);
-        const response = await fetch(`/api/documents/${documentToDelete}`, {
-          method: 'DELETE',
-          credentials: 'include' // Use cookie authentication
-        });
+    try {
+      setDeleting(true);
+      const response = await fetch(`/api/documents/${documentToDelete}`, {
+        method: 'DELETE',
+        credentials: 'include', // Use cookie authentication
+      });
 
-        if (!response.ok) {
-          throw new Error('Failed to delete document');
-        }
-
-        message.success(t('uploadModal.success.deleted'));
-
-        // Refresh document list by fetching updated documents
-        try {
-          const response = await fetch(`/api/cases/${caseFileId}/documents`, {
-            credentials: 'include'
-          });
-          if (response.ok) {
-            const docs = await response.json();
-            setDocuments(docs);
-          }
-        } catch (error) {
-          console.error('[UploadModal] Failed to refresh documents:', error);
-        }
-
-        // Close confirmation modal
-        setDeleteConfirmVisible(false);
-        setDocumentToDelete(null);
-      } catch (error) {
-        console.error('[UploadModal] Delete error:', error);
-        message.error(t('uploadModal.errors.deleteFailed'));
-      } finally {
-        setDeleting(false);
+      if (!response.ok) {
+        throw new Error('Failed to delete document');
       }
-    },
-    [documentToDelete, t, message, caseFileId]
-  );
+
+      message.success(t('uploadModal.success.deleted'));
+
+      // Refresh document list by fetching updated documents
+      try {
+        const response = await fetch(`/api/cases/${caseFileId}/documents`, {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const docs = await response.json();
+          setDocuments(docs);
+        }
+      } catch (error) {
+        console.error('[UploadModal] Failed to refresh documents:', error);
+      }
+
+      // Close confirmation modal
+      setDeleteConfirmVisible(false);
+      setDocumentToDelete(null);
+    } catch (error) {
+      console.error('[UploadModal] Delete error:', error);
+      message.error(t('uploadModal.errors.deleteFailed'));
+    } finally {
+      setDeleting(false);
+    }
+  }, [documentToDelete, t, message, caseFileId]);
 
   /**
    * Cancel delete - Close confirmation modal
@@ -444,6 +523,7 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
 
       if (response.ok) {
         message.success('Summary generation started');
+        previousStatusRef.current = 'generating'; // Track that we started generating
         setSummaryStatus('generating');
         setGenerationProgress({ percent: 0, currentBatch: 0, totalBatches: 1 });
       } else {
@@ -468,6 +548,7 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
 
       if (response.ok) {
         message.success('Summary update started');
+        previousStatusRef.current = 'generating'; // Track that we started generating
         setSummaryStatus('generating');
         setGenerationProgress({ percent: 0, currentBatch: 0, totalBatches: 1 });
       } else {
@@ -484,7 +565,7 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
    * Handle regenerate summary
    */
   const handleRegenerateSummary = useCallback(async () => {
-    Modal.confirm({
+    modal.confirm({
       title: 'Regenerate Summary',
       content: 'This will rebuild the entire summary from scratch. Continue?',
       onOk: async () => {
@@ -496,6 +577,7 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
 
           if (response.ok) {
             message.success('Summary regeneration started');
+            previousStatusRef.current = 'generating'; // Track that we started generating
             setSummaryStatus('generating');
             setGenerationProgress({ percent: 0, currentBatch: 0, totalBatches: 1 });
           } else {
@@ -508,7 +590,7 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
         }
       },
     });
-  }, [caseFileId, message]);
+  }, [caseFileId, message, modal]);
 
   /**
    * Handle view summary
@@ -520,76 +602,32 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
 
   return (
     <>
-      {contextHolder}
-      <ModalWrapper
-        visible={visible}
-        onCancel={onClose}
-        title={t('conversation.workspace.uploadCaseFiles', 'Upload Case Files')}
-        style={{ width: '90vw', height: '90vh' }}
-        showCustomClose={true}
-      >
-        <div className="upload-modal-body">
+      {messageContextHolder}
+      {modalContextHolder}
+      <ModalWrapper visible={visible} onCancel={onClose} title={t('conversation.explorer.uploadCaseFiles', 'Upload Case Files')} style={{ width: '90vw', height: '90vh' }} showCustomClose={true}>
+        <div className='upload-modal-body'>
           <DropzoneSection onFilesAdded={handleFilesAdded} />
 
           {loading ? (
-            <div className="document-list-loading">
+            <div className='document-list-loading'>
               <Spin size={32} />
               <p>{t('uploadModal.loading', 'Loading documents...')}</p>
             </div>
           ) : (
             <>
-              <DocumentListSection
-                documents={documents}
-                activeTab={activeTab}
-                onTabChange={handleTabChange}
-                page={page}
-                pageSize={pageSize}
-                onPageChange={handlePageChange}
-                searchQuery={searchQuery}
-                onSearchChange={handleSearchChange}
-                onPreview={handlePreview}
-                onDownload={handleDownload}
-                onDelete={handleDelete}
-              />
+              <DocumentListSection documents={documents} activeTab={activeTab} onTabChange={handleTabChange} page={page} pageSize={pageSize} onPageChange={handlePageChange} searchQuery={searchQuery} onSearchChange={handleSearchChange} onPreview={handlePreview} onDownload={handleDownload} onDelete={handleDelete} />
 
-              <CaseSummaryControls
-                caseId={caseFileId}
-                summaryStatus={summaryStatus}
-                summaryGeneratedAt={summaryGeneratedAt}
-                summaryVersion={summaryVersion}
-                summaryDocumentCount={summaryDocumentCount}
-                currentDocumentCount={documents.filter(d => d.processing_status === 'complete').length}
-                onGenerate={handleGenerateSummary}
-                onUpdate={handleUpdateSummary}
-                onRegenerate={handleRegenerateSummary}
-                onViewSummary={handleViewSummary}
-                generationProgress={generationProgress}
-              />
+              <CaseSummaryControls caseId={caseFileId} summaryStatus={summaryStatus} summaryGeneratedAt={summaryGeneratedAt} summaryVersion={summaryVersion} summaryDocumentCount={summaryDocumentCount} currentDocumentCount={documents.filter((d) => d.processing_status === 'complete').length} onGenerate={handleGenerateSummary} onUpdate={handleUpdateSummary} onRegenerate={handleRegenerateSummary} onViewSummary={handleViewSummary} generationProgress={generationProgress} />
             </>
           )}
         </div>
       </ModalWrapper>
 
       {/* Document Preview Modal */}
-      {previewDocumentId && (
-        <DocumentPreview
-          documentId={previewDocumentId}
-          visible={!!previewDocumentId}
-          onClose={handleClosePreview}
-        />
-      )}
+      {previewDocumentId && <DocumentPreview documentId={previewDocumentId} visible={!!previewDocumentId} onClose={handleClosePreview} />}
 
       {/* Delete Confirmation Modal */}
-      <Modal
-        visible={deleteConfirmVisible}
-        title={t('uploadModal.delete.confirmTitle')}
-        onOk={confirmDelete}
-        onCancel={cancelDelete}
-        okText={t('uploadModal.delete.confirmOk')}
-        cancelText={t('uploadModal.delete.confirmCancel')}
-        okButtonProps={{ status: 'danger', loading: deleting }}
-        cancelButtonProps={{ disabled: deleting }}
-      >
+      <Modal visible={deleteConfirmVisible} title={t('uploadModal.delete.confirmTitle')} onOk={confirmDelete} onCancel={cancelDelete} okText={t('uploadModal.delete.confirmOk')} cancelText={t('uploadModal.delete.confirmCancel')} okButtonProps={{ status: 'danger', loading: deleting }} cancelButtonProps={{ disabled: deleting }}>
         <p>{t('uploadModal.delete.confirmMessage')}</p>
       </Modal>
     </>
@@ -597,4 +635,3 @@ export const UploadCaseFilesModal: React.FC<UploadCaseFilesModalProps> = ({
 };
 
 export default UploadCaseFilesModal;
-

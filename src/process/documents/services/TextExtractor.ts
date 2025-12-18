@@ -30,11 +30,7 @@ export class TextExtractor {
    * @param caseFileId - Case file ID
    * @param filePath - Path to the original file
    */
-  async extractDocument(
-    documentId: string,
-    caseFileId: string,
-    intakeFilePath: string
-  ): Promise<void> {
+  async extractDocument(documentId: string, caseFileId: string, intakeFilePath: string): Promise<void> {
     console.log(`[DocumentIntake] Starting extraction for document: ${documentId}`);
 
     // Get document to get filename for progress events
@@ -76,7 +72,7 @@ export class TextExtractor {
       // Calculate page and word counts
       const pageMatches = extractedText.match(/--- Page \d+ ---/g);
       const page_count = pageMatches ? pageMatches.length : 1;
-      const word_count = extractedText.split(/\s+/).filter(w => w.length > 0).length;
+      const word_count = extractedText.split(/\s+/).filter((w) => w.length > 0).length;
 
       // Update document with extraction results
       DocumentRepository.updateProcessingFlags(documentId, {
@@ -102,10 +98,7 @@ export class TextExtractor {
   /**
    * Route to appropriate handler based on file type
    */
-  private async routeToHandler(
-    fileType: string,
-    filePath: string
-  ): Promise<string> {
+  private async routeToHandler(fileType: string, filePath: string): Promise<string> {
     switch (fileType) {
       case '.pdf':
         console.log('[DocumentIntake] Routing to Mistral OCR for PDF text extraction');

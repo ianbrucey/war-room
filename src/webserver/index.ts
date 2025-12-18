@@ -120,7 +120,7 @@ export async function startWebServer(port: number, allowRemote = false): Promise
   const server = createServer(app);
   const wss = new WebSocketServer({
     server,
-    maxPayload: 500 * 1024 * 1024 // 500MB max payload (increased from default 100MB)
+    maxPayload: 500 * 1024 * 1024, // 500MB max payload (increased from default 100MB)
   });
 
   // 初始化默认管理员账户

@@ -32,13 +32,7 @@ interface WorkspaceFilePreviewProps {
  * - HTML: Uses srcdoc iframe (inline content, no URL)
  * - Other text: Displays as plain text
  */
-export const WorkspaceFilePreview: React.FC<WorkspaceFilePreviewProps> = ({
-  filePath,
-  filename,
-  visible,
-  onClose,
-  onOpenExternal,
-}) => {
+export const WorkspaceFilePreview: React.FC<WorkspaceFilePreviewProps> = ({ filePath, filename, visible, onClose, onOpenExternal }) => {
   const [loading, setLoading] = useState(true);
   const [content, setContent] = useState<string>('');
   const [mimeType, setMimeType] = useState<string>('text/plain');
@@ -78,7 +72,7 @@ export const WorkspaceFilePreview: React.FC<WorkspaceFilePreviewProps> = ({
   const renderContent = () => {
     if (mimeType === 'text/markdown') {
       return (
-        <div className="preview-markdown-container">
+        <div className='preview-markdown-container'>
           <MarkdownView>{content}</MarkdownView>
         </div>
       );
@@ -86,20 +80,13 @@ export const WorkspaceFilePreview: React.FC<WorkspaceFilePreviewProps> = ({
 
     if (mimeType === 'text/html') {
       // Use srcdoc to render HTML inline - no URL, no download prompt
-      return (
-        <iframe
-          srcDoc={content}
-          className="preview-html-iframe"
-          title={filename}
-          sandbox="allow-same-origin"
-        />
-      );
+      return <iframe srcDoc={content} className='preview-html-iframe' title={filename} sandbox='allow-same-origin' />;
     }
 
     // Plain text / code
     return (
-      <div className="preview-text-container">
-        <pre className="preview-text-content">{content}</pre>
+      <div className='preview-text-container'>
+        <pre className='preview-text-content'>{content}</pre>
       </div>
     );
   };
@@ -115,43 +102,31 @@ export const WorkspaceFilePreview: React.FC<WorkspaceFilePreviewProps> = ({
   };
 
   return (
-    <Modal
-      visible={visible}
-      onCancel={onClose}
-      footer={null}
-      closable={false}
-      maskClosable={true}
-      style={{ width: '90vw', maxWidth: '1200px', height: '90vh', maxHeight: '900px' }}
-      wrapClassName="workspace-file-preview-modal-wrap"
-    >
-      <div className="workspace-file-preview-modal">
-        <div className="preview-header">
-          <span className="preview-filename" title={filePath}>
+    <Modal visible={visible} onCancel={onClose} footer={null} closable={false} maskClosable={true} style={{ width: '90vw', maxWidth: '1200px', height: '90vh', maxHeight: '900px' }} wrapClassName='workspace-file-preview-modal-wrap'>
+      <div className='workspace-file-preview-modal'>
+        <div className='preview-header'>
+          <span className='preview-filename' title={filePath}>
             {filename}
           </span>
-          <div className="preview-header-actions">
-            <button
-              onClick={handleOpenExternal}
-              className="header-action-btn"
-              title="Open in external editor"
-            >
+          <div className='preview-header-actions'>
+            <button onClick={handleOpenExternal} className='header-action-btn' title='Open in external editor'>
               <Copy size={18} />
             </button>
-            <button onClick={onClose} className="preview-close" title="Close">
+            <button onClick={onClose} className='preview-close' title='Close'>
               <Close size={20} />
             </button>
           </div>
         </div>
-        <div className="preview-content">
+        <div className='preview-content'>
           {loading && (
-            <div className="preview-loading">
+            <div className='preview-loading'>
               <Spin size={40} />
               <p>Loading file...</p>
             </div>
           )}
           {error && (
-            <div className="preview-error">
-              <div className="error-icon">⚠️</div>
+            <div className='preview-error'>
+              <div className='error-icon'>⚠️</div>
               <p>{error}</p>
             </div>
           )}
@@ -163,4 +138,3 @@ export const WorkspaceFilePreview: React.FC<WorkspaceFilePreviewProps> = ({
 };
 
 export default WorkspaceFilePreview;
-

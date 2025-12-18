@@ -35,7 +35,7 @@ export const searchDocumentsTool = {
 
     // Check if any documents are indexed for this case
     const documents = DocumentRepository.findByCaseFileId(args.caseFileId);
-    const indexedDocs = documents.filter(d => d.rag_indexed);
+    const indexedDocs = documents.filter((d) => d.rag_indexed);
 
     if (indexedDocs.length === 0) {
       return { results: 'No documents are indexed for search in this case file.' };
@@ -133,7 +133,7 @@ export const filterDocumentsTool = {
           processing_status: { type: 'array', items: { type: 'string' }, description: 'Processing statuses to filter by' },
           has_text_extraction: { type: 'boolean', description: 'Filter by text extraction status' },
           has_metadata: { type: 'boolean', description: 'Filter by metadata status' },
-        }
+        },
       },
     },
     required: ['caseFileId', 'filter'],
@@ -165,7 +165,7 @@ export const filterDocumentsTool = {
     const filteredDocs = complexFilter(documents, filterQuery, caseFile.workspace_path);
 
     return {
-      results: filteredDocs.map(d => ({
+      results: filteredDocs.map((d) => ({
         id: d.id,
         filename: d.filename,
         document_type: d.document_type,

@@ -148,10 +148,15 @@ const useSendBoxDraft = (conversation_id: string) => {
 const AcpSendBox: React.FC<{
   conversation_id: string;
   backend: AcpBackend;
-}> = ({ conversation_id, backend }) => {
+  isNarrativeMode?: boolean;
+  onNarrativeComplete?: (narrative: string) => void;
+}> = ({ conversation_id, backend, isNarrativeMode = false, onNarrativeComplete }) => {
   const { thought, running, acpStatus, aiProcessing, setAiProcessing } = useAcpMessage(conversation_id);
   const { t } = useTranslation();
   const { atPath, uploadFile, setAtPath, setUploadFile, content, setContent } = useSendBoxDraft(conversation_id);
+
+  // Narrative mode state - collect messages until "done"
+  const [narrativeBuffer, setNarrativeBuffer] = useState<string[]>([]);
 
   const { isRecording, isProcessing, startRecording, stopRecording, transcription, error: voiceError } = useAudioRecorder();
 
@@ -256,6 +261,36 @@ const AcpSendBox: React.FC<{
   }, [conversation_id, backend, acpStatus]);
 
   const onSendHandler = async (message: string) => {
+    // Handle narrative mode - collect messages until "done"
+    if (isNarrativeMode) {
+      const trimmedMessage = message.trim().toLowerCase();
+      if (trimmedMessage === 'done' || trimmedMessage === 'finished' || trimmedMessage === 'complete') {
+        // Compile all narrative messages and call completion handler
+        const fullNarrative = narrativeBuffer.join('\n\n');
+        setNarrativeBuffer([]);
+        setContent('');
+        if (onNarrativeComplete) {
+          onNarrativeComplete(fullNarrative);
+        }
+        return;
+      }
+      // Add message to narrative buffer
+      setNarrativeBuffer((prev) => [...prev, message]);
+      setContent('');
+      // Show the message in the conversation as a local message
+      const addOrUpdate = addOrUpdateMessageRef.current;
+      addOrUpdate({
+        id: uuid(),
+        msg_id: uuid(),
+        conversation_id,
+        type: 'text',
+        position: 'right',
+        content: { content: message },
+        createdAt: Date.now(),
+      });
+      return;
+    }
+
     const msg_id = uuid();
 
     message = processMessageWithFiles(message);
@@ -346,13 +381,7 @@ const AcpSendBox: React.FC<{
             shape='circle'
             className={`${isRecording ? 'animate-pulse' : ''}`}
             disabled={isProcessing}
-            icon={
-              isProcessing ? (
-                <IconLoading />
-              ) : (
-                <Voice theme={isRecording ? 'filled' : 'outline'} size='14' strokeWidth={2} fill={isRecording ? '#fff' : iconColors.primary} />
-              )
-            }
+            icon={isProcessing ? <IconLoading /> : <Voice theme={isRecording ? 'filled' : 'outline'} size='14' strokeWidth={2} fill={isRecording ? '#fff' : iconColors.primary} />}
             onClick={() => {
               if (isRecording) {
                 stopRecording();

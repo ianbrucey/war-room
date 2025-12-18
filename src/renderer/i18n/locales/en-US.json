@@ -96,8 +96,8 @@
       "saveName": "Save Name",
       "cancelEdit": "Cancel Edit"
     },
-    "workspace": {
-      "title": "Workspace",
+    "explorer": {
+      "title": "Explorer",
       "pasteConfirm_title": "Paste files",
       "pasteConfirm_message": "Are you sure you want to paste '{{name}}' into the selected folder ({{target}})?",
       "pasteConfirm_paste": "Paste",

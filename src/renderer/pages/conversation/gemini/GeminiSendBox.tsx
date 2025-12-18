@@ -105,8 +105,6 @@ const useSendBoxDraft = (conversation_id: string) => {
     [data, mutate]
   );
 
-
-
   return {
     atPath,
     uploadFile,
@@ -120,11 +118,16 @@ const useSendBoxDraft = (conversation_id: string) => {
 const GeminiSendBox: React.FC<{
   conversation_id: string;
   model: TProviderWithModel;
-}> = ({ conversation_id, model }) => {
+  isNarrativeMode?: boolean;
+  onNarrativeComplete?: (narrative: string) => void;
+}> = ({ conversation_id, model, isNarrativeMode = false, onNarrativeComplete }) => {
   const { t } = useTranslation();
   const { thought, running } = useGeminiMessage(conversation_id);
 
   const { atPath, uploadFile, setAtPath, setUploadFile, content, setContent } = useSendBoxDraft(conversation_id);
+
+  // Narrative mode: buffer messages
+  const [narrativeBuffer, setNarrativeBuffer] = useState<string[]>([]);
 
   const { isRecording, startRecording, stopRecording, transcription, error: voiceError } = useAudioRecorder();
 
@@ -214,6 +217,46 @@ const GeminiSendBox: React.FC<{
 
   const onSendHandler = async (message: string) => {
     if (!currentModel?.useModel) return;
+
+    // Narrative mode: buffer messages and check for completion
+    if (isNarrativeMode) {
+      const trimmedMessage = message.trim().toLowerCase();
+
+      // Check if user wants to finish narrative
+      if (trimmedMessage === 'done' || trimmedMessage === 'finished' || trimmedMessage === 'complete') {
+        const fullNarrative = narrativeBuffer.join('\n\n');
+        setContent('');
+        setNarrativeBuffer([]);
+
+        if (onNarrativeComplete && fullNarrative) {
+          onNarrativeComplete(fullNarrative);
+        }
+        return;
+      }
+
+      // Buffer the message
+      setNarrativeBuffer((prev) => [...prev, message]);
+      setContent('');
+
+      // Show buffered message in UI
+      const msg_id = uuid();
+      addOrUpdateMessage(
+        {
+          id: msg_id,
+          type: 'text',
+          position: 'right',
+          conversation_id,
+          content: {
+            content: message,
+          },
+          createdAt: Date.now(),
+        },
+        true
+      );
+      return;
+    }
+
+    // Normal mode: send message as usual
     const msg_id = uuid();
     message = processMessageWithFiles(message);
 
@@ -271,7 +314,7 @@ const GeminiSendBox: React.FC<{
         onChange={setContent}
         loading={running}
         disabled={!currentModel?.useModel}
-        placeholder={currentModel?.useModel ? '' : t('conversation.chat.noModelSelected')}
+        placeholder={isNarrativeMode ? 'Tell me what happened... (Type "done" when finished)' : currentModel?.useModel ? '' : t('conversation.chat.noModelSelected')}
         onStop={() => {
           return ipcBridge.conversation.stop.invoke({ conversation_id }).then(() => {
             console.log('stopStream');

@@ -1,3 +1,4 @@
+import { CaseGroundingCard } from '@/renderer/components/CaseGroundingCard';
 import ConversationHeader from '@/renderer/components/ConversationHeader';
 import ConversationPanel from '@/renderer/components/ConversationPanel';
 import LeftPanel from '@/renderer/components/LeftPanel';
@@ -11,7 +12,6 @@ import CodexLogo from '@/renderer/assets/logos/codex.svg';
 import GeminiLogo from '@/renderer/assets/logos/gemini.svg';
 import IflowLogo from '@/renderer/assets/logos/iflow.svg';
 import QwenLogo from '@/renderer/assets/logos/qwen.svg';
-import { ACP_BACKENDS_ALL } from '@/types/acpTypes';
 
 const CHAT_PANEL_WIDTH_KEY = 'chatPanelWidth';
 const DEFAULT_CHAT_WIDTH = 380;
@@ -24,28 +24,33 @@ const ChatLayout: React.FC<{
   sider: React.ReactNode;
   siderTitle?: React.ReactNode;
   backend?: string;
+  /** Event prefix for workspace events (gemini/acp/codex) */
+  eventPrefix?: 'gemini' | 'acp' | 'codex';
   /** Optional middle-pane preview content (e.g. workspace file preview) */
   preview?: React.ReactNode;
   /** Callback used by workspace panel to trigger preview updates */
   onFilePreview?: (filePath: string, filename: string) => void;
+  /** Callbacks for case grounding actions */
+  onStartNarrative?: () => void;
+  onUploadDocuments?: () => void;
+  onGenerateSummary?: () => void;
 }> = (props) => {
   const { backend } = props;
   const { caseFileId } = useParams<{ caseFileId?: string }>();
 
   // Panel state from context (for left panel)
-  const {
-    activePanel,
-    panelWidth,
-    setPanelWidth,
-    resetPanelWidth,
-    MIN_WIDTH,
-    MAX_WIDTH
-  } = usePanelContext();
+  const { activePanel, panelWidth, setPanelWidth, resetPanelWidth, MIN_WIDTH, MAX_WIDTH } = usePanelContext();
 
   // Chat panel width state (persisted to localStorage)
   const [chatWidth, setChatWidth] = useState(() => {
     const saved = localStorage.getItem(CHAT_PANEL_WIDTH_KEY);
     return saved ? parseInt(saved, 10) : DEFAULT_CHAT_WIDTH;
+  });
+
+  // Grounding card dismiss state (session-based)
+  const [groundingCardDismissed, setGroundingCardDismissed] = useState(() => {
+    if (!caseFileId) return false;
+    return sessionStorage.getItem(`grounding-dismissed-${caseFileId}`) === 'true';
   });
 
   useEffect(() => {
@@ -81,6 +86,22 @@ const ChatLayout: React.FC<{
     setChatWidth(DEFAULT_CHAT_WIDTH);
   };
 
+  // Handle grounding card dismiss
+  const handleGroundingDismiss = () => {
+    if (caseFileId) {
+      sessionStorage.setItem(`grounding-dismissed-${caseFileId}`, 'true');
+      setGroundingCardDismissed(true);
+    }
+  };
+
+  // Handle showing the grounding card (after dismissal)
+  const handleShowGroundingCard = () => {
+    if (caseFileId) {
+      sessionStorage.removeItem(`grounding-dismissed-${caseFileId}`);
+      setGroundingCardDismissed(false);
+    }
+  };
+
   // Get conversation_id and workspace from props.sider (ChatSider component)
   // This is a temporary solution - ideally we'd pass these as props
   const conversation_id = (props.sider as any)?.props?.conversation?.id || '';
@@ -89,12 +110,18 @@ const ChatLayout: React.FC<{
   // Backend logo helper
   const getBackendLogo = () => {
     switch (backend) {
-      case 'claude': return ClaudeLogo;
-      case 'gemini': return GeminiLogo;
-      case 'qwen': return QwenLogo;
-      case 'iflow': return IflowLogo;
-      case 'codex': return CodexLogo;
-      default: return '';
+      case 'claude':
+        return ClaudeLogo;
+      case 'gemini':
+        return GeminiLogo;
+      case 'qwen':
+        return QwenLogo;
+      case 'iflow':
+        return IflowLogo;
+      case 'codex':
+        return CodexLogo;
+      default:
+        return '';
     }
   };
 
@@ -103,8 +130,8 @@ const ChatLayout: React.FC<{
     switch (activePanel) {
       case 'conversations':
         return <ConversationPanel />;
-      case 'workspace':
-        return <WorkspacePanel conversation_id={conversation_id} workspace={workspace} onFilePreview={props.onFilePreview} />;
+      case 'explorer':
+        return <WorkspacePanel conversation_id={conversation_id} workspace={workspace} eventPrefix={props.eventPrefix} onFilePreview={props.onFilePreview} />;
       case 'preview':
         return <div className='p-16px'>File Preview (Coming Soon)</div>;
       default:
@@ -112,82 +139,73 @@ const ChatLayout: React.FC<{
     }
   };
 
+  // Render middle panel content (grounding card or preview or empty state)
+  const renderMiddlePanel = () => {
+    // Priority 1: Show grounding card if case exists, not dismissed, and no preview
+    if (caseFileId && !groundingCardDismissed && !props.preview) {
+      return <CaseGroundingCard caseFileId={caseFileId} onStartNarrative={props.onStartNarrative || (() => {})} onUploadDocuments={props.onUploadDocuments || (() => {})} onGenerateSummary={props.onGenerateSummary || (() => {})} onDismiss={handleGroundingDismiss} />;
+    }
+
+    // Priority 2: Show file preview if provided
+    if (props.preview) {
+      return props.preview;
+    }
+
+    // Priority 3: Empty state
+    return (
+      <div className='size-full flex items-center justify-center text-13px text-t-secondary px-16px'>
+        <span>Select a file in the workspace to preview it here.</span>
+      </div>
+    );
+  };
+
   return (
     <div className='size-full flex flex-col'>
       {/* TOP: Conversation Header */}
-      {caseFileId && <ConversationHeader caseFileId={caseFileId} />}
+      {caseFileId && <ConversationHeader caseFileId={caseFileId} groundingCardDismissed={groundingCardDismissed} onShowGroundingCard={handleShowGroundingCard} />}
 
       {/* MAIN: Layout with left panel and content */}
       <div className='flex flex-row flex-1 min-w-0 overflow-hidden'>
         {/* LEFT: Dynamic Panel */}
-        <LeftPanel
-          activePanel={activePanel}
-          width={panelWidth}
-          onWidthChange={setPanelWidth}
-          onResetWidth={resetPanelWidth}
-          minWidth={MIN_WIDTH}
-          maxWidth={MAX_WIDTH}
-        >
+        <LeftPanel activePanel={activePanel} width={panelWidth} onWidthChange={setPanelWidth} onResetWidth={resetPanelWidth} minWidth={MIN_WIDTH} maxWidth={MAX_WIDTH}>
           {renderPanelContent()}
         </LeftPanel>
 
         {/* RIGHT: Main content area with preview + chat panel */}
         <div className='flex flex-row flex-1 min-w-0 bg-2 p-12px gap-12px overflow-hidden'>
-        {/* Middle: file preview area */}
-        <div className='flex-1 min-w-0 bg-1 rounded-12px overflow-hidden'>
-          {props.preview || (
-            <div className='size-full flex items-center justify-center text-13px text-t-secondary px-16px'>
-              <span>Select a file in the workspace to preview it here.</span>
-            </div>
-          )}
-        </div>
+          {/* Middle: file preview area or grounding card */}
+          <div className='flex-1 min-w-0 bg-1 rounded-12px overflow-hidden'>{renderMiddlePanel()}</div>
 
-        {/* Right: Chat Panel - card-like container with drag handle */}
-        <div
-          className='flex flex-col bg-1 rounded-12px overflow-hidden relative'
-          style={{
-            width: `${chatWidth}px`,
-            flexShrink: 0,
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
-          }}
-        >
-          {/* Drag Handle - left edge of chat panel */}
+          {/* Right: Chat Panel - card-like container with drag handle */}
           <div
-            className='absolute left-0 top-0 bottom-0 w-6px cursor-col-resize z-10 hover:bg-[var(--color-border-2)] transition-colors'
-            onMouseDown={handleChatDragStart}
-            onDoubleClick={handleChatResetWidth}
+            className='flex flex-col bg-1 rounded-12px overflow-hidden relative'
             style={{
-              borderLeft: '1px solid var(--bg-3)',
+              width: `${chatWidth}px`,
+              flexShrink: 0,
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
             }}
-          />
+          >
+            {/* Drag Handle - left edge of chat panel */}
+            <div
+              className='absolute left-0 top-0 bottom-0 w-6px cursor-col-resize z-10 hover:bg-[var(--color-border-2)] transition-colors'
+              onMouseDown={handleChatDragStart}
+              onDoubleClick={handleChatResetWidth}
+              style={{
+                borderLeft: '1px solid var(--bg-3)',
+              }}
+            />
 
-          {/* Chat Panel Header */}
-          <div className='flex items-center justify-between px-16px py-12px border-b border-[var(--bg-3)] flex-shrink-0'>
-            <div className='flex items-center gap-8px'>
-              <span className='font-semibold text-14px text-t-primary'>{props.title || 'Chat'}</span>
-            </div>
-            {backend && (
-              <div className='flex items-center gap-6px bg-2 rounded-full px-8px py-2px'>
-                <img
-                  src={getBackendLogo()}
-                  alt={`${backend} logo`}
-                  width={14}
-                  height={14}
-                  style={{ objectFit: 'contain' }}
-                />
-                <span className='text-12px text-t-secondary'>
-                  {ACP_BACKENDS_ALL[backend as keyof typeof ACP_BACKENDS_ALL]?.name || backend}
-                </span>
+            {/* Chat Panel Header */}
+            <div className='flex items-center justify-between px-16px py-12px border-b border-[var(--bg-3)] flex-shrink-0'>
+              <div className='flex items-center gap-8px'>
+                <span className='font-semibold text-14px text-t-primary'>{props.title || 'Chat'}</span>
               </div>
-            )}
-          </div>
+            </div>
 
-          {/* Chat Content */}
-          <div className='flex-1 flex flex-col min-h-0 overflow-hidden'>
-            {props.children}
+            {/* Chat Content */}
+            <div className='flex-1 flex flex-col min-h-0 overflow-hidden'>{props.children}</div>
           </div>
         </div>
-      </div>
       </div>
     </div>
   );

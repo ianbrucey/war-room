@@ -1,12 +1,6 @@
-export function buildSummarizationPrompt(
-  extractedText: string,
-  filename: string
-): string {
+export function buildSummarizationPrompt(extractedText: string, filename: string): string {
   const MAX_LENGTH = 15000;
-  const truncatedText =
-    extractedText.length > MAX_LENGTH
-      ? extractedText.substring(0, MAX_LENGTH) + '... [TRUNCATED]'
-      : extractedText;
+  const truncatedText = extractedText.length > MAX_LENGTH ? extractedText.substring(0, MAX_LENGTH) + '... [TRUNCATED]' : extractedText;
 
   const prompt = `
 You are a legal document analyst. Analyze the following document and extract structured metadata.

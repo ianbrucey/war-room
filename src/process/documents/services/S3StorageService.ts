@@ -4,15 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {
-  DeleteObjectCommand,
-  DeleteObjectsCommand,
-  GetObjectCommand,
-  HeadObjectCommand,
-  ListObjectsV2Command,
-  PutObjectCommand,
-  S3Client,
-} from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, DeleteObjectsCommand, GetObjectCommand, HeadObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import fs from 'fs/promises';
 import path from 'path';
@@ -111,11 +103,7 @@ export class S3StorageService {
    * @param contentType - MIME type
    * @returns Upload result with key, versionId, and bucket
    */
-  async uploadFile(
-    filePath: string,
-    s3Key: string,
-    contentType: string
-  ): Promise<{ key: string; versionId?: string; bucket: string }> {
+  async uploadFile(filePath: string, s3Key: string, contentType: string): Promise<{ key: string; versionId?: string; bucket: string }> {
     const fileContent = await fs.readFile(filePath);
 
     const command = new PutObjectCommand({
@@ -148,11 +136,7 @@ export class S3StorageService {
    * @param contentType - MIME type
    * @returns Upload result
    */
-  async uploadContent(
-    content: Buffer | string,
-    s3Key: string,
-    contentType: string
-  ): Promise<{ key: string; versionId?: string; bucket: string }> {
+  async uploadContent(content: Buffer | string, s3Key: string, contentType: string): Promise<{ key: string; versionId?: string; bucket: string }> {
     const command = new PutObjectCommand({
       Bucket: this.bucket,
       Key: s3Key,

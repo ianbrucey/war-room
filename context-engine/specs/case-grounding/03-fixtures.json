@@ -1,0 +1,147 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Test fixtures for Case Grounding feature",
+
+  "cases": {
+    "ungrounded_case": {
+      "id": "case-001-ungrounded",
+      "title": "Smith v. Acme Corp",
+      "workspace_path": "/Users/test/.justicequest/smith-v-acme-2024",
+      "grounding_status": "ungrounded",
+      "narrative_updated_at": null,
+      "case_summary_status": null,
+      "case_summary_generated_at": null,
+      "document_count": 0
+    },
+
+    "narrative_only_case": {
+      "id": "case-002-narrative-only",
+      "title": "Johnson Employment Dispute",
+      "workspace_path": "/Users/test/.justicequest/johnson-employment-2024",
+      "grounding_status": "narrative_only",
+      "narrative_updated_at": 1702900800000,
+      "case_summary_status": null,
+      "case_summary_generated_at": null,
+      "document_count": 0
+    },
+
+    "docs_only_case": {
+      "id": "case-003-docs-only", 
+      "title": "Williams Property Dispute",
+      "workspace_path": "/Users/test/.justicequest/williams-property-2024",
+      "grounding_status": "docs_only",
+      "narrative_updated_at": null,
+      "case_summary_status": "generated",
+      "case_summary_generated_at": 1702814400000,
+      "document_count": 5
+    },
+
+    "fully_grounded_case": {
+      "id": "case-004-grounded",
+      "title": "Davis Contract Breach",
+      "workspace_path": "/Users/test/.justicequest/davis-contract-2024",
+      "grounding_status": "grounded",
+      "narrative_updated_at": 1702728000000,
+      "case_summary_status": "generated",
+      "case_summary_generated_at": 1702814400000,
+      "document_count": 8
+    },
+
+    "stale_summary_case": {
+      "id": "case-005-stale",
+      "title": "Miller Wrongful Termination",
+      "workspace_path": "/Users/test/.justicequest/miller-termination-2024",
+      "grounding_status": "grounded",
+      "narrative_updated_at": 1702900800000,
+      "case_summary_status": "stale",
+      "case_summary_generated_at": 1702814400000,
+      "document_count": 3,
+      "_note": "narrative_updated_at > case_summary_generated_at, hence stale"
+    }
+  },
+
+  "narratives": {
+    "sample_voice_narrative": {
+      "content": "So what happened was, I was working at Acme Corp for about three years as a senior developer. Everything was fine until last March when they brought in a new manager, Sarah Chen. She started making my life difficult—giving me impossible deadlines, excluding me from meetings, that sort of thing. I tried to talk to HR about it in April, but nothing changed. Then in June, they called me into a meeting and said I was being let go for 'performance issues.' But I have all my performance reviews from before Sarah arrived, and they were all excellent. I think this was retaliation for going to HR.",
+      "captured_at": "2024-12-18T10:30:00Z",
+      "capture_method": "voice"
+    },
+
+    "sample_text_narrative": {
+      "content": "I purchased a property at 123 Oak Street in January 2024. The seller (Robert Williams) assured me the foundation was solid. Three months after closing, I discovered significant foundation cracks that a structural engineer said were pre-existing and deliberately concealed. I have photos from the original listing that appear to have been edited to hide the damage. The repair estimate is $45,000.",
+      "captured_at": "2024-12-18T14:00:00Z",
+      "capture_method": "text"
+    }
+  },
+
+  "parties": {
+    "employment_case_parties": [
+      {
+        "name": "User (Self)",
+        "role": "plaintiff",
+        "relationship": "self",
+        "notes": null
+      },
+      {
+        "name": "Acme Corp",
+        "role": "defendant",
+        "relationship": "former employer",
+        "notes": "Employed user for 3 years"
+      },
+      {
+        "name": "Sarah Chen",
+        "role": "witness",
+        "relationship": "former manager",
+        "notes": "New manager who allegedly created hostile environment"
+      }
+    ],
+
+    "property_case_parties": [
+      {
+        "name": "User (Self)",
+        "role": "plaintiff",
+        "relationship": "self",
+        "notes": "Buyer of property"
+      },
+      {
+        "name": "Robert Williams",
+        "role": "defendant",
+        "relationship": "property seller",
+        "notes": "Allegedly concealed foundation damage"
+      }
+    ]
+  },
+
+  "grounding_status_responses": {
+    "ungrounded": {
+      "narrativeExists": false,
+      "narrativeUpdatedAt": null,
+      "documentCount": 0,
+      "summaryStatus": null,
+      "summaryGeneratedAt": null,
+      "isStale": false,
+      "groundingStatus": "ungrounded"
+    },
+
+    "fully_grounded": {
+      "narrativeExists": true,
+      "narrativeUpdatedAt": 1702728000000,
+      "documentCount": 8,
+      "summaryStatus": "generated",
+      "summaryGeneratedAt": 1702814400000,
+      "isStale": false,
+      "groundingStatus": "grounded"
+    },
+
+    "stale": {
+      "narrativeExists": true,
+      "narrativeUpdatedAt": 1702900800000,
+      "documentCount": 3,
+      "summaryStatus": "stale",
+      "summaryGeneratedAt": 1702814400000,
+      "isStale": true,
+      "groundingStatus": "grounded"
+    }
+  }
+}
+

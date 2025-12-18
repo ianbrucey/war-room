@@ -17,13 +17,20 @@ interface ProgressIndicatorProps {
  */
 const getProgress = (status: ProcessingStatus): number => {
   switch (status) {
-    case 'pending': return 10;
-    case 'extracting': return 30;
-    case 'analyzing': return 60;
-    case 'indexing': return 85;
-    case 'complete': return 100;
-    case 'failed': return 0;
-    default: return 0;
+    case 'pending':
+      return 10;
+    case 'extracting':
+      return 30;
+    case 'analyzing':
+      return 60;
+    case 'indexing':
+      return 85;
+    case 'complete':
+      return 100;
+    case 'failed':
+      return 0;
+    default:
+      return 0;
   }
 };
 
@@ -44,12 +51,5 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({ status }) 
   const progress = getProgress(status);
   const color = getProgressColor(status);
 
-  return (
-    <Progress
-      percent={progress}
-      status={status === 'failed' ? 'error' : undefined}
-      color={color}
-      size="small"
-    />
-  );
+  return <Progress percent={progress} status={status === 'failed' ? 'error' : undefined} color={color} size='small' />;
 };

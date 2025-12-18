@@ -98,7 +98,7 @@ export const useDragUpload = ({ supportedExts = [], onFilesAdded }: UseDragUploa
             }
           } else {
             // WebUI: Pass File objects directly
-            const processedFiles: (FileMetadata & { file?: File })[] = validFiles.map(file => ({
+            const processedFiles: (FileMetadata & { file?: File })[] = validFiles.map((file) => ({
               name: file.name,
               path: '', // Not used in WebUI
               size: file.size,

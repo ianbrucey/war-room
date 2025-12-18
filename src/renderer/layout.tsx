@@ -82,16 +82,8 @@ const LayoutInner: React.FC<{
       <ArcoLayout className={'size-full layout'}>
         {/* Icon Sidebar (80px) - Hide on cases page */}
         {!isCasesPage && (
-          <ArcoLayout.Sider
-            collapsedWidth={0}
-            collapsed={false}
-            width={80}
-            className='!bg-2 layout-icon-sidebar'
-          >
-            <IconSidebar
-              activePanel={activePanel}
-              onPanelToggle={togglePanel}
-            />
+          <ArcoLayout.Sider collapsedWidth={0} collapsed={false} width={80} className='!bg-2 layout-icon-sidebar'>
+            <IconSidebar activePanel={activePanel} onPanelToggle={togglePanel} />
           </ArcoLayout.Sider>
         )}
 

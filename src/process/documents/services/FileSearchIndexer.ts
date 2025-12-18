@@ -30,12 +30,7 @@ export class FileSearchIndexer {
    * @param extractedTextPath - Path to extracted text file
    * @param metadata - Document metadata
    */
-  async indexDocument(
-    documentId: string,
-    caseFileId: string,
-    extractedTextPath: string,
-    metadata: IDocumentMetadata
-  ): Promise<void> {
+  async indexDocument(documentId: string, caseFileId: string, extractedTextPath: string, metadata: IDocumentMetadata): Promise<void> {
     const doc = DocumentRepository.findById(documentId);
     if (!doc) {
       throw new Error(`Document not found: ${documentId}`);
@@ -47,11 +42,7 @@ export class FileSearchIndexer {
       // emitDocumentIndexing(documentId, caseFileId, doc.filename);
 
       const storeId = await this.getOrCreateStore(caseFileId);
-      const fileUri = await this.uploadToFileSearch(
-        storeId,
-        extractedTextPath,
-        metadata
-      );
+      const fileUri = await this.uploadToFileSearch(storeId, extractedTextPath, metadata);
 
       // Update document with file URI and mark as complete
       DocumentRepository.updateProcessingFlags(documentId, {
@@ -100,11 +91,7 @@ export class FileSearchIndexer {
   /**
    * Upload file to Gemini File Search
    */
-  private async uploadToFileSearch(
-    storeId: string,
-    textPath: string,
-    metadata: IDocumentMetadata
-  ): Promise<string> {
+  private async uploadToFileSearch(storeId: string, textPath: string, metadata: IDocumentMetadata): Promise<string> {
     // This is a placeholder for the actual API call to upload a file.
     // The Gemini SDK for Node.js doesn't yet support file search management.
     // We will simulate the upload and return a fake URI.

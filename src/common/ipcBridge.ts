@@ -131,6 +131,35 @@ export const cases = {
   delete: bridge.buildProvider<IBridgeResponse, { caseId: string }>('cases.delete'),
 };
 
+// Case grounding (narrative capture and party extraction)
+export const caseGrounding = {
+  getNarrativeStatus: bridge.buildProvider<IBridgeResponse<{ exists: boolean; updatedAt: number | null; captureMethod: 'voice' | 'text' | 'mixed' | null }>, { caseFileId: string }>('case-grounding.get-narrative-status'),
+
+  saveNarrative: bridge.buildProvider<IBridgeResponse<{ success: boolean; filePath: string }>, { caseFileId: string; content: string; captureMethod: 'voice' | 'text' | 'mixed' }>('case-grounding.save-narrative'),
+
+  getGroundingStatus: bridge.buildProvider<
+    IBridgeResponse<{
+      narrativeExists: boolean;
+      narrativeUpdatedAt: number | null;
+      documentCount: number;
+      summaryStatus: string | null;
+      summaryGeneratedAt: number | null;
+      isStale: boolean;
+      groundingStatus: string;
+    }>,
+    { caseFileId: string }
+  >('case-grounding.get-grounding-status'),
+
+  extractParties: bridge.buildProvider<
+    IBridgeResponse<{
+      success: boolean;
+      parties: Array<{ name: string; role: string; relationship: string | null; notes: string | null }>;
+      filePath: string;
+    }>,
+    { caseFileId: string; narrativeContent: string }
+  >('case-grounding.extract-parties'),
+};
+
 interface ISendMessageParams {
   input: string;
   msg_id: string;

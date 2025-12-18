@@ -215,4 +215,93 @@ export const CaseFileRepository = {
       throw error;
     }
   },
+
+  /**
+   * Update narrative timestamp
+   * 更新用户叙述时间戳
+   */
+  updateNarrativeTimestamp(caseFileId: string, timestamp: number): void {
+    const db = getDatabase();
+    try {
+      db.exec(
+        `UPDATE case_files
+         SET narrative_updated_at = ?, updated_at = ?
+         WHERE id = ?`,
+        timestamp,
+        Date.now(),
+        caseFileId
+      );
+      console.log(`[CaseFileRepository] Updated narrative timestamp for case ${caseFileId}`);
+    } catch (error) {
+      console.error('[CaseFileRepository] Failed to update narrative timestamp:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update grounding status
+   * 更新案件基础状态
+   */
+  updateGroundingStatus(caseFileId: string, status: 'ungrounded' | 'narrative_only' | 'docs_only' | 'grounded'): void {
+    const db = getDatabase();
+    try {
+      db.exec(
+        `UPDATE case_files
+         SET grounding_status = ?, updated_at = ?
+         WHERE id = ?`,
+        status,
+        Date.now(),
+        caseFileId
+      );
+      console.log(`[CaseFileRepository] Updated grounding status to '${status}' for case ${caseFileId}`);
+    } catch (error) {
+      console.error('[CaseFileRepository] Failed to update grounding status:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get grounding status for a case
+   * 获取案件基础状态
+   */
+  getGroundingStatus(caseFileId: string): {
+    narrativeExists: boolean;
+    narrativeUpdatedAt: number | null;
+    documentCount: number;
+    summaryStatus: string | null;
+    summaryGeneratedAt: number | null;
+    isStale: boolean;
+    groundingStatus: string;
+  } | null {
+    const db = getDatabase();
+    try {
+      // Get case file info
+      const caseFile = this.findById(caseFileId);
+      if (!caseFile) {
+        return null;
+      }
+
+      // Get document count
+      const docCountResult = db.querySingle('SELECT COUNT(*) as count FROM case_documents WHERE case_file_id = ? AND processing_status = ?', caseFileId, 'complete') as { count: number } | null;
+      const documentCount = docCountResult?.count ?? 0;
+
+      // Check staleness
+      const narrativeUpdatedAt = caseFile.narrative_updated_at ?? null;
+      const summaryGeneratedAt = caseFile.case_summary_generated_at ?? null;
+      const isStale = caseFile.case_summary_status === 'stale' || (caseFile.case_summary_status === 'generated' && narrativeUpdatedAt !== null && summaryGeneratedAt !== null && narrativeUpdatedAt > summaryGeneratedAt);
+
+      return {
+        narrativeExists: narrativeUpdatedAt !== null,
+        narrativeUpdatedAt,
+        documentCount,
+        summaryStatus: caseFile.case_summary_status ?? null,
+        summaryGeneratedAt,
+        isStale,
+        groundingStatus: caseFile.grounding_status ?? 'ungrounded',
+      };
+    } catch (error) {
+      console.error('[CaseFileRepository] Failed to get grounding status:', error);
+      return null;
+    }
+  },
 };

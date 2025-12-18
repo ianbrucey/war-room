@@ -31,7 +31,7 @@ export class PdfParseHandler {
 
     const pageCount = data.numpages;
     const textWithBreaks = this.addPageBreaks(data.text, pageCount);
-    const wordCount = textWithBreaks.split(/\s+/).filter(w => w.length > 0).length;
+    const wordCount = textWithBreaks.split(/\s+/).filter((w) => w.length > 0).length;
 
     return { text: textWithBreaks, pageCount, wordCount };
   }

@@ -141,36 +141,37 @@ export class WebSocketManager {
 
         // Voice Handling - bridge invoke sends "subscribe-{key}" and expects "subscribe.callback-{key}{id}"
         if (name === 'subscribe-voice-start') {
-           const requestId = data?.id || '';
-           console.log('[WebSocketManager] Voice session starting for:', sessionId, 'requestId:', requestId);
-           voiceService.startSession(sessionId);
-           // Send response using bridge callback pattern
-           ws.send(JSON.stringify({ name: `subscribe.callback-voice-start${requestId}`, data: undefined }));
-           return;
+          const requestId = data?.id || '';
+          console.log('[WebSocketManager] Voice session starting for:', sessionId, 'requestId:', requestId);
+          voiceService.startSession(sessionId);
+          // Send response using bridge callback pattern
+          ws.send(JSON.stringify({ name: `subscribe.callback-voice-start${requestId}`, data: undefined }));
+          return;
         } else if (name === 'subscribe-voice-chunk') {
-           const requestId = data?.id || '';
-           const chunkData = data?.data;
-           voiceService.appendAudio(sessionId, chunkData);
-           // Send response using bridge callback pattern
-           ws.send(JSON.stringify({ name: `subscribe.callback-voice-chunk${requestId}`, data: undefined }));
-           return;
+          const requestId = data?.id || '';
+          const chunkData = data?.data;
+          voiceService.appendAudio(sessionId, chunkData);
+          // Send response using bridge callback pattern
+          ws.send(JSON.stringify({ name: `subscribe.callback-voice-chunk${requestId}`, data: undefined }));
+          return;
         } else if (name === 'subscribe-voice-end') {
-           const requestId = data?.id || '';
-           console.log('[WebSocketManager] Voice session ending for:', sessionId, 'requestId:', requestId);
-           voiceService.transcribeSession(sessionId)
-             .then(text => {
-               console.log('[WebSocketManager] Transcription received:', text);
-               // Send the transcription as an event (for the voice-text listener)
-               ws.send(JSON.stringify({ name: 'voice-text', data: { text } }));
-               // Also send response using bridge callback pattern so invoke() completes
-               ws.send(JSON.stringify({ name: `subscribe.callback-voice-end${requestId}`, data: undefined }));
-             })
-             .catch(err => {
-               console.error('[WebSocketManager] Transcription error:', err.message);
-               ws.send(JSON.stringify({ name: 'voice-error', data: { message: err.message } }));
-               ws.send(JSON.stringify({ name: `subscribe.callback-voice-end${requestId}`, data: undefined }));
-             });
-           return;
+          const requestId = data?.id || '';
+          console.log('[WebSocketManager] Voice session ending for:', sessionId, 'requestId:', requestId);
+          voiceService
+            .transcribeSession(sessionId)
+            .then((text) => {
+              console.log('[WebSocketManager] Transcription received:', text);
+              // Send the transcription as an event (for the voice-text listener)
+              ws.send(JSON.stringify({ name: 'voice-text', data: { text } }));
+              // Also send response using bridge callback pattern so invoke() completes
+              ws.send(JSON.stringify({ name: `subscribe.callback-voice-end${requestId}`, data: undefined }));
+            })
+            .catch((err) => {
+              console.error('[WebSocketManager] Transcription error:', err.message);
+              ws.send(JSON.stringify({ name: 'voice-error', data: { message: err.message } }));
+              ws.send(JSON.stringify({ name: `subscribe.callback-voice-end${requestId}`, data: undefined }));
+            });
+          return;
         }
 
         // Forward other messages to bridge system
@@ -332,20 +333,24 @@ export class WebSocketManager {
   private handleCaseFileSubscription(ws: WebSocket, data: any): void {
     const caseFileId = data?.caseFileId;
     if (!caseFileId) {
-      ws.send(JSON.stringify({
-        name: 'subscription-error',
-        data: { error: 'caseFileId required' }
-      }));
+      ws.send(
+        JSON.stringify({
+          name: 'subscription-error',
+          data: { error: 'caseFileId required' },
+        })
+      );
       return;
     }
 
     const clientInfo = this.clients.get(ws);
     if (clientInfo) {
       clientInfo.subscribedCaseFiles.add(caseFileId);
-      ws.send(JSON.stringify({
-        name: 'subscribed-case-file',
-        data: { caseFileId, success: true }
-      }));
+      ws.send(
+        JSON.stringify({
+          name: 'subscribed-case-file',
+          data: { caseFileId, success: true },
+        })
+      );
       console.log(`[WebSocketManager] Client subscribed to case file: ${caseFileId}`);
     }
   }

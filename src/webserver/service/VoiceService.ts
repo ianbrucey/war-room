@@ -65,12 +65,12 @@ export class VoiceService {
 
     // Handle serialized Buffer object from JSON
     if (chunk && typeof chunk === 'object' && 'data' in chunk && Array.isArray((chunk as any).data)) {
-        bufferToAppend = Buffer.from((chunk as any).data);
+      bufferToAppend = Buffer.from((chunk as any).data);
     } else if (Buffer.isBuffer(chunk)) {
-        bufferToAppend = chunk;
+      bufferToAppend = chunk;
     } else {
-        console.warn('[VoiceService] Invalid chunk format received');
-        return;
+      console.warn('[VoiceService] Invalid chunk format received');
+      return;
     }
 
     session.buffer = Buffer.concat([session.buffer, bufferToAppend]);
@@ -125,7 +125,8 @@ export class VoiceService {
   /**
    * Check for inactive sessions and clean them up
    */
-  public cleanupInactiveSessions(maxAgeMs = 300000): void { // 5 minutes
+  public cleanupInactiveSessions(maxAgeMs = 300000): void {
+    // 5 minutes
     const now = Date.now();
     for (const [id, session] of this.sessions.entries()) {
       if (now - session.lastActivity > maxAgeMs) {

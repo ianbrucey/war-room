@@ -4,10 +4,7 @@ export interface RetryOptions {
   factor?: number;
 }
 
-export async function withRetry<T>(
-  fn: () => Promise<T>,
-  options: RetryOptions = {}
-): Promise<T> {
+export async function withRetry<T>(fn: () => Promise<T>, options: RetryOptions = {}): Promise<T> {
   const { retries = 3, delay = 1000, factor = 2 } = options;
   let lastError: Error | undefined;
 
@@ -22,7 +19,7 @@ export async function withRetry<T>(
       if (i < retries - 1) {
         const currentDelay = delay * Math.pow(factor, i);
         console.log(`[DocumentIntake] Retrying after ${currentDelay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, currentDelay));
+        await new Promise((resolve) => setTimeout(resolve, currentDelay));
       }
     }
   }

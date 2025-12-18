@@ -29,23 +29,19 @@ export class DocumentAnalyzer {
 
   /**
    * Analyze a document and generate metadata
-   * 
+   *
    * @param documentId - Document ID from database
    * @param caseFileId - Case file ID
    * @param extractedTextPath - Path to extracted text file
    * @returns Generated document metadata
    */
-  async analyzeDocument(
-    documentId: string,
-    caseFileId: string,
-    extractedTextPath: string
-  ): Promise<IDocumentMetadata> {
+  async analyzeDocument(documentId: string, caseFileId: string, extractedTextPath: string): Promise<IDocumentMetadata> {
     console.log('[DocumentIntake] Starting document analysis:', documentId);
 
     try {
       // Read extracted text
       const extractedText = await readFile(extractedTextPath, 'utf-8');
-      
+
       // Get document from database to get filename
       const document = DocumentRepository.findById(documentId);
       if (!document) {
@@ -56,13 +52,7 @@ export class DocumentAnalyzer {
       DocumentRepository.updateStatus(documentId, 'analyzing');
 
       // Generate summary using Gemini CLI
-      const metadata = await this.generateMetadata(
-        documentId,
-        document.filename,
-        document.file_type,
-        extractedText,
-        extractedTextPath
-      );
+      const metadata = await this.generateMetadata(documentId, document.filename, document.file_type, extractedText, extractedTextPath);
 
       // Get case file to get workspace path
       const caseFile = CaseFileRepository.findById(caseFileId);
@@ -96,10 +86,10 @@ export class DocumentAnalyzer {
       return metadata;
     } catch (error) {
       console.error('[DocumentIntake] Document analysis failed:', error);
-      
+
       // Mark document as failed
       DocumentRepository.updateStatus(documentId, 'failed');
-      
+
       throw error;
     }
   }
@@ -114,13 +104,7 @@ export class DocumentAnalyzer {
    * @param extractedTextPath - Path to extracted text file
    * @returns Structured metadata
    */
-  private async generateMetadata(
-    documentId: string,
-    filename: string,
-    fileType: string,
-    extractedText: string,
-    extractedTextPath: string
-  ): Promise<IDocumentMetadata> {
+  private async generateMetadata(documentId: string, filename: string, fileType: string, extractedText: string, extractedTextPath: string): Promise<IDocumentMetadata> {
     const prompt = this.buildSummarizationPrompt(extractedText);
 
     console.log('[DocumentIntake] Calling Gemini CLI for document summary...');
@@ -132,8 +116,8 @@ export class DocumentAnalyzer {
     const aiSummary = this.parseGeminiResponse(response);
 
     // Count words in extracted text
-    const wordCount = extractedText.split(/\s+/).filter(w => w.length > 0).length;
-    
+    const wordCount = extractedText.split(/\s+/).filter((w) => w.length > 0).length;
+
     // Count pages (look for page break markers)
     const pageMatches = extractedText.match(/--- Page \d+ ---/g);
     const pageCount = pageMatches ? pageMatches.length : 1;
@@ -158,19 +142,22 @@ export class DocumentAnalyzer {
         requested_relief: aiSummary.requested_relief,
       },
       entities: {
-        parties: aiSummary.key_parties?.map((name: string) => ({
-          name,
-          role: 'Unknown',
-          mentions: 1,
-        })) || [],
-        dates: aiSummary.important_dates?.map((date: string) => ({
-          date,
-          context: 'Document date',
-        })) || [],
-        authorities: aiSummary.authorities?.map((citation: string) => ({
-          citation,
-          context: 'Cited authority',
-        })) || [],
+        parties:
+          aiSummary.key_parties?.map((name: string) => ({
+            name,
+            role: 'Unknown',
+            mentions: 1,
+          })) || [],
+        dates:
+          aiSummary.important_dates?.map((date: string) => ({
+            date,
+            context: 'Document date',
+          })) || [],
+        authorities:
+          aiSummary.authorities?.map((citation: string) => ({
+            citation,
+            context: 'Cited authority',
+          })) || [],
       },
       relevance_scores: {},
       relationships: {
@@ -185,7 +172,7 @@ export class DocumentAnalyzer {
 
   /**
    * Build structured summarization prompt for Gemini
-   * 
+   *
    * @param extractedText - Document text to analyze
    * @returns Prompt string
    */
@@ -224,11 +211,7 @@ IMPORTANT:
    * @param maxRetries - Maximum retry attempts
    * @returns Parsed JSON response
    */
-  private async callGeminiWithRetry(
-    prompt: string,
-    extractedTextPath: string,
-    maxRetries = 3
-  ): Promise<string> {
+  private async callGeminiWithRetry(prompt: string, extractedTextPath: string, maxRetries = 3): Promise<string> {
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -236,14 +219,11 @@ IMPORTANT:
         console.log(`[DocumentIntake] Calling Gemini CLI (attempt ${attempt}/${maxRetries})...`);
 
         // Use Gemini CLI with --include-directories flag
-        const result = execSync(
-          `gemini -m gemini-2.5-flash -p "${prompt.replace(/"/g, '\\"')} @${extractedTextPath}" --include-directories ${dirname(extractedTextPath)}`,
-          {
-            encoding: 'utf-8',
-            timeout: 120000, // 2 minute timeout
-            maxBuffer: 10 * 1024 * 1024, // 10MB buffer
-          }
-        );
+        const result = execSync(`gemini -m gemini-2.5-flash -p "${prompt.replace(/"/g, '\\"')} @${extractedTextPath}" --include-directories ${dirname(extractedTextPath)}`, {
+          encoding: 'utf-8',
+          timeout: 120000, // 2 minute timeout
+          maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+        });
 
         return result.trim();
       } catch (error: any) {
@@ -254,7 +234,7 @@ IMPORTANT:
           // Exponential backoff: 2^attempt seconds
           const delay = Math.pow(2, attempt) * 1000;
           console.log(`[DocumentIntake] Retrying in ${delay}ms...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
     }
@@ -264,7 +244,7 @@ IMPORTANT:
 
   /**
    * Parse Gemini JSON response
-   * 
+   *
    * @param responseText - Raw response from Gemini
    * @returns Parsed JSON object
    */
@@ -272,18 +252,18 @@ IMPORTANT:
     try {
       // Remove markdown code blocks if present
       let cleaned = responseText.trim();
-      
+
       if (cleaned.startsWith('```json')) {
         cleaned = cleaned.replace(/^```json\s*/, '').replace(/```\s*$/, '');
       } else if (cleaned.startsWith('```')) {
         cleaned = cleaned.replace(/^```\s*/, '').replace(/```\s*$/, '');
       }
-      
+
       return JSON.parse(cleaned);
     } catch (error) {
       console.error('[DocumentIntake] Failed to parse Gemini response:', error);
       console.error('[DocumentIntake] Response text:', responseText.substring(0, 500));
-      
+
       // Return minimal valid structure if parsing fails
       return {
         document_type: 'Unknown',
@@ -300,7 +280,7 @@ IMPORTANT:
 
   /**
    * Infer extraction method from file type
-   * 
+   *
    * @param fileType - File type string
    * @returns Extraction method name
    */

@@ -38,12 +38,9 @@ function loadDocumentMetadata(doc: ICaseDocument, workspacePath: string): IDocum
 /**
  * Filter documents by document type
  */
-export function filterByDocumentType(
-  documents: ICaseDocument[],
-  types: DocumentType[]
-): ICaseDocument[] {
+export function filterByDocumentType(documents: ICaseDocument[], types: DocumentType[]): ICaseDocument[] {
   const typeSet = new Set(types);
-  return documents.filter(doc => doc.document_type && typeSet.has(doc.document_type as DocumentType));
+  return documents.filter((doc) => doc.document_type && typeSet.has(doc.document_type as DocumentType));
 }
 
 /**
@@ -54,18 +51,13 @@ export function filterByDocumentType(
  * @param endDate - End date
  * @param workspacePath - Workspace path for loading metadata
  */
-export function filterByDateRange(
-  documents: ICaseDocument[],
-  startDate: Date,
-  endDate: Date,
-  workspacePath: string
-): ICaseDocument[] {
-  return documents.filter(doc => {
+export function filterByDateRange(documents: ICaseDocument[], startDate: Date, endDate: Date, workspacePath: string): ICaseDocument[] {
+  return documents.filter((doc) => {
     const metadata = loadDocumentMetadata(doc, workspacePath);
     if (!metadata || !metadata.entities?.dates || metadata.entities.dates.length === 0) {
       return false;
     }
-    return metadata.entities.dates.some(dateEntry => {
+    return metadata.entities.dates.some((dateEntry) => {
       const date = new Date(dateEntry.date);
       return date >= startDate && date <= endDate;
     });
@@ -79,20 +71,14 @@ export function filterByDateRange(
  * @param partyName - Party name to search for
  * @param workspacePath - Workspace path for loading metadata
  */
-export function filterByParty(
-  documents: ICaseDocument[],
-  partyName: string,
-  workspacePath: string
-): ICaseDocument[] {
+export function filterByParty(documents: ICaseDocument[], partyName: string, workspacePath: string): ICaseDocument[] {
   const lowerCasePartyName = partyName.toLowerCase();
-  return documents.filter(doc => {
+  return documents.filter((doc) => {
     const metadata = loadDocumentMetadata(doc, workspacePath);
     if (!metadata || !metadata.entities?.parties || metadata.entities.parties.length === 0) {
       return false;
     }
-    return metadata.entities.parties.some(party =>
-      party.name.toLowerCase().includes(lowerCasePartyName)
-    );
+    return metadata.entities.parties.some((party) => party.name.toLowerCase().includes(lowerCasePartyName));
   });
 }
 
@@ -103,11 +89,7 @@ export function filterByParty(
  * @param query - Filter query
  * @param workspacePath - Workspace path for loading metadata
  */
-export function complexFilter(
-  documents: ICaseDocument[],
-  query: FilterQuery,
-  workspacePath: string
-): ICaseDocument[] {
+export function complexFilter(documents: ICaseDocument[], query: FilterQuery, workspacePath: string): ICaseDocument[] {
   let results = [...documents];
 
   if (query.document_types && query.document_types.length > 0) {
@@ -120,24 +102,20 @@ export function complexFilter(
 
   if (query.parties && query.parties.length > 0) {
     // Filter by any of the specified parties
-    results = results.filter(doc =>
-      query.parties!.some(partyName =>
-        filterByParty([doc], partyName, workspacePath).length > 0
-      )
-    );
+    results = results.filter((doc) => query.parties!.some((partyName) => filterByParty([doc], partyName, workspacePath).length > 0));
   }
 
   if (query.processing_status && query.processing_status.length > 0) {
     const statusSet = new Set(query.processing_status);
-    results = results.filter(doc => statusSet.has(doc.processing_status));
+    results = results.filter((doc) => statusSet.has(doc.processing_status));
   }
 
   if (typeof query.has_text_extraction === 'boolean') {
-    results = results.filter(doc => Boolean(doc.has_text_extraction) === query.has_text_extraction);
+    results = results.filter((doc) => Boolean(doc.has_text_extraction) === query.has_text_extraction);
   }
 
   if (typeof query.has_metadata === 'boolean') {
-    results = results.filter(doc => Boolean(doc.has_metadata) === query.has_metadata);
+    results = results.filter((doc) => Boolean(doc.has_metadata) === query.has_metadata);
   }
 
   // Sort by upload date (newest first)

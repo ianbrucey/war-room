@@ -1,5 +1,5 @@
 /**
- * @license  
+ * @license
  * Copyright 2025 AionUi (aionui.com)
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -26,69 +26,69 @@ export type FileType = 'pdf' | 'docx' | 'txt' | 'md' | 'jpg' | 'png' | 'mp3' | '
 export interface ICaseDocument {
   /** Unique document ID (UUID) */
   id: string;
-  
+
   /** Foreign key to case_files table */
   case_file_id: string;
-  
+
   /** Original filename */
   filename: string;
-  
+
   /** Sanitized folder name for document storage */
   folder_name: string;
-  
+
   /** Classified document type (Complaint, Motion, Evidence, etc.) */
   document_type?: string | null;
-  
+
   /** File extension/type (pdf, docx, txt, etc.) */
   file_type: string;
-  
+
   /** Number of pages extracted (PDF only) */
   page_count?: number | null;
-  
+
   /** Total word count from extracted text */
   word_count?: number | null;
-  
+
   /** Current processing status */
   processing_status: ProcessingStatus;
-  
+
   /** Whether text extraction has completed (SQLite boolean: 0/1) */
   has_text_extraction: number;
-  
+
   /** Whether AI metadata generation has completed (SQLite boolean: 0/1) */
   has_metadata: number;
-  
+
   /** Whether document is indexed in RAG system (SQLite boolean: 0/1) */
   rag_indexed: number;
-  
+
   /** Google File Search store ID (RAG indexing) */
   file_search_store_id?: string | null;
-  
+
   /** Gemini Files API URI for this document */
   gemini_file_uri?: string | null;
-  
+
   /** Upload timestamp (Unix milliseconds) */
   uploaded_at: number;
-  
+
   /** Processing completion timestamp (Unix milliseconds) */
   processed_at?: number | null;
 
   // ========== S3 Storage Fields (added in migration v12) ==========
-  
+
   /** S3 object key (full path in bucket) */
   s3_key?: string | null;
-  
+
   /** S3 bucket name */
   s3_bucket?: string | null;
-  
+
   /** S3 upload timestamp (Unix milliseconds) */
   s3_uploaded_at?: number | null;
-  
+
   /** S3 version ID (if versioning is enabled) */
   s3_version_id?: string | null;
-  
+
   /** MIME content type (e.g., application/pdf, video/mp4) */
   content_type?: string | null;
-  
+
   /** File size in bytes */
   file_size_bytes?: number | null;
 }
@@ -100,22 +100,22 @@ export interface ICaseDocument {
 export interface IDocumentMetadata {
   /** Schema version for future compatibility */
   schema_version: string;
-  
+
   /** Reference to document ID in database */
   document_id: string;
-  
+
   /** Original filename */
   original_filename: string;
-  
+
   /** File type (pdf, docx, etc.) */
   file_type: string;
-  
+
   /** Classified document type */
   document_type: DocumentType;
-  
+
   /** AI confidence in classification (0.0 - 1.0) */
   classification_confidence: number;
-  
+
   /** Text extraction details */
   extraction: {
     method: 'pdf-parse' | 'mistral-ocr' | 'plaintext' | 'docx';
@@ -123,14 +123,14 @@ export interface IDocumentMetadata {
     word_count?: number;
     extracted_at: string; // ISO timestamp
   };
-  
+
   /** AI-generated summary */
   summary: {
     executive_summary: string;
     main_arguments: string[];
     requested_relief?: string;
   };
-  
+
   /** Extracted entities */
   entities: {
     parties: Array<{
@@ -148,24 +148,24 @@ export interface IDocumentMetadata {
       context: string;
     }>;
   };
-  
+
   /** Relevance scoring by claim type */
   relevance_scores?: Record<string, number>;
-  
+
   /** Cross-document relationships */
   relationships?: {
     references?: string[]; // Document IDs
     contradicts?: string[];
     supports?: string[];
   };
-  
+
   /** RAG indexing details */
   rag?: {
     file_search_store_id: string;
     indexed_at: string;
     chunk_count?: number;
   };
-  
+
   /** Agent annotations (for manual notes) */
   agent_notes?: string;
 }
@@ -177,16 +177,16 @@ export interface IDocumentMetadata {
 export interface ICaseDocumentsManifest {
   /** Schema version */
   schema_version: string;
-  
+
   /** Case file ID */
   case_file_id: string;
-  
+
   /** Last manifest update timestamp */
   last_updated: string; // ISO timestamp
-  
+
   /** Total document count */
   document_count: number;
-  
+
   /** All documents in case */
   documents: Array<{
     id: string;
@@ -203,20 +203,23 @@ export interface ICaseDocumentsManifest {
     processing_status: ProcessingStatus;
     added_at: string; // ISO timestamp
   }>;
-  
+
   /** Party registry (aggregated from all documents) */
-  parties_registry?: Record<string, {
-    role: string;
-    documents: string[]; // document IDs
-  }>;
-  
+  parties_registry?: Record<
+    string,
+    {
+      role: string;
+      documents: string[]; // document IDs
+    }
+  >;
+
   /** Timeline (aggregated from all documents) */
   timeline?: Array<{
     date: string;
     event: string;
     source_doc: string; // document ID
   }>;
-  
+
   /** Claims (aggregated) */
   claims?: string[];
 }

@@ -5,16 +5,18 @@
  */
 
 import { execSync } from 'child_process';
+import { existsSync } from 'fs';
 import { copyFile, readFile, unlink, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { CaseFileRepository } from '../../../webserver/auth/repository/CaseFileRepository';
 import { DocumentRepository } from '../../../webserver/auth/repository/DocumentRepository';
+import type { IParty } from './PartyExtractor';
 import { CASE_SUMMARY_GENERATION_PROMPT, CASE_SUMMARY_UPDATE_PROMPT } from './prompts/case-summary-prompt';
 
 /**
  * Case Summary Generator Service
- * 
+ *
  * Generates AI-powered case summaries from document metadata using Gemini CLI
  */
 export class CaseSummaryGenerator {
@@ -23,14 +25,11 @@ export class CaseSummaryGenerator {
 
   /**
    * Generate new case summary from all processed documents
-   * 
+   *
    * @param caseId - Case file ID
    * @param onProgress - Optional progress callback
    */
-  async generate(
-    caseId: string,
-    onProgress?: (percent: number, currentBatch: number, totalBatches: number) => void
-  ): Promise<void> {
+  async generate(caseId: string, onProgress?: (percent: number, currentBatch: number, totalBatches: number) => void): Promise<void> {
     console.log('[CaseSummaryGenerator] Starting generation for case:', caseId);
     const startTime = Date.now();
 
@@ -62,11 +61,7 @@ export class CaseSummaryGenerator {
       }
 
       // Process in batches
-      const summary = await this.processInBatches(
-        metadataFiles,
-        caseFile.workspace_path,
-        onProgress
-      );
+      const summary = await this.processInBatches(metadataFiles, caseFile.workspace_path, onProgress);
 
       // Write summary to disk
       const summaryPath = join(caseFile.workspace_path, 'case-context', 'case_summary.md');
@@ -88,7 +83,6 @@ export class CaseSummaryGenerator {
 
       const processingTime = Date.now() - startTime;
       console.log(`[CaseSummaryGenerator] Generation complete in ${processingTime}ms`);
-
     } catch (error) {
       console.error('[CaseSummaryGenerator] Generation failed:', error);
       CaseFileRepository.markSummaryFailed(caseId);
@@ -98,14 +92,11 @@ export class CaseSummaryGenerator {
 
   /**
    * Update existing summary with new documents only
-   * 
+   *
    * @param caseId - Case file ID
    * @param onProgress - Optional progress callback
    */
-  async update(
-    caseId: string,
-    onProgress?: (percent: number, currentBatch: number, totalBatches: number) => void
-  ): Promise<void> {
+  async update(caseId: string, onProgress?: (percent: number, currentBatch: number, totalBatches: number) => void): Promise<void> {
     console.log('[CaseSummaryGenerator] Starting update for case:', caseId);
 
     try {
@@ -150,11 +141,7 @@ export class CaseSummaryGenerator {
       const newMetadataFiles = await this.loadMetadataFiles(caseFile.workspace_path, newDocs);
 
       // Merge with existing summary
-      const updatedSummary = await this.mergeWithExisting(
-        existingSummary,
-        newMetadataFiles,
-        caseFile.workspace_path
-      );
+      const updatedSummary = await this.mergeWithExisting(existingSummary, newMetadataFiles, caseFile.workspace_path);
 
       // Write updated summary
       await writeFile(summaryPath, updatedSummary, 'utf-8');
@@ -171,7 +158,6 @@ export class CaseSummaryGenerator {
 
       // Update database status
       CaseFileRepository.markSummaryGenerated(caseId, completedDocs.length);
-
     } catch (error) {
       console.error('[CaseSummaryGenerator] Update failed:', error);
       CaseFileRepository.markSummaryFailed(caseId);
@@ -185,10 +171,7 @@ export class CaseSummaryGenerator {
    * @param caseId - Case file ID
    * @param onProgress - Optional progress callback
    */
-  async regenerate(
-    caseId: string,
-    onProgress?: (percent: number, currentBatch: number, totalBatches: number) => void
-  ): Promise<void> {
+  async regenerate(caseId: string, onProgress?: (percent: number, currentBatch: number, totalBatches: number) => void): Promise<void> {
     console.log('[CaseSummaryGenerator] Starting regeneration for case:', caseId);
 
     try {
@@ -210,7 +193,6 @@ export class CaseSummaryGenerator {
 
       // Call generate (which processes all documents fresh)
       await this.generate(caseId, onProgress);
-
     } catch (error) {
       console.error('[CaseSummaryGenerator] Regeneration failed:', error);
       throw error;
@@ -222,10 +204,7 @@ export class CaseSummaryGenerator {
    *
    * @private
    */
-  private async loadMetadataFiles(
-    workspacePath: string,
-    documents: Array<{ id: string; folder_name: string; filename: string }>
-  ): Promise<Array<{ docId: string; filename: string; filePath: string }>> {
+  private async loadMetadataFiles(workspacePath: string, documents: Array<{ id: string; folder_name: string; filename: string }>): Promise<Array<{ docId: string; filename: string; filePath: string }>> {
     const metadataFiles: Array<{ docId: string; filename: string; filePath: string }> = [];
 
     for (const doc of documents) {
@@ -254,13 +233,12 @@ export class CaseSummaryGenerator {
    *
    * @private
    */
-  private async processInBatches(
-    metadataFiles: Array<{ docId: string; filename: string; filePath: string }>,
-    workspacePath: string,
-    onProgress?: (percent: number, currentBatch: number, totalBatches: number) => void
-  ): Promise<string> {
+  private async processInBatches(metadataFiles: Array<{ docId: string; filename: string; filePath: string }>, workspacePath: string, onProgress?: (percent: number, currentBatch: number, totalBatches: number) => void): Promise<string> {
     const totalBatches = Math.ceil(metadataFiles.length / this.BATCH_SIZE);
     console.log(`[CaseSummaryGenerator] Processing ${metadataFiles.length} documents in ${totalBatches} batches`);
+
+    // Load narrative and parties context
+    const contextPrefix = await this.loadCaseContext(workspacePath);
 
     let cumulativeSummary = '';
 
@@ -271,15 +249,13 @@ export class CaseSummaryGenerator {
       console.log(`[CaseSummaryGenerator] Processing batch ${batchNum}/${totalBatches} (${batch.length} documents)`);
 
       // Build file list for prompt
-      const fileList = batch.map(f => `- ${f.filename}`).join('\n');
+      const fileList = batch.map((f) => `- ${f.filename}`).join('\n');
 
-      // Build prompt with file references
-      const prompt = cumulativeSummary
-        ? `${CASE_SUMMARY_GENERATION_PROMPT}\n\nPREVIOUS SUMMARY:\n${cumulativeSummary}\n\nNEW DOCUMENTS TO ANALYZE:\n${fileList}`
-        : `${CASE_SUMMARY_GENERATION_PROMPT}\n\nDOCUMENTS TO ANALYZE:\n${fileList}`;
+      // Build prompt with file references and context
+      const prompt = cumulativeSummary ? `${contextPrefix}${CASE_SUMMARY_GENERATION_PROMPT}\n\nPREVIOUS SUMMARY:\n${cumulativeSummary}\n\nNEW DOCUMENTS TO ANALYZE:\n${fileList}` : `${contextPrefix}${CASE_SUMMARY_GENERATION_PROMPT}\n\nDOCUMENTS TO ANALYZE:\n${fileList}`;
 
       // Extract file paths for Gemini CLI
-      const filePaths = batch.map(f => f.filePath);
+      const filePaths = batch.map((f) => f.filePath);
 
       // Call Gemini CLI with file paths
       const batchSummary = await this.callGeminiCLI(prompt, filePaths, workspacePath);
@@ -306,22 +282,16 @@ export class CaseSummaryGenerator {
    *
    * @private
    */
-  private async mergeWithExisting(
-    existingSummary: string,
-    newMetadataFiles: Array<{ docId: string; filename: string; filePath: string }>,
-    workspacePath: string
-  ): Promise<string> {
+  private async mergeWithExisting(existingSummary: string, newMetadataFiles: Array<{ docId: string; filename: string; filePath: string }>, workspacePath: string): Promise<string> {
     console.log(`[CaseSummaryGenerator] Merging ${newMetadataFiles.length} new documents with existing summary`);
 
     // Build file list for prompt
-    const fileList = newMetadataFiles.map(f => `- ${f.filename}`).join('\n');
+    const fileList = newMetadataFiles.map((f) => `- ${f.filename}`).join('\n');
 
-    const prompt = CASE_SUMMARY_UPDATE_PROMPT
-      .replace('{existing_summary_content}', existingSummary)
-      .replace('{new_metadata_files}', fileList);
+    const prompt = CASE_SUMMARY_UPDATE_PROMPT.replace('{existing_summary_content}', existingSummary).replace('{new_metadata_files}', fileList);
 
     // Extract file paths for Gemini CLI
-    const filePaths = newMetadataFiles.map(f => f.filePath);
+    const filePaths = newMetadataFiles.map((f) => f.filePath);
 
     return await this.callGeminiCLI(prompt, filePaths, workspacePath);
   }
@@ -333,11 +303,7 @@ export class CaseSummaryGenerator {
    *
    * @private
    */
-  private async callGeminiCLI(
-    prompt: string,
-    filePaths: string[],
-    workspacePath: string
-  ): Promise<string> {
+  private async callGeminiCLI(prompt: string, filePaths: string[], workspacePath: string): Promise<string> {
     const tempPromptFile = join(tmpdir(), `case-summary-prompt-${Date.now()}.txt`);
 
     try {
@@ -345,13 +311,15 @@ export class CaseSummaryGenerator {
       await writeFile(tempPromptFile, prompt, 'utf-8');
 
       // Build file arguments using @ syntax: @file1 @file2 @file3
-      const fileArgs = filePaths.map(p => `@${p}`).join(' ');
+      const fileArgs = filePaths.map((p) => `@${p}`).join(' ');
 
       // Include the documents directory so Gemini can access all metadata files
+      // Use absolute path and exclude AGENTS.md and other config files
       const documentsDir = join(workspacePath, 'documents');
 
       // Build command using stdin to pass the prompt (avoids all shell escaping issues)
-      const command = `cat "${tempPromptFile}" | gemini -m gemini-2.5-flash ${fileArgs} --include-directories ${documentsDir}`;
+      // Run from a neutral directory to avoid picking up workspace root files like AGENTS.md
+      const command = `cat "${tempPromptFile}" | gemini -m gemini-2.5-flash ${fileArgs} --include-directories "${documentsDir}"`;
 
       console.log('[CaseSummaryGenerator] Calling Gemini CLI...');
       console.log(`[CaseSummaryGenerator] Processing ${filePaths.length} files from ${documentsDir}`);
@@ -360,10 +328,10 @@ export class CaseSummaryGenerator {
         encoding: 'utf-8',
         timeout: 180000, // 3 minute timeout
         maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+        cwd: tmpdir(), // Run from temp directory to avoid picking up workspace AGENTS.md
       });
 
       return output.trim();
-
     } catch (error) {
       console.error('[CaseSummaryGenerator] Gemini CLI call failed:', error);
       throw new Error(`Failed to generate summary: ${error}`);
@@ -383,7 +351,58 @@ export class CaseSummaryGenerator {
    * @private
    */
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Load case context (narrative and parties) to prepend to prompts
+   *
+   * @private
+   */
+  private async loadCaseContext(workspacePath: string): Promise<string> {
+    let contextPrefix = '';
+
+    try {
+      // Load user narrative if it exists
+      const narrativePath = join(workspacePath, 'case-context', 'user_narrative.md');
+      if (existsSync(narrativePath)) {
+        const narrativeContent = await readFile(narrativePath, 'utf-8');
+        contextPrefix += `\n\n=== USER NARRATIVE (User's Account of Events) ===\n\n${narrativeContent}\n\n`;
+        console.log('[CaseSummaryGenerator] Loaded user narrative');
+      }
+
+      // Load parties if they exist
+      const partiesPath = join(workspacePath, 'case-context', 'parties.json');
+      if (existsSync(partiesPath)) {
+        const partiesContent = await readFile(partiesPath, 'utf-8');
+        const parties: IParty[] = JSON.parse(partiesContent);
+
+        if (parties.length > 0) {
+          contextPrefix += `=== IDENTIFIED PARTIES ===\n\n`;
+          parties.forEach((party) => {
+            contextPrefix += `- **${party.name}** (${party.role})`;
+            if (party.relationship) {
+              contextPrefix += ` - ${party.relationship}`;
+            }
+            if (party.notes) {
+              contextPrefix += `\n  Notes: ${party.notes}`;
+            }
+            contextPrefix += '\n';
+          });
+          contextPrefix += '\n';
+          console.log(`[CaseSummaryGenerator] Loaded ${parties.length} parties`);
+        }
+      }
+
+      if (contextPrefix) {
+        contextPrefix += `=== INSTRUCTIONS ===\n\nUse the user narrative above as the PRIMARY INTERPRETIVE LENS for analyzing documents. The narrative represents the user's intent and perspective. Documents should be analyzed in light of this narrative.\n\n`;
+      }
+    } catch (error) {
+      console.warn('[CaseSummaryGenerator] Failed to load case context:', error);
+      // Continue without context if loading fails
+    }
+
+    return contextPrefix;
   }
 
   /**

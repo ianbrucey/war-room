@@ -9,13 +9,7 @@ import type { ProcessingStatus } from '@process/documents/types';
 /**
  * Document progress event types
  */
-export type DocumentProgressEventType = 
-  | 'document:upload'
-  | 'document:extracting'
-  | 'document:analyzing'
-  | 'document:indexing'
-  | 'document:complete'
-  | 'document:error';
+export type DocumentProgressEventType = 'document:upload' | 'document:extracting' | 'document:analyzing' | 'document:indexing' | 'document:complete' | 'document:error';
 
 /**
  * Document progress event structure
@@ -23,25 +17,25 @@ export type DocumentProgressEventType =
 export interface DocumentProgressEvent {
   /** Event type */
   type: DocumentProgressEventType;
-  
+
   /** Document ID */
   documentId: string;
-  
+
   /** Case file ID */
   caseFileId: string;
-  
+
   /** Original filename */
   filename: string;
-  
+
   /** Progress percentage (0-100) */
   progress: number;
-  
+
   /** Human-readable status message */
   message: string;
-  
+
   /** Error message (if type is 'document:error') */
   error?: string;
-  
+
   /** Timestamp */
   timestamp: number;
 }
@@ -63,7 +57,7 @@ let wsManager: IWebSocketManager | null = null;
 /**
  * Initialize the WebSocket manager for document progress
  * Should be called during server startup
- * 
+ *
  * @param manager - WebSocket manager instance
  */
 export function initializeDocumentProgress(manager: IWebSocketManager): void {
@@ -73,7 +67,7 @@ export function initializeDocumentProgress(manager: IWebSocketManager): void {
 
 /**
  * Emit document progress event to WebSocket clients
- * 
+ *
  * @param event - Progress event to emit
  */
 export function emitDocumentProgress(event: DocumentProgressEvent): void {
@@ -85,7 +79,7 @@ export function emitDocumentProgress(event: DocumentProgressEvent): void {
   try {
     // Emit to all clients connected to this case file
     wsManager.emitToCaseFile(event.caseFileId, 'document:progress', event);
-    
+
     console.log('[DocumentIntake] Emitted progress event:', {
       type: event.type,
       documentId: event.documentId,
@@ -98,16 +92,12 @@ export function emitDocumentProgress(event: DocumentProgressEvent): void {
 
 /**
  * Create and emit a document upload event
- * 
+ *
  * @param documentId - Document ID
  * @param caseFileId - Case file ID
  * @param filename - Original filename
  */
-export function emitDocumentUpload(
-  documentId: string,
-  caseFileId: string,
-  filename: string
-): void {
+export function emitDocumentUpload(documentId: string, caseFileId: string, filename: string): void {
   emitDocumentProgress({
     type: 'document:upload',
     documentId,
@@ -121,16 +111,12 @@ export function emitDocumentUpload(
 
 /**
  * Create and emit a document extracting event
- * 
+ *
  * @param documentId - Document ID
  * @param caseFileId - Case file ID
  * @param filename - Original filename
  */
-export function emitDocumentExtracting(
-  documentId: string,
-  caseFileId: string,
-  filename: string
-): void {
+export function emitDocumentExtracting(documentId: string, caseFileId: string, filename: string): void {
   emitDocumentProgress({
     type: 'document:extracting',
     documentId,
@@ -144,16 +130,12 @@ export function emitDocumentExtracting(
 
 /**
  * Create and emit a document analyzing event
- * 
+ *
  * @param documentId - Document ID
  * @param caseFileId - Case file ID
  * @param filename - Original filename
  */
-export function emitDocumentAnalyzing(
-  documentId: string,
-  caseFileId: string,
-  filename: string
-): void {
+export function emitDocumentAnalyzing(documentId: string, caseFileId: string, filename: string): void {
   emitDocumentProgress({
     type: 'document:analyzing',
     documentId,
@@ -167,16 +149,12 @@ export function emitDocumentAnalyzing(
 
 /**
  * Create and emit a document indexing event
- * 
+ *
  * @param documentId - Document ID
  * @param caseFileId - Case file ID
  * @param filename - Original filename
  */
-export function emitDocumentIndexing(
-  documentId: string,
-  caseFileId: string,
-  filename: string
-): void {
+export function emitDocumentIndexing(documentId: string, caseFileId: string, filename: string): void {
   emitDocumentProgress({
     type: 'document:indexing',
     documentId,
@@ -190,16 +168,12 @@ export function emitDocumentIndexing(
 
 /**
  * Create and emit a document complete event
- * 
+ *
  * @param documentId - Document ID
  * @param caseFileId - Case file ID
  * @param filename - Original filename
  */
-export function emitDocumentComplete(
-  documentId: string,
-  caseFileId: string,
-  filename: string
-): void {
+export function emitDocumentComplete(documentId: string, caseFileId: string, filename: string): void {
   emitDocumentProgress({
     type: 'document:complete',
     documentId,
@@ -213,18 +187,13 @@ export function emitDocumentComplete(
 
 /**
  * Create and emit a document error event
- * 
+ *
  * @param documentId - Document ID
  * @param caseFileId - Case file ID
  * @param filename - Original filename
  * @param error - Error message
  */
-export function emitDocumentError(
-  documentId: string,
-  caseFileId: string,
-  filename: string,
-  error: string
-): void {
+export function emitDocumentError(documentId: string, caseFileId: string, filename: string, error: string): void {
   emitDocumentProgress({
     type: 'document:error',
     documentId,
@@ -239,7 +208,7 @@ export function emitDocumentError(
 
 /**
  * Get progress percentage from processing status
- * 
+ *
  * @param status - Processing status
  * @returns Progress percentage (0-100)
  */
@@ -264,7 +233,7 @@ export function getProgressFromStatus(status: ProcessingStatus): number {
 
 /**
  * Get human-readable message from processing status
- * 
+ *
  * @param status - Processing status
  * @param filename - Original filename
  * @returns Status message
@@ -291,27 +260,21 @@ export function getMessageFromStatus(status: ProcessingStatus, filename: string)
 /**
  * Emit progress event from processing status
  * Convenience function that determines event type from status
- * 
+ *
  * @param documentId - Document ID
  * @param caseFileId - Case file ID
  * @param filename - Original filename
  * @param status - Processing status
  * @param error - Optional error message
  */
-export function emitProgressFromStatus(
-  documentId: string,
-  caseFileId: string,
-  filename: string,
-  status: ProcessingStatus,
-  error?: string
-): void {
+export function emitProgressFromStatus(documentId: string, caseFileId: string, filename: string, status: ProcessingStatus, error?: string): void {
   const eventTypeMap: Record<ProcessingStatus, DocumentProgressEventType> = {
-    'pending': 'document:upload',
-    'extracting': 'document:extracting',
-    'analyzing': 'document:analyzing',
-    'indexing': 'document:indexing',
-    'complete': 'document:complete',
-    'failed': 'document:error',
+    pending: 'document:upload',
+    extracting: 'document:extracting',
+    analyzing: 'document:analyzing',
+    indexing: 'document:indexing',
+    complete: 'document:complete',
+    failed: 'document:error',
   };
 
   const event: DocumentProgressEvent = {

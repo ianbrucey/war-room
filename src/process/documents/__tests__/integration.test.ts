@@ -47,7 +47,10 @@ describe('Document Intake Integration Test', () => {
     await fs.writeFile(txtFilePath, 'This is test content for extraction.');
 
     // 2. Verify file was created
-    const fileExists = await fs.access(txtFilePath).then(() => true).catch(() => false);
+    const fileExists = await fs
+      .access(txtFilePath)
+      .then(() => true)
+      .catch(() => false);
     expect(fileExists).toBe(true);
 
     // Note: Full integration test would:
@@ -65,7 +68,10 @@ describe('Document Intake Integration Test', () => {
     await fs.writeFile(unsupportedFilePath, 'dummy content');
 
     // Verify file was created
-    const fileExists = await fs.access(unsupportedFilePath).then(() => true).catch(() => false);
+    const fileExists = await fs
+      .access(unsupportedFilePath)
+      .then(() => true)
+      .catch(() => false);
     expect(fileExists).toBe(true);
 
     // Note: Full integration test would verify that:

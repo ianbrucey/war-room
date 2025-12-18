@@ -1,6 +1,6 @@
 /**
  * LeftPanel - Container for dynamic panel content (conversations, workspace, file preview)
- * 
+ *
  * Features:
  * - Slides in/out with smooth animation
  * - Draggable right edge to resize
@@ -8,7 +8,7 @@
  * - Collapses to 0px when no panel is active
  */
 
-import { PanelId } from '@/renderer/hooks/usePanelState';
+import type { PanelId } from '@/renderer/hooks/usePanelState';
 import classNames from 'classnames';
 import React from 'react';
 import './LeftPanel.css';
@@ -23,15 +23,7 @@ interface LeftPanelProps {
   maxWidth: number;
 }
 
-const LeftPanel: React.FC<LeftPanelProps> = ({
-  activePanel,
-  width,
-  onWidthChange,
-  onResetWidth,
-  children,
-  minWidth,
-  maxWidth,
-}) => {
+const LeftPanel: React.FC<LeftPanelProps> = ({ activePanel, width, onWidthChange, onResetWidth, children, minWidth, maxWidth }) => {
   const isOpen = activePanel !== null;
 
   const handleDragStart = (e: React.MouseEvent) => {
@@ -68,21 +60,12 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
       }}
     >
       {/* Panel Content */}
-      <div className='left-panel__content'>
-        {children}
-      </div>
+      <div className='left-panel__content'>{children}</div>
 
       {/* Drag Handle (only visible when panel is open) */}
-      {isOpen && (
-        <div
-          className='left-panel__drag-handle'
-          onMouseDown={handleDragStart}
-          onDoubleClick={onResetWidth}
-        />
-      )}
+      {isOpen && <div className='left-panel__drag-handle' onMouseDown={handleDragStart} onDoubleClick={onResetWidth} />}
     </div>
   );
 };
 
 export default LeftPanel;
-

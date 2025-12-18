@@ -65,31 +65,20 @@ const formatTimestamp = (timestamp: number): string => {
  * Case Summary Controls Component
  * Displays summary status and provides actions to generate/update/regenerate summaries
  */
-export const CaseSummaryControls: React.FC<CaseSummaryControlsProps> = ({
-  summaryStatus,
-  summaryGeneratedAt,
-  summaryVersion,
-  summaryDocumentCount,
-  currentDocumentCount,
-  onGenerate,
-  onUpdate,
-  onRegenerate,
-  onViewSummary,
-  generationProgress,
-}) => {
+export const CaseSummaryControls: React.FC<CaseSummaryControlsProps> = ({ summaryStatus, summaryGeneratedAt, summaryVersion, summaryDocumentCount, currentDocumentCount, onGenerate, onUpdate, onRegenerate, onViewSummary, generationProgress }) => {
   const badge = getStatusBadge(summaryStatus);
   const newDocumentCount = currentDocumentCount - summaryDocumentCount;
 
   return (
-    <div className="case-summary-controls">
+    <div className='case-summary-controls'>
       <Divider style={{ margin: '24px 0' }} />
-      
-      <div className="summary-header">
+
+      <div className='summary-header'>
         <Text style={{ fontSize: 16, fontWeight: 600 }}>Case Summary</Text>
       </div>
 
-      <div className="summary-content">
-        <div className="summary-status-row">
+      <div className='summary-content'>
+        <div className='summary-status-row'>
           <Text>Status: </Text>
           <Badge status={badge.status} text={badge.text} />
         </div>
@@ -97,10 +86,10 @@ export const CaseSummaryControls: React.FC<CaseSummaryControlsProps> = ({
         {/* No Summary State */}
         {summaryStatus === null && (
           <>
-            <Text type="secondary" style={{ display: 'block', margin: '12px 0' }}>
+            <Text type='secondary' style={{ display: 'block', margin: '12px 0' }}>
               No case summary has been generated yet. Generate a summary to create context for AI agents.
             </Text>
-            <Button type="primary" icon={<IconRefresh />} onClick={onGenerate}>
+            <Button type='primary' icon={<IconRefresh />} onClick={onGenerate}>
               Generate Summary
             </Button>
           </>
@@ -109,12 +98,8 @@ export const CaseSummaryControls: React.FC<CaseSummaryControlsProps> = ({
         {/* Generating State */}
         {summaryStatus === 'generating' && generationProgress && (
           <>
-            <Progress
-              percent={generationProgress.percent}
-              status="normal"
-              style={{ margin: '12px 0' }}
-            />
-            <Text type="secondary">
+            <Progress percent={generationProgress.percent} status='normal' style={{ margin: '12px 0' }} />
+            <Text type='secondary'>
               Processing batch {generationProgress.currentBatch} of {generationProgress.totalBatches}...
             </Text>
           </>
@@ -123,13 +108,11 @@ export const CaseSummaryControls: React.FC<CaseSummaryControlsProps> = ({
         {/* Generated State */}
         {summaryStatus === 'generated' && (
           <>
-            <div className="summary-meta">
-              <Text type="secondary">
+            <div className='summary-meta'>
+              <Text type='secondary'>
                 Last generated: {formatTimestamp(summaryGeneratedAt!)} (v{summaryVersion})
               </Text>
-              <Text type="secondary">
-                Documents included: {summaryDocumentCount}
-              </Text>
+              <Text type='secondary'>Documents included: {summaryDocumentCount}</Text>
             </div>
             <Space style={{ marginTop: 12 }}>
               <Button icon={<IconFile />} onClick={onViewSummary}>
@@ -145,24 +128,20 @@ export const CaseSummaryControls: React.FC<CaseSummaryControlsProps> = ({
         {/* Stale State */}
         {summaryStatus === 'stale' && (
           <>
-            <div className="summary-meta">
-              <Text type="secondary">
+            <div className='summary-meta'>
+              <Text type='secondary'>
                 Last generated: {formatTimestamp(summaryGeneratedAt!)} (v{summaryVersion})
               </Text>
-              <Text type="secondary">
+              <Text type='secondary'>
                 Documents included: {summaryDocumentCount} of {currentDocumentCount} ({newDocumentCount} new)
               </Text>
             </div>
-            <Alert
-              type="warning"
-              content="New documents have been added since last summary"
-              style={{ margin: '12px 0' }}
-            />
+            <Alert type='warning' content='New documents have been added since last summary' style={{ margin: '12px 0' }} />
             <Space>
               <Button icon={<IconFile />} onClick={onViewSummary}>
                 View
               </Button>
-              <Button type="primary" icon={<IconPlus />} onClick={onUpdate}>
+              <Button type='primary' icon={<IconPlus />} onClick={onUpdate}>
                 Update Summary
               </Button>
               <Button icon={<IconRefresh />} onClick={onRegenerate}>
@@ -175,12 +154,8 @@ export const CaseSummaryControls: React.FC<CaseSummaryControlsProps> = ({
         {/* Failed State */}
         {summaryStatus === 'failed' && (
           <>
-            <Alert
-              type="error"
-              content="Summary generation failed. Please try again."
-              style={{ margin: '12px 0' }}
-            />
-            <Button type="primary" status="danger" icon={<IconRefresh />} onClick={onGenerate}>
+            <Alert type='error' content='Summary generation failed. Please try again.' style={{ margin: '12px 0' }} />
+            <Button type='primary' status='danger' icon={<IconRefresh />} onClick={onGenerate}>
               Retry Generate
             </Button>
           </>
@@ -189,4 +164,3 @@ export const CaseSummaryControls: React.FC<CaseSummaryControlsProps> = ({
     </div>
   );
 };
-

@@ -44,9 +44,7 @@ export class AcpConnection {
     switch (backend) {
       case 'auggie':
         // Add --workspace-root, --allow-indexing, and --model flags to automatically index and set model
-        args = workingDir
-          ? ['--acp', '--workspace-root', workingDir, '--allow-indexing', '--model', 'haiku4.5']
-          : ['--acp'];
+        args = workingDir ? ['--acp', '--workspace-root', workingDir, '--allow-indexing', '--model', 'haiku4.5'] : ['--acp'];
         console.error(`[ACP] Auggie args: ${JSON.stringify(args)}`);
         console.error(`[ACP] Auggie workingDir: ${workingDir}`);
         return args;

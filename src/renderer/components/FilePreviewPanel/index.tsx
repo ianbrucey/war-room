@@ -33,12 +33,7 @@ interface FilePreviewPanelProps {
  * Renders markdown and HTML files directly in the middle pane of the
  * conversation layout. Supports multiple tabs for switching between files.
  */
-const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
-  tabs,
-  activeTab,
-  onTabSelect,
-  onTabClose
-}) => {
+const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({ tabs, activeTab, onTabSelect, onTabClose }) => {
   const [loading, setLoading] = useState(false);
   const [content, setContent] = useState<string>('');
   const [mimeType, setMimeType] = useState<string>('text/plain');
@@ -84,14 +79,7 @@ const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
     }
 
     if (mimeType === 'text/html') {
-      return (
-        <iframe
-          srcDoc={content}
-          className='preview-html-iframe'
-          title={filename}
-          sandbox='allow-same-origin'
-        />
-      );
+      return <iframe srcDoc={content} className='preview-html-iframe' title={filename} sandbox='allow-same-origin' />;
     }
 
     return (
@@ -116,19 +104,13 @@ const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
         {tabs.map((tab, index) => (
           <div
             key={tab.filePath}
-            className={classNames(
-              'flex items-center gap-6px px-12px py-8px cursor-pointer border-r border-[var(--bg-3)] min-w-0 max-w-180px group',
-              {
-                'bg-1': index === activeTab,
-                'hover:bg-hover': index !== activeTab,
-              }
-            )}
+            className={classNames('flex items-center gap-6px px-12px py-8px cursor-pointer border-r border-[var(--bg-3)] min-w-0 max-w-180px group', {
+              'bg-1': index === activeTab,
+              'hover:bg-hover': index !== activeTab,
+            })}
             onClick={() => onTabSelect(index)}
           >
-            <span
-              className='text-13px truncate flex-1 text-t-primary'
-              title={tab.filePath}
-            >
+            <span className='text-13px truncate flex-1 text-t-primary' title={tab.filePath}>
               {tab.filename}
             </span>
             <button
@@ -165,4 +147,3 @@ const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
 };
 
 export default FilePreviewPanel;
-

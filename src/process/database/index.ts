@@ -485,6 +485,11 @@ export class AionUIDatabase {
   /**
    * Get all case files for a user
    * 获取用户的所有案件文件
+   *
+   * Sorted by most recent activity across:
+   * - Case file updates (updated_at)
+   * - Conversation activity (conversations.updated_at)
+   * - Document uploads (case_documents.uploaded_at)
    */
   getUserCaseFiles(userId: string, page = 0, pageSize = 50): IPaginatedResult<ICaseFile> {
     try {
@@ -495,10 +500,17 @@ export class AionUIDatabase {
       const rows = this.db
         .prepare(
           `
-            SELECT *
-            FROM case_files
-            WHERE user_id = ?
-            ORDER BY created_at DESC
+            SELECT
+              cf.*,
+              MAX(
+                cf.updated_at,
+                COALESCE((SELECT MAX(updated_at) FROM conversations WHERE case_file_id = cf.id), 0),
+                COALESCE((SELECT MAX(uploaded_at) FROM case_documents WHERE case_file_id = cf.id), 0)
+              ) as last_activity_at
+            FROM case_files cf
+            WHERE cf.user_id = ?
+            GROUP BY cf.id
+            ORDER BY last_activity_at DESC
             LIMIT ? OFFSET ?
           `
         )

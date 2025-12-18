@@ -210,6 +210,9 @@ export interface ICaseFile {
   case_summary_generated_at?: number | null;
   case_summary_version?: number;
   case_summary_document_count?: number;
+  // Case Grounding Fields
+  narrative_updated_at?: number | null;
+  grounding_status?: 'ungrounded' | 'narrative_only' | 'docs_only' | 'grounded';
 }
 
 export interface IPaginatedResult<T> {

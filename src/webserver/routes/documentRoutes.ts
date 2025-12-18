@@ -4,7 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Request, Response, Router } from 'express';
+import type { Request, Response } from 'express';
+import { Router } from 'express';
 import fs from 'fs';
 import multer from 'multer';
 import path from 'path';
@@ -28,106 +29,99 @@ router.use(AuthMiddleware.authenticateToken);
  * Upload a document to a case file.
  * Documents are uploaded to S3 first (source of truth), then saved to local cache for processing.
  */
-router.post(
-  '/cases/:caseFileId/documents/upload',
-  upload.single('file'),
-  async (req: Request, res: Response) => {
-    try {
-      const { caseFileId } = req.params;
-      const file = req.file;
-      const user = req.user;
+router.post('/cases/:caseFileId/documents/upload', upload.single('file'), async (req: Request, res: Response) => {
+  try {
+    const { caseFileId } = req.params;
+    const file = req.file;
+    const user = req.user;
 
-      if (!file) {
-        res.status(400).json({ error: 'No file uploaded' });
-        return;
-      }
-
-      if (!user) {
-        res.status(401).json({ error: 'User not authenticated' });
-        return;
-      }
-
-      // Get workspace path from case file
-      const caseFile = CaseFileRepository.findById(caseFileId);
-      if (!caseFile) {
-        res.status(404).json({ error: 'Case file not found' });
-        return;
-      }
-
-      // Detect file type and content type
-      const fileType = await detectFileType(file.originalname);
-      const contentType = getContentType(file.originalname);
-
-      // Create folder name from filename (sanitized)
-      const folderName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
-
-      // Generate document ID early so we can use it for S3 key
-      const documentId = require('crypto').randomUUID();
-      const s3FileName = `original${path.extname(file.originalname)}`;
-
-      // Initialize S3 service and upload
-      const s3Service = new S3StorageService();
-      const s3Key = s3Service.generateKey(user.id, caseFileId, documentId, s3FileName);
-
-      let s3Result: { key: string; versionId?: string; bucket: string } | null = null;
-
-      try {
-        // Upload to S3 (source of truth)
-        s3Result = await s3Service.uploadFile(file.path, s3Key, contentType);
-        console.log(`[DocumentIntake] Uploaded to S3: ${s3Key}`);
-      } catch (s3Error) {
-        console.error('[DocumentIntake] S3 upload failed, continuing with local storage only:', s3Error);
-        // Continue without S3 - fall back to local-only mode
-      }
-
-      // Move file to local cache for processing
-      const workspacePath = caseFile.workspace_path;
-      const intakePath = path.join(workspacePath, 'intake');
-      fs.mkdirSync(intakePath, { recursive: true });
-
-      const newFilePath = path.join(intakePath, file.originalname);
-      fs.renameSync(file.path, newFilePath);
-
-      // Create database record with S3 info
-      const createdDoc = DocumentRepository.create({
-        case_file_id: caseFileId,
-        filename: file.originalname,
-        folder_name: folderName,
-        file_type: fileType,
-        content_type: contentType,
-        file_size_bytes: file.size,
-        processing_status: 'pending',
-        has_text_extraction: 0,
-        has_metadata: 0,
-        rag_indexed: 0,
-        uploaded_at: Date.now(),
-        // S3 storage fields
-        s3_key: s3Result?.key || null,
-        s3_bucket: s3Result?.bucket || null,
-        s3_version_id: s3Result?.versionId || null,
-        s3_uploaded_at: s3Result ? Date.now() : null,
-      });
-
-      // Start async text extraction (full pipeline)
-      const textExtractor = new TextExtractor(
-        process.env.MISTRAL_API_KEY || '',
-        process.env.GEMINI_API_KEY || ''
-      );
-      textExtractor.extractDocument(createdDoc.id, caseFileId, newFilePath).catch((err) => {
-        console.error('[DocumentIntake] Background processing failed:', err);
-      });
-
-      res.json({
-        success: true,
-        documentId: createdDoc.id,
-        s3Key: s3Result?.key,
-      });
-    } catch (error) {
-      console.error('[DocumentIntake] Upload error:', error);
-      res.status(500).json({ error: 'Upload failed' });
+    if (!file) {
+      res.status(400).json({ error: 'No file uploaded' });
+      return;
     }
+
+    if (!user) {
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
+    }
+
+    // Get workspace path from case file
+    const caseFile = CaseFileRepository.findById(caseFileId);
+    if (!caseFile) {
+      res.status(404).json({ error: 'Case file not found' });
+      return;
+    }
+
+    // Detect file type and content type
+    const fileType = await detectFileType(file.originalname);
+    const contentType = getContentType(file.originalname);
+
+    // Create folder name from filename (sanitized)
+    const folderName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+
+    // Generate document ID early so we can use it for S3 key
+    const documentId = require('crypto').randomUUID();
+    const s3FileName = `original${path.extname(file.originalname)}`;
+
+    // Initialize S3 service and upload
+    const s3Service = new S3StorageService();
+    const s3Key = s3Service.generateKey(user.id, caseFileId, documentId, s3FileName);
+
+    let s3Result: { key: string; versionId?: string; bucket: string } | null = null;
+
+    try {
+      // Upload to S3 (source of truth)
+      s3Result = await s3Service.uploadFile(file.path, s3Key, contentType);
+      console.log(`[DocumentIntake] Uploaded to S3: ${s3Key}`);
+    } catch (s3Error) {
+      console.error('[DocumentIntake] S3 upload failed, continuing with local storage only:', s3Error);
+      // Continue without S3 - fall back to local-only mode
+    }
+
+    // Move file to local cache for processing
+    const workspacePath = caseFile.workspace_path;
+    const intakePath = path.join(workspacePath, 'intake');
+    fs.mkdirSync(intakePath, { recursive: true });
+
+    const newFilePath = path.join(intakePath, file.originalname);
+    fs.renameSync(file.path, newFilePath);
+
+    // Create database record with S3 info
+    const createdDoc = DocumentRepository.create({
+      case_file_id: caseFileId,
+      filename: file.originalname,
+      folder_name: folderName,
+      file_type: fileType,
+      content_type: contentType,
+      file_size_bytes: file.size,
+      processing_status: 'pending',
+      has_text_extraction: 0,
+      has_metadata: 0,
+      rag_indexed: 0,
+      uploaded_at: Date.now(),
+      // S3 storage fields
+      s3_key: s3Result?.key || null,
+      s3_bucket: s3Result?.bucket || null,
+      s3_version_id: s3Result?.versionId || null,
+      s3_uploaded_at: s3Result ? Date.now() : null,
+    });
+
+    // Start async text extraction (full pipeline)
+    const textExtractor = new TextExtractor(process.env.MISTRAL_API_KEY || '', process.env.GEMINI_API_KEY || '');
+    textExtractor.extractDocument(createdDoc.id, caseFileId, newFilePath).catch((err) => {
+      console.error('[DocumentIntake] Background processing failed:', err);
+    });
+
+    res.json({
+      success: true,
+      documentId: createdDoc.id,
+      s3Key: s3Result?.key,
+    });
+  } catch (error) {
+    console.error('[DocumentIntake] Upload error:', error);
+    res.status(500).json({ error: 'Upload failed' });
   }
-);
+});
 
 /**
  * GET /api/cases/:caseFileId/documents

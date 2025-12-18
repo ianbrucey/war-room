@@ -36,10 +36,7 @@ const ConversationPanel: React.FC<ConversationPanelProps> = ({ onSessionClick })
       <div className='flex items-center justify-between p-16px border-b border-b-solid border-b-[var(--bg-3)]'>
         <span className='text-16px font-bold text-t-primary'>Conversations</span>
         <Tooltip content='New Chat'>
-          <button
-            onClick={handleNewChat}
-            className='flex items-center justify-center w-28px h-28px rounded-6px hover:bg-hover transition-colors cursor-pointer border-none bg-transparent'
-          >
+          <button onClick={handleNewChat} className='flex items-center justify-center w-28px h-28px rounded-6px hover:bg-hover transition-colors cursor-pointer border-none bg-transparent'>
             <Plus theme='outline' size='18' className='text-t-primary' />
           </button>
         </Tooltip>
@@ -54,4 +51,3 @@ const ConversationPanel: React.FC<ConversationPanelProps> = ({ onSessionClick })
 };
 
 export default ConversationPanel;
-

@@ -1,0 +1,129 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Case Grounding API Contract",
+  "description": "IPC bridge methods and data structures for case grounding feature",
+
+  "ipc_methods": {
+    "caseGrounding.getNarrativeStatus": {
+      "description": "Check if user narrative exists for a case",
+      "request": {
+        "caseFileId": "string (UUID)"
+      },
+      "response": {
+        "exists": "boolean",
+        "updatedAt": "number | null (timestamp)",
+        "captureMethod": "'voice' | 'text' | 'mixed' | null"
+      }
+    },
+
+    "caseGrounding.saveNarrative": {
+      "description": "Save user narrative to case-context/user_narrative.md",
+      "request": {
+        "caseFileId": "string (UUID)",
+        "content": "string (raw narrative text)",
+        "captureMethod": "'voice' | 'text' | 'mixed'",
+        "extractedParties": "Party[] | null (optional, if pre-extracted)"
+      },
+      "response": {
+        "success": "boolean",
+        "filePath": "string",
+        "partiesExtracted": "number (count)"
+      }
+    },
+
+    "caseGrounding.getGroundingStatus": {
+      "description": "Get comprehensive grounding status for a case",
+      "request": {
+        "caseFileId": "string (UUID)"
+      },
+      "response": {
+        "narrativeExists": "boolean",
+        "narrativeUpdatedAt": "number | null",
+        "documentCount": "number",
+        "summaryStatus": "'generated' | 'generating' | 'stale' | 'failed' | null",
+        "summaryGeneratedAt": "number | null",
+        "isStale": "boolean",
+        "groundingStatus": "'ungrounded' | 'narrative_only' | 'docs_only' | 'grounded'"
+      }
+    },
+
+    "caseGrounding.extractParties": {
+      "description": "Extract parties from narrative using AI",
+      "request": {
+        "caseFileId": "string (UUID)",
+        "narrativeContent": "string"
+      },
+      "response": {
+        "success": "boolean",
+        "parties": "Party[]",
+        "filePath": "string (parties.json path)"
+      }
+    }
+  },
+
+  "types": {
+    "Party": {
+      "name": "string",
+      "role": "string (e.g., 'plaintiff', 'defendant', 'witness', 'employer')",
+      "relationship": "string | null (e.g., 'former employer', 'landlord')",
+      "notes": "string | null"
+    },
+
+    "GroundingCard": {
+      "description": "UI state for the CaseGroundingCard component",
+      "props": {
+        "caseFileId": "string",
+        "narrativeComplete": "boolean",
+        "documentsUploaded": "boolean", 
+        "summaryGenerated": "boolean",
+        "summaryStale": "boolean",
+        "onTellStory": "() => void",
+        "onUploadDocs": "() => void",
+        "onGenerateSummary": "() => void",
+        "onDismiss": "() => void"
+      }
+    },
+
+    "NarrativeMode": {
+      "description": "Chat state when in narrative capture mode",
+      "state": {
+        "isNarrativeMode": "boolean",
+        "narrativeBuffer": "string[]",
+        "startedAt": "number | null",
+        "captureMethod": "'voice' | 'text' | 'mixed'"
+      }
+    }
+  },
+
+  "file_artifacts": {
+    "user_narrative.md": {
+      "location": "{workspace}/case-context/user_narrative.md",
+      "format": "markdown with YAML frontmatter",
+      "frontmatter": {
+        "captured_at": "ISO 8601 timestamp",
+        "capture_method": "'voice' | 'text' | 'mixed'",
+        "version": "number"
+      }
+    },
+
+    "parties.json": {
+      "location": "{workspace}/case-context/parties.json",
+      "format": "JSON array of Party objects",
+      "example": [
+        {
+          "name": "John Smith",
+          "role": "plaintiff",
+          "relationship": "self",
+          "notes": null
+        },
+        {
+          "name": "Acme Corp",
+          "role": "defendant", 
+          "relationship": "former employer",
+          "notes": "Terminated user in March 2024"
+        }
+      ]
+    }
+  }
+}
+

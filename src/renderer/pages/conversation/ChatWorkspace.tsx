@@ -403,7 +403,7 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
         await ipcBridge.shell.openFile.invoke(nodeData.fullPath);
       } catch (error) {
         console.error('Failed to open path:', error);
-        messageApi.error(t('conversation.workspace.contextMenu.openFailed') || 'Failed to open');
+        messageApi.error(t('conversation.explorer.contextMenu.openFailed') || 'Failed to open');
       }
     },
     [messageApi, t]
@@ -418,7 +418,7 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
         await ipcBridge.shell.showItemInFolder.invoke(nodeData.fullPath);
       } catch (error) {
         console.error('Failed to reveal item in folder:', error);
-        messageApi.error(t('conversation.workspace.contextMenu.revealFailed') || 'Failed to reveal');
+        messageApi.error(t('conversation.explorer.contextMenu.revealFailed') || 'Failed to reveal');
       }
     },
     [messageApi, t]
@@ -444,13 +444,13 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
       setDeleteModal((prev) => ({ ...prev, loading: true }));
       const res = await removeWorkspaceEntry(deleteModal.target.fullPath);
       if (!res?.success) {
-        const errorMsg = res?.msg || t('conversation.workspace.contextMenu.deleteFailed');
+        const errorMsg = res?.msg || t('conversation.explorer.contextMenu.deleteFailed');
         messageApi.error(errorMsg);
         setDeleteModal((prev) => ({ ...prev, loading: false }));
         return;
       }
 
-      messageApi.success(t('conversation.workspace.contextMenu.deleteSuccess'));
+      messageApi.success(t('conversation.explorer.contextMenu.deleteSuccess'));
       setSelected([]);
       selectedKeysRef.current = [];
       selectedNodeRef.current = null;
@@ -459,7 +459,7 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
       setTimeout(() => refreshWorkspace(), 200);
     } catch (error) {
       console.error('Failed to delete item:', error);
-      messageApi.error(t('conversation.workspace.contextMenu.deleteFailed'));
+      messageApi.error(t('conversation.explorer.contextMenu.deleteFailed'));
       setDeleteModal((prev) => ({ ...prev, loading: false }));
     }
   }, [deleteModal.target, closeDeleteModal, eventPrefix, messageApi, refreshWorkspace, t]);
@@ -564,7 +564,7 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
     const trimmedName = renameModal.value.trim();
 
     if (!trimmedName) {
-      messageApi.warning(t('conversation.workspace.contextMenu.renameEmpty'));
+      messageApi.warning(t('conversation.explorer.contextMenu.renameEmpty'));
       return;
     }
 
@@ -594,7 +594,7 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
       setRenameLoading(true);
       const response = await waitWithTimeout(renameWorkspaceEntry(target.fullPath, trimmedName));
       if (!response?.success) {
-        const errorMsg = response?.msg || t('conversation.workspace.contextMenu.renameFailed');
+        const errorMsg = response?.msg || t('conversation.explorer.contextMenu.renameFailed');
         messageApi.error(errorMsg);
         return;
       }
@@ -619,13 +619,13 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
         selectedNodeRef.current = null;
       }
 
-      messageApi.success(t('conversation.workspace.contextMenu.renameSuccess'));
+      messageApi.success(t('conversation.explorer.contextMenu.renameSuccess'));
     } catch (error) {
       if (error instanceof Error && error.message === 'timeout') {
-        messageApi.error(t('conversation.workspace.contextMenu.renameTimeout'));
+        messageApi.error(t('conversation.explorer.contextMenu.renameTimeout'));
       } else {
         console.error('Failed to rename item:', error);
-        messageApi.error(t('conversation.workspace.contextMenu.renameFailed'));
+        messageApi.error(t('conversation.explorer.contextMenu.renameFailed'));
       }
     } finally {
       setRenameLoading(false);
@@ -639,7 +639,7 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
       if (!nodeData || !nodeData.fullPath) return;
       ensureNodeSelected(nodeData, { emit: true });
       closeContextMenu();
-      messageApi.success(t('conversation.workspace.contextMenu.addedToChat'));
+      messageApi.success(t('conversation.explorer.contextMenu.addedToChat'));
     },
     [closeContextMenu, ensureNodeSelected, messageApi, t]
   );
@@ -839,6 +839,19 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
 
   useAddEventListener(`${eventPrefix}.workspace.refresh`, () => refreshWorkspace(), [refreshWorkspace]);
 
+  // Listen for upload trigger event from CaseGroundingCard
+  useAddEventListener(
+    `${eventPrefix}.workspace.upload.trigger` as any,
+    () => {
+      console.log('[ChatWorkspace] Received upload trigger event, caseFileId:', caseFileId);
+      if (caseFileId) {
+        console.log('[ChatWorkspace] Opening upload modal');
+        setUploadModalVisible(true);
+      }
+    },
+    [caseFileId]
+  );
+
   useEffect(() => {
     return ipcBridge.conversation.responseSearchWorkSpace.provider((data) => {
       if (data.match) setFiles([data.match]);
@@ -886,9 +899,9 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
               <FileText theme='outline' size='24' fill='rgb(var(--primary-6))' />
             </div>
             <div>
-              <div className='text-16px font-semibold mb-4px'>{t('conversation.workspace.pasteConfirm_title')}</div>
+              <div className='text-16px font-semibold mb-4px'>{t('conversation.explorer.pasteConfirm_title')}</div>
               <div className='text-13px' style={{ color: 'var(--color-text-3)' }}>
-                {confirmFilesToPaste.length > 1 ? t('conversation.workspace.pasteConfirm_multipleFiles', { count: confirmFilesToPaste.length }) : t('conversation.workspace.pasteConfirm_title')}
+                {confirmFilesToPaste.length > 1 ? t('conversation.explorer.pasteConfirm_multipleFiles', { count: confirmFilesToPaste.length }) : t('conversation.explorer.pasteConfirm_title')}
               </div>
             </div>
           </div>
@@ -899,7 +912,7 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
               <FileText theme='outline' size='18' fill='var(--color-text-2)' style={{ marginTop: '2px' }} />
               <div className='flex-1'>
                 <div className='text-13px mb-4px' style={{ color: 'var(--color-text-3)' }}>
-                  {t('conversation.workspace.pasteConfirm_fileName')}
+                  {t('conversation.explorer.pasteConfirm_fileName')}
                 </div>
                 <div className='text-14px font-medium break-all' style={{ color: 'var(--color-text-1)' }}>
                   {confirmFileName}
@@ -910,7 +923,7 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
               <FolderOpen theme='outline' size='18' fill='var(--color-text-2)' style={{ marginTop: '2px' }} />
               <div className='flex-1'>
                 <div className='text-13px mb-4px' style={{ color: 'var(--color-text-3)' }}>
-                  {t('conversation.workspace.pasteConfirm_targetFolder')}
+                  {t('conversation.explorer.pasteConfirm_targetFolder')}
                 </div>
                 <div className='text-14px font-medium font-mono break-all' style={{ color: 'rgb(var(--primary-6))' }}>
                   {getTargetFolderPath().fullPath}
@@ -923,7 +936,7 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
           <div className='mb-20px'>
             <Checkbox checked={doNotAsk} onChange={(v) => setDoNotAsk(v)}>
               <span className='text-13px' style={{ color: 'var(--color-text-2)' }}>
-                {t('conversation.workspace.pasteConfirm_noAsk')}
+                {t('conversation.explorer.pasteConfirm_noAsk')}
               </span>
             </Checkbox>
           </div>
@@ -948,7 +961,7 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
                 setPasteTargetFolder(null);
               }}
             >
-              {t('conversation.workspace.pasteConfirm_cancel')}
+              {t('conversation.explorer.pasteConfirm_cancel')}
             </button>
             <button
               className='px-16px py-8px rounded-6px text-14px font-medium transition-all'
@@ -977,7 +990,7 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
                   const failedFiles = res.data?.failedFiles ?? [];
 
                   if (copiedFiles.length > 0) {
-                    messageApi.success(t('conversation.workspace.pasteConfirm_paste') || 'Pasted');
+                    messageApi.success(t('conversation.explorer.pasteConfirm_paste') || 'Pasted');
                     setTimeout(() => refreshWorkspace(), 300);
                   }
 
@@ -1000,33 +1013,33 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
                 }
               }}
             >
-              {t('conversation.workspace.pasteConfirm_paste')}
+              {t('conversation.explorer.pasteConfirm_paste')}
             </button>
           </div>
         </div>
       </Modal>
-      <Modal visible={renameModal.visible} title={t('conversation.workspace.contextMenu.renameTitle')} onCancel={closeRenameModal} onOk={handleRenameConfirm} okText={t('common.confirm')} cancelText={t('common.cancel')} confirmLoading={renameLoading} style={{ borderRadius: '12px' }}>
-        <Input autoFocus value={renameModal.value} onChange={(value) => setRenameModal((prev) => ({ ...prev, value }))} onPressEnter={handleRenameConfirm} placeholder={t('conversation.workspace.contextMenu.renamePlaceholder')} />
+      <Modal visible={renameModal.visible} title={t('conversation.explorer.contextMenu.renameTitle')} onCancel={closeRenameModal} onOk={handleRenameConfirm} okText={t('common.confirm')} cancelText={t('common.cancel')} confirmLoading={renameLoading} style={{ borderRadius: '12px' }}>
+        <Input autoFocus value={renameModal.value} onChange={(value) => setRenameModal((prev) => ({ ...prev, value }))} onPressEnter={handleRenameConfirm} placeholder={t('conversation.explorer.contextMenu.renamePlaceholder')} />
       </Modal>
-      <Modal visible={deleteModal.visible} title={t('conversation.workspace.contextMenu.deleteTitle')} onCancel={closeDeleteModal} onOk={handleDeleteConfirm} okText={t('common.confirm')} cancelText={t('common.cancel')} confirmLoading={deleteModal.loading} style={{ borderRadius: '12px' }}>
-        <div className='text-14px text-t-secondary'>{t('conversation.workspace.contextMenu.deleteConfirm')}</div>
+      <Modal visible={deleteModal.visible} title={t('conversation.explorer.contextMenu.deleteTitle')} onCancel={closeDeleteModal} onOk={handleDeleteConfirm} okText={t('common.confirm')} cancelText={t('common.cancel')} confirmLoading={deleteModal.loading} style={{ borderRadius: '12px' }}>
+        <div className='text-14px text-t-secondary'>{t('conversation.explorer.contextMenu.deleteConfirm')}</div>
       </Modal>
       <div className='px-16px pb-8px'>
         <div className='flex items-center justify-start gap-8px'>
           <span className='font-bold text-14px text-t-primary'>{t('common.file')}</span>
           <div className='flex items-center gap-8px'>
-            <Tooltip content={t('conversation.workspace.addFile')}>
+            <Tooltip content={t('conversation.explorer.addFile')}>
               <span>
                 <FileAddition className='cursor-pointer flex' theme='outline' size='16' fill={iconColors.secondary} onClick={handleAddFiles} />
               </span>
             </Tooltip>
-            <Tooltip content={t('conversation.workspace.refresh')}>
+            <Tooltip content={t('conversation.explorer.refresh')}>
               <span>
                 <Refresh className={loading ? 'loading lh-[1] flex cursor-pointer' : 'flex cursor-pointer'} theme='outline' size='16' fill={iconColors.secondary} onClick={() => refreshWorkspace()} />
               </span>
             </Tooltip>
             {caseFileId && (
-              <Tooltip content={t('conversation.workspace.uploadCaseFiles')}>
+              <Tooltip content={t('conversation.explorer.uploadCaseFiles')}>
                 <span>
                   <Upload className='cursor-pointer flex' theme='outline' size='16' fill={iconColors.secondary} onClick={() => setUploadModalVisible(true)} />
                 </span>
@@ -1039,7 +1052,7 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
         <div className='px-16px pb-8px'>
           <Input
             className='w-full'
-            placeholder={t('conversation.workspace.searchPlaceholder')}
+            placeholder={t('conversation.explorer.searchPlaceholder')}
             value={searchText}
             onChange={(value) => {
               setSearchText(value);
@@ -1070,7 +1083,7 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
                   closeContextMenu();
                 }}
               >
-                {t('conversation.workspace.contextMenu.open')}
+                {t('conversation.explorer.contextMenu.open')}
               </button>
               {isContextMenuNodeFile && (
                 <button
@@ -1081,7 +1094,7 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
                     closeContextMenu();
                   }}
                 >
-                  {t('conversation.workspace.contextMenu.openLocation')}
+                  {t('conversation.explorer.contextMenu.openLocation')}
                 </button>
               )}
               <div className='h-1px bg-3 my-2px'></div>
@@ -1103,7 +1116,7 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
                   openRenameModal(contextMenuNode);
                 }}
               >
-                {t('conversation.workspace.contextMenu.rename')}
+                {t('conversation.explorer.contextMenu.rename')}
               </button>
               <div className='h-1px bg-3 my-2px'></div>
               <button
@@ -1113,7 +1126,7 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
                   handleAddToChat(contextMenuNode);
                 }}
               >
-                {t('conversation.workspace.contextMenu.addToChat')}
+                {t('conversation.explorer.contextMenu.addToChat')}
               </button>
             </div>
           </div>
@@ -1123,8 +1136,8 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
             <Empty
               description={
                 <div>
-                  <span className='text-t-secondary font-bold text-14px'>{searchText ? t('conversation.workspace.search.empty') : t('conversation.workspace.empty')}</span>
-                  <div className='text-t-secondary'>{searchText ? '' : t('conversation.workspace.emptyDescription')}</div>
+                  <span className='text-t-secondary font-bold text-14px'>{searchText ? t('conversation.explorer.search.empty') : t('conversation.explorer.empty')}</span>
+                  <div className='text-t-secondary'>{searchText ? '' : t('conversation.explorer.emptyDescription')}</div>
                 </div>
               }
             />
@@ -1269,12 +1282,7 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
       {caseFileId && <UploadCaseFilesModal visible={uploadModalVisible} caseFileId={caseFileId} onClose={() => setUploadModalVisible(false)} />}
 
       {/* Workspace File Preview Modal */}
-      <WorkspaceFilePreview
-        visible={filePreview.visible}
-        filePath={filePreview.filePath}
-        filename={filePreview.filename}
-        onClose={closeFilePreview}
-      />
+      <WorkspaceFilePreview visible={filePreview.visible} filePath={filePreview.filePath} filename={filePreview.filename} onClose={closeFilePreview} />
     </div>
   );
 };

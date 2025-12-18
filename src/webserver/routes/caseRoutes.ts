@@ -334,14 +334,17 @@ export function registerCaseRoutes(app: Express): void {
       const generator = new CaseSummaryGenerator();
 
       // Don't await - let it run in background
-      generator.generate(caseId, (percent, currentBatch, totalBatches) => {
-        emitSummaryGenerating(caseId, percent, currentBatch, totalBatches);
-      }).then(() => {
-        const status = CaseFileRepository.getSummaryStatus(caseId);
-        emitSummaryComplete(caseId, status?.version ?? 1, status?.documentCount ?? 0);
-      }).catch((error) => {
-        emitSummaryFailed(caseId, error.message);
-      });
+      generator
+        .generate(caseId, (percent, currentBatch, totalBatches) => {
+          emitSummaryGenerating(caseId, percent, currentBatch, totalBatches);
+        })
+        .then(() => {
+          const status = CaseFileRepository.getSummaryStatus(caseId);
+          emitSummaryComplete(caseId, status?.version ?? 1, status?.documentCount ?? 0);
+        })
+        .catch((error) => {
+          emitSummaryFailed(caseId, error.message);
+        });
 
       res.json({
         success: true,
@@ -396,14 +399,17 @@ export function registerCaseRoutes(app: Express): void {
       // Start update in background
       const generator = new CaseSummaryGenerator();
 
-      generator.update(caseId, (percent, currentBatch, totalBatches) => {
-        emitSummaryGenerating(caseId, percent, currentBatch, totalBatches);
-      }).then(() => {
-        const status = CaseFileRepository.getSummaryStatus(caseId);
-        emitSummaryComplete(caseId, status?.version ?? 1, status?.documentCount ?? 0);
-      }).catch((error) => {
-        emitSummaryFailed(caseId, error.message);
-      });
+      generator
+        .update(caseId, (percent, currentBatch, totalBatches) => {
+          emitSummaryGenerating(caseId, percent, currentBatch, totalBatches);
+        })
+        .then(() => {
+          const status = CaseFileRepository.getSummaryStatus(caseId);
+          emitSummaryComplete(caseId, status?.version ?? 1, status?.documentCount ?? 0);
+        })
+        .catch((error) => {
+          emitSummaryFailed(caseId, error.message);
+        });
 
       res.json({
         success: true,
@@ -458,14 +464,17 @@ export function registerCaseRoutes(app: Express): void {
       // Start regeneration in background
       const generator = new CaseSummaryGenerator();
 
-      generator.regenerate(caseId, (percent, currentBatch, totalBatches) => {
-        emitSummaryGenerating(caseId, percent, currentBatch, totalBatches);
-      }).then(() => {
-        const status = CaseFileRepository.getSummaryStatus(caseId);
-        emitSummaryComplete(caseId, status?.version ?? 1, status?.documentCount ?? 0);
-      }).catch((error) => {
-        emitSummaryFailed(caseId, error.message);
-      });
+      generator
+        .regenerate(caseId, (percent, currentBatch, totalBatches) => {
+          emitSummaryGenerating(caseId, percent, currentBatch, totalBatches);
+        })
+        .then(() => {
+          const status = CaseFileRepository.getSummaryStatus(caseId);
+          emitSummaryComplete(caseId, status?.version ?? 1, status?.documentCount ?? 0);
+        })
+        .catch((error) => {
+          emitSummaryFailed(caseId, error.message);
+        });
 
       res.json({
         success: true,

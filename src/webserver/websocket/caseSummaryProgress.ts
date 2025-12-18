@@ -6,17 +6,14 @@
 
 /**
  * Case Summary Progress WebSocket Events
- * 
+ *
  * Emits real-time progress updates during case summary generation
  */
 
 /**
  * Summary progress event types
  */
-export type SummaryProgressEventType = 
-  | 'summary:generating'
-  | 'summary:complete'
-  | 'summary:failed';
+export type SummaryProgressEventType = 'summary:generating' | 'summary:complete' | 'summary:failed';
 
 /**
  * Summary progress event structure
@@ -24,31 +21,31 @@ export type SummaryProgressEventType =
 export interface SummaryProgressEvent {
   /** Event type */
   type: SummaryProgressEventType;
-  
+
   /** Case file ID */
   caseFileId: string;
-  
+
   /** Progress percentage (0-100) */
   progress: number;
-  
+
   /** Current batch being processed */
   currentBatch?: number;
-  
+
   /** Total number of batches */
   totalBatches?: number;
-  
+
   /** Human-readable status message */
   message: string;
-  
+
   /** Error message (if type is 'summary:failed') */
   error?: string;
-  
+
   /** Summary version (if type is 'summary:complete') */
   version?: number;
-  
+
   /** Document count (if type is 'summary:complete') */
   documentCount?: number;
-  
+
   /** Timestamp */
   timestamp: number;
 }
@@ -67,7 +64,7 @@ let wsManager: IWebSocketManager | null = null;
 
 /**
  * Initialize the summary progress emitter with WebSocket manager
- * 
+ *
  * @param manager - WebSocket manager instance
  */
 export function initializeSummaryProgress(manager: IWebSocketManager): void {
@@ -77,7 +74,7 @@ export function initializeSummaryProgress(manager: IWebSocketManager): void {
 
 /**
  * Emit summary progress event to WebSocket clients
- * 
+ *
  * @param event - Progress event to emit
  */
 export function emitSummaryProgress(event: SummaryProgressEvent): void {
@@ -89,7 +86,7 @@ export function emitSummaryProgress(event: SummaryProgressEvent): void {
   try {
     // Emit to all clients connected to this case file
     wsManager.emitToCaseFile(event.caseFileId, 'summary:progress', event);
-    
+
     console.log('[CaseSummary] Emitted progress event:', {
       type: event.type,
       caseFileId: event.caseFileId,
@@ -102,18 +99,13 @@ export function emitSummaryProgress(event: SummaryProgressEvent): void {
 
 /**
  * Emit summary generating event
- * 
+ *
  * @param caseFileId - Case file ID
  * @param progress - Progress percentage (0-100)
  * @param currentBatch - Current batch number
  * @param totalBatches - Total batch count
  */
-export function emitSummaryGenerating(
-  caseFileId: string,
-  progress: number,
-  currentBatch: number,
-  totalBatches: number
-): void {
+export function emitSummaryGenerating(caseFileId: string, progress: number, currentBatch: number, totalBatches: number): void {
   emitSummaryProgress({
     type: 'summary:generating',
     caseFileId,
@@ -127,16 +119,12 @@ export function emitSummaryGenerating(
 
 /**
  * Emit summary complete event
- * 
+ *
  * @param caseFileId - Case file ID
  * @param version - Summary version
  * @param documentCount - Number of documents processed
  */
-export function emitSummaryComplete(
-  caseFileId: string,
-  version: number,
-  documentCount: number
-): void {
+export function emitSummaryComplete(caseFileId: string, version: number, documentCount: number): void {
   emitSummaryProgress({
     type: 'summary:complete',
     caseFileId,
@@ -150,14 +138,11 @@ export function emitSummaryComplete(
 
 /**
  * Emit summary failed event
- * 
+ *
  * @param caseFileId - Case file ID
  * @param error - Error message
  */
-export function emitSummaryFailed(
-  caseFileId: string,
-  error: string
-): void {
+export function emitSummaryFailed(caseFileId: string, error: string): void {
   emitSummaryProgress({
     type: 'summary:failed',
     caseFileId,
@@ -167,4 +152,3 @@ export function emitSummaryFailed(
     timestamp: Date.now(),
   });
 }
-

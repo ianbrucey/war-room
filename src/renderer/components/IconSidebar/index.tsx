@@ -1,6 +1,6 @@
 /**
  * IconSidebar - VS Code-style icon bar for toggling panels
- * 
+ *
  * Features:
  * - 48px wide icon-only sidebar
  * - 5 icons: Conversations, Workspace, Preview, Settings, User
@@ -19,7 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import JQLogo from '../../../../public/en/JQ.png';
 
-export type PanelId = 'conversations' | 'workspace' | 'preview' | null;
+export type PanelId = 'conversations' | 'explorer' | 'preview' | null;
 
 interface IconSidebarProps {
   activePanel: PanelId;
@@ -65,12 +65,13 @@ const IconSidebar: React.FC<IconSidebarProps> = ({ activePanel, onPanelToggle, c
   return (
     <div className='size-full flex flex-col items-center py-12px gap-8px bg-2'>
       {/* Logo */}
-      <Tooltip content='JusticeQuest' position='right'>
+      <Tooltip content='Back to Cases' position='right'>
         <div
           className='w-48px h-48px flex items-center justify-center cursor-pointer transition-all hover:opacity-80 mb-8px'
           onClick={() => {
-            // Could show about modal or navigate to home
-            console.log('Logo clicked');
+            Promise.resolve(navigate('/cases')).catch((error) => {
+              console.error('Navigation failed:', error);
+            });
           }}
         >
           <img src={JQLogo} alt='JusticeQuest' className='w-64px h-48px object-contain' />
@@ -80,32 +81,24 @@ const IconSidebar: React.FC<IconSidebarProps> = ({ activePanel, onPanelToggle, c
       {/* Conversations Icon */}
       <Tooltip content={t('conversation.history.title') || 'Conversations'} position='right'>
         <div
-          className={classNames(
-            'w-48px h-48px flex items-center justify-center rd-8px cursor-pointer transition-all',
-            'hover:bg-hover',
-            {
-              'bg-active': activePanel === 'conversations',
-            }
-          )}
+          className={classNames('w-48px h-48px flex items-center justify-center rd-8px cursor-pointer transition-all', 'hover:bg-hover', {
+            'bg-active': activePanel === 'conversations',
+          })}
           onClick={() => onPanelToggle(activePanel === 'conversations' ? null : 'conversations')}
         >
           <Message theme='outline' size='26' fill={activePanel === 'conversations' ? iconColors.primary : inactiveIconColor} strokeWidth={3} />
         </div>
       </Tooltip>
 
-      {/* Workspace Icon */}
-      <Tooltip content={t('conversation.workspace.title') || 'Workspace'} position='right'>
+      {/* explorer Icon */}
+      <Tooltip content={t('conversation.explorer.title') || 'Explorer'} position='right'>
         <div
-          className={classNames(
-            'w-48px h-48px flex items-center justify-center rd-8px cursor-pointer transition-all',
-            'hover:bg-hover',
-            {
-              'bg-active': activePanel === 'workspace',
-            }
-          )}
-          onClick={() => onPanelToggle(activePanel === 'workspace' ? null : 'workspace')}
+          className={classNames('w-48px h-48px flex items-center justify-center rd-8px cursor-pointer transition-all', 'hover:bg-hover', {
+            'bg-active': activePanel === 'explorer',
+          })}
+          onClick={() => onPanelToggle(activePanel === 'explorer' ? null : 'explorer')}
         >
-          <FileAddition theme='outline' size='26' fill={activePanel === 'workspace' ? iconColors.primary : inactiveIconColor} strokeWidth={3} />
+          <FileAddition theme='outline' size='26' fill={activePanel === 'explorer' ? iconColors.primary : inactiveIconColor} strokeWidth={3} />
         </div>
       </Tooltip>
 
@@ -114,13 +107,7 @@ const IconSidebar: React.FC<IconSidebarProps> = ({ activePanel, onPanelToggle, c
 
       {/* Settings Icon */}
       <Tooltip content={isSettings ? t('common.back') : t('common.settings')} position='right'>
-        <div
-          className={classNames(
-            'w-48px h-48px flex items-center justify-center rd-8px cursor-pointer transition-all',
-            'hover:bg-hover'
-          )}
-          onClick={handleSettingsClick}
-        >
+        <div className={classNames('w-48px h-48px flex items-center justify-center rd-8px cursor-pointer transition-all', 'hover:bg-hover')} onClick={handleSettingsClick}>
           <SettingTwo theme='outline' size='26' fill={inactiveIconColor} strokeWidth={3} />
         </div>
       </Tooltip>
@@ -129,10 +116,7 @@ const IconSidebar: React.FC<IconSidebarProps> = ({ activePanel, onPanelToggle, c
       {user && (user.role === 'admin' || user.role === 'super_admin') && (
         <Tooltip content='User Management' position='right'>
           <div
-            className={classNames(
-              'w-48px h-48px flex items-center justify-center rd-8px cursor-pointer transition-all',
-              'hover:bg-hover'
-            )}
+            className={classNames('w-48px h-48px flex items-center justify-center rd-8px cursor-pointer transition-all', 'hover:bg-hover')}
             onClick={() => {
               Promise.resolve(navigate('/admin/users')).catch((error) => {
                 console.error('Navigation failed:', error);
@@ -150,13 +134,7 @@ const IconSidebar: React.FC<IconSidebarProps> = ({ activePanel, onPanelToggle, c
       {/* Logout Icon */}
       {user && (
         <Tooltip content={t('common.logout')} position='right'>
-          <div
-            className={classNames(
-              'w-48px h-48px flex items-center justify-center rd-8px cursor-pointer transition-all',
-              'hover:bg-hover'
-            )}
-            onClick={handleLogout}
-          >
+          <div className={classNames('w-48px h-48px flex items-center justify-center rd-8px cursor-pointer transition-all', 'hover:bg-hover')} onClick={handleLogout}>
             <Logout theme='outline' size='26' fill={inactiveIconColor} strokeWidth={3} />
           </div>
         </Tooltip>
@@ -166,4 +144,3 @@ const IconSidebar: React.FC<IconSidebarProps> = ({ activePanel, onPanelToggle, c
 };
 
 export default IconSidebar;
-
