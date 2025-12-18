@@ -11,8 +11,9 @@
 
 import { useAuth } from '@/renderer/context/AuthContext';
 import { iconColors } from '@/renderer/theme/colors';
+import { emitter } from '@/renderer/utils/emitter';
 import { Tooltip } from '@arco-design/web-react';
-import { FileAddition, Logout, Message, SettingTwo } from '@icon-park/react';
+import { FileAddition, Logout, Message, SettingTwo, Upload } from '@icon-park/react';
 import classNames from 'classnames';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -27,7 +28,7 @@ interface IconSidebarProps {
   collapsed?: boolean;
 }
 
-const IconSidebar: React.FC<IconSidebarProps> = ({ activePanel, onPanelToggle, collapsed = false }) => {
+const IconSidebar: React.FC<IconSidebarProps> = ({ activePanel, onPanelToggle }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -57,6 +58,14 @@ const IconSidebar: React.FC<IconSidebarProps> = ({ activePanel, onPanelToggle, c
     Promise.resolve(navigate('/settings')).catch((error) => {
       console.error('Navigation failed:', error);
     });
+  };
+
+  const handleUploadClick = () => {
+    // Emit upload trigger event - ChatWorkspace listens for this on all event prefixes
+    // Try all possible prefixes to ensure it reaches the active conversation
+    emitter.emit('gemini.workspace.upload.trigger' as any);
+    emitter.emit('acp.workspace.upload.trigger' as any);
+    emitter.emit('codex.workspace.upload.trigger' as any);
   };
 
   // Darker color for inactive icons - use a visible gray
@@ -101,6 +110,18 @@ const IconSidebar: React.FC<IconSidebarProps> = ({ activePanel, onPanelToggle, c
           <FileAddition theme='outline' size='26' fill={activePanel === 'explorer' ? iconColors.primary : inactiveIconColor} strokeWidth={3} />
         </div>
       </Tooltip>
+
+      {/* Upload Icon - only show if caseFileId exists */}
+      {caseFileId && (
+        <Tooltip content={t('conversation.explorer.uploadCaseFiles') || 'Upload Case Files'} position='right'>
+          <div
+            className={classNames('w-48px h-48px flex items-center justify-center rd-8px cursor-pointer transition-all', 'hover:bg-hover')}
+            onClick={handleUploadClick}
+          >
+            <Upload theme='outline' size='26' fill={inactiveIconColor} strokeWidth={3} />
+          </div>
+        </Tooltip>
+      )}
 
       {/* Spacer to push bottom items down */}
       <div className='flex-1' />

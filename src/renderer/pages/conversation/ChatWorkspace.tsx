@@ -16,7 +16,7 @@ import { emitter, useAddEventListener } from '@/renderer/utils/emitter';
 import { removeWorkspaceEntry, renameWorkspaceEntry } from '@/renderer/utils/workspaceFs';
 import { Checkbox, Empty, Input, Message, Modal, Tooltip, Tree } from '@arco-design/web-react';
 import type { NodeInstance } from '@arco-design/web-react/es/Tree/interface';
-import { FileAddition, FileText, FolderOpen, Refresh, Search, Upload } from '@icon-park/react';
+import { FileText, FolderOpen, Refresh, Search } from '@icon-park/react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
@@ -656,39 +656,7 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
     [closeContextMenu, ensureNodeSelected]
   );
 
-  const handleAddFiles = useCallback(() => {
-    ipcBridge.dialog.showOpen
-      .invoke({
-        properties: ['openFile', 'multiSelections'],
-        defaultPath: workspace,
-      })
-      .then((selectedFiles) => {
-        if (selectedFiles && selectedFiles.length > 0) {
-          return ipcBridge.fs.copyFilesToWorkspace.invoke({ filePaths: selectedFiles, workspace }).then((result) => {
-            const copiedFiles = result.data?.copiedFiles ?? [];
-            const failedFiles = result.data?.failedFiles ?? [];
 
-            if (copiedFiles.length > 0) {
-              setTimeout(() => {
-                refreshWorkspace();
-              }, 300);
-            }
-
-            if (!result.success || failedFiles.length > 0) {
-              // 部分或全部失败时给出显式提示 / Surface warning when any copy operation fails
-              const fallback = failedFiles.length > 0 ? 'Some files failed to copy' : result.msg;
-              messageApi.warning(fallback || t('messages.unknownError') || 'Copy failed');
-              if (failedFiles.length > 0) {
-                console.warn('Files failed to copy:', failedFiles);
-              }
-            }
-          });
-        }
-      })
-      .catch((error) => {
-        console.error('Failed to add files:', error);
-      });
-  }, [workspace, refreshWorkspace]);
 
   const onSearch = useDebounce(
     (value: string) => {
@@ -1026,25 +994,13 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
       </Modal>
       <div className='px-16px pb-8px'>
         <div className='flex items-center justify-start gap-8px'>
-          <span className='font-bold text-14px text-t-primary'>{t('common.file')}</span>
+          <span className='font-bold text-14px text-t-primary'>{t('conversation.explorer.title', 'Explorer')}</span>
           <div className='flex items-center gap-8px'>
-            <Tooltip content={t('conversation.explorer.addFile')}>
-              <span>
-                <FileAddition className='cursor-pointer flex' theme='outline' size='16' fill={iconColors.secondary} onClick={handleAddFiles} />
-              </span>
-            </Tooltip>
             <Tooltip content={t('conversation.explorer.refresh')}>
               <span>
                 <Refresh className={loading ? 'loading lh-[1] flex cursor-pointer' : 'flex cursor-pointer'} theme='outline' size='16' fill={iconColors.secondary} onClick={() => refreshWorkspace()} />
               </span>
             </Tooltip>
-            {caseFileId && (
-              <Tooltip content={t('conversation.explorer.uploadCaseFiles')}>
-                <span>
-                  <Upload className='cursor-pointer flex' theme='outline' size='16' fill={iconColors.secondary} onClick={() => setUploadModalVisible(true)} />
-                </span>
-              </Tooltip>
-            )}
           </div>
         </div>
       </div>
