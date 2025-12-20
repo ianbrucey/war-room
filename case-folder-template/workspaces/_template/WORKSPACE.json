@@ -1,0 +1,19 @@
+{
+  "workspace_id": "REPLACE_WITH_WORKSPACE_NAME",
+  "description": "REPLACE_WITH_WORKSPACE_DESCRIPTION",
+  "created_at": "REPLACE_WITH_TIMESTAMP",
+  "objective": "REPLACE_WITH_CLEAR_OBJECTIVE",
+  
+  "active_focus": {
+    "type": null,
+    "id": null,
+    "workflow_state": null
+  },
+  
+  "strategies": [],
+  "outlines": [],
+  "drafts": [],
+  
+  "linked_research": []
+}
+

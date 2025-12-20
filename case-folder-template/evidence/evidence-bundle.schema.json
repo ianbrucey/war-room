@@ -1,0 +1,106 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Evidence Bundle",
+  "description": "Schema for legal case evidence bundles - the source of truth for exhibit management",
+  "type": "object",
+  "required": ["bundle_id", "purpose", "exhibits"],
+  "properties": {
+    "bundle_id": {
+      "type": ["string", "null"],
+      "description": "Unique identifier for this bundle (e.g., 'complaint-exhibits', 'motion-exhibits')"
+    },
+    "purpose": {
+      "type": ["string", "null"],
+      "description": "What filing/purpose this bundle is for (e.g., 'Exhibits for Complaint filing')"
+    },
+    "created_at": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when bundle was created"
+    },
+    "updated_at": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when bundle was last modified"
+    },
+    "exhibits": {
+      "type": "array",
+      "description": "Ordered list of exhibits in this bundle",
+      "items": {
+        "type": "object",
+        "required": ["exhibit_id", "label", "title", "document_ref"],
+        "properties": {
+          "exhibit_id": {
+            "type": "string",
+            "description": "Exhibit identifier (e.g., 'A', 'B', '1', '2')"
+          },
+          "label": {
+            "type": "string",
+            "description": "Full exhibit label (e.g., 'Exhibit A', 'Plaintiff's Exhibit 1')"
+          },
+          "title": {
+            "type": "string",
+            "description": "Descriptive title of the exhibit"
+          },
+          "document_ref": {
+            "type": "string",
+            "description": "Path to source document folder relative to case root (e.g., 'documents/contract-signed/')"
+          },
+          "description": {
+            "type": ["string", "null"],
+            "description": "Detailed description for exhibit list and cover page"
+          },
+          "page_range": {
+            "type": ["string", "null"],
+            "description": "Page range within source document (e.g., '1-5', 'all')"
+          },
+          "key_excerpts": {
+            "type": "array",
+            "description": "Important quotes/excerpts for agent reference during drafting",
+            "items": {
+              "type": "object",
+              "required": ["page", "quote"],
+              "properties": {
+                "page": { "type": ["integer", "string"], "description": "Page number or range" },
+                "quote": { "type": "string", "description": "Exact quote from document" },
+                "relevance": { "type": "string", "description": "Why this excerpt matters" }
+              }
+            }
+          },
+          "supports_claims": {
+            "type": "array",
+            "description": "Legal claims/elements this exhibit supports",
+            "items": { "type": "string" }
+          },
+          "bates_range": {
+            "type": ["object", "null"],
+            "properties": {
+              "start": { "type": "string" },
+              "end": { "type": "string" }
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": ["draft", "included", "excluded", "pending_review"],
+            "default": "draft",
+            "description": "Current status of this exhibit"
+          },
+          "notes": {
+            "type": ["string", "null"],
+            "description": "Internal notes about this exhibit"
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "total_exhibits": { "type": "integer" },
+        "total_pages": { "type": "integer" },
+        "filing_deadline": { "type": ["string", "null"], "format": "date" },
+        "notes": { "type": ["string", "null"] }
+      }
+    }
+  }
+}
+

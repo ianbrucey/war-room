@@ -13,6 +13,7 @@ import path from 'path';
 interface VoiceSession {
   buffer: Buffer;
   lastActivity: number;
+  fileExtension: string;
 }
 
 export class VoiceService {
@@ -21,7 +22,6 @@ export class VoiceService {
   private openai: OpenAI | null = null;
 
   private constructor() {
-    // Initialize OpenAI client if key is present
     if (process.env.OPENAI_API_KEY) {
       this.openai = new OpenAI({
         apiKey: process.env.OPENAI_API_KEY,
@@ -39,12 +39,53 @@ export class VoiceService {
   }
 
   /**
+   * Transcribe a complete audio file (new simplified API)
+   * This receives the complete audio blob from the frontend
+   */
+  public async transcribeAudio(audioData: number[], fileExtension: string): Promise<string> {
+    if (!this.openai) {
+      throw new Error('OpenAI API key not configured');
+    }
+
+    const buffer = Buffer.from(audioData);
+    const tempFilePath = path.join(os.tmpdir(), `voice-${randomUUID()}.${fileExtension}`);
+
+    console.log(`[VoiceService] Transcribing complete audio file, format: ${fileExtension}, size: ${buffer.length} bytes`);
+
+    try {
+      // Write buffer to temp file
+      await fs.promises.writeFile(tempFilePath, buffer);
+
+      // Call OpenAI Whisper API
+      const response = await this.openai.audio.transcriptions.create({
+        file: fs.createReadStream(tempFilePath),
+        model: 'whisper-1',
+        language: 'en',
+        prompt: 'This is a voice message with proper punctuation, capitalization, and formatting.',
+      });
+
+      return response.text || '';
+    } catch (error) {
+      console.error('[VoiceService] Transcription failed:', error);
+      throw error;
+    } finally {
+      // Clean up temp file
+      try {
+        await fs.promises.unlink(tempFilePath);
+      } catch (e) {
+        // Ignore unlink errors
+      }
+    }
+  }
+
+  /**
    * Reset the audio buffer for a session
    */
   public startSession(sessionId: string): void {
     this.sessions.set(sessionId, {
       buffer: Buffer.alloc(0),
       lastActivity: Date.now(),
+      fileExtension: 'webm', // Default, will be updated by first chunk
     });
     // console.log(`[VoiceService] Started session ${sessionId}`);
   }
@@ -52,12 +93,16 @@ export class VoiceService {
   /**
    * Append audio chunk to session buffer
    */
-  public appendAudio(sessionId: string, chunk: { data: { type: string; data: number[] } } | Buffer): void {
+  public appendAudio(
+    sessionId: string,
+    chunk: { data: { type: string; data: number[] }; fileExtension?: string } | Buffer,
+    fileExtension?: string
+  ): void {
     const session = this.sessions.get(sessionId);
     if (!session) {
       // Auto-start if missing (resilience)
       this.startSession(sessionId);
-      this.appendAudio(sessionId, chunk);
+      this.appendAudio(sessionId, chunk, fileExtension);
       return;
     }
 
@@ -66,11 +111,20 @@ export class VoiceService {
     // Handle serialized Buffer object from JSON
     if (chunk && typeof chunk === 'object' && 'data' in chunk && Array.isArray((chunk as any).data)) {
       bufferToAppend = Buffer.from((chunk as any).data);
+      // Update file extension if provided
+      if ((chunk as any).fileExtension) {
+        session.fileExtension = (chunk as any).fileExtension;
+      }
     } else if (Buffer.isBuffer(chunk)) {
       bufferToAppend = chunk;
     } else {
       console.warn('[VoiceService] Invalid chunk format received');
       return;
+    }
+
+    // Update file extension from parameter if provided
+    if (fileExtension) {
+      session.fileExtension = fileExtension;
     }
 
     session.buffer = Buffer.concat([session.buffer, bufferToAppend]);
@@ -90,7 +144,11 @@ export class VoiceService {
       throw new Error('OpenAI API key not configured');
     }
 
-    const tempFilePath = path.join(os.tmpdir(), `voice-${sessionId}-${randomUUID()}.webm`);
+    // Use the correct file extension based on the audio format
+    const fileExtension = session.fileExtension || 'webm';
+    const tempFilePath = path.join(os.tmpdir(), `voice-${sessionId}-${randomUUID()}.${fileExtension}`);
+
+    console.log(`[VoiceService] Transcribing audio with format: ${fileExtension}, size: ${session.buffer.length} bytes`);
 
     try {
       // Write buffer to temp file

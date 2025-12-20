@@ -129,6 +129,22 @@ const GeminiSendBox: React.FC<{
   // Narrative mode: buffer messages
   const [narrativeBuffer, setNarrativeBuffer] = useState<string[]>([]);
 
+  // Listen for narrative finish event (triggered by button in chat header)
+  useAddEventListener(
+    'narrative.finish' as any,
+    () => {
+      if (isNarrativeMode && narrativeBuffer.length > 0) {
+        const fullNarrative = narrativeBuffer.join('\n\n');
+        setContent('');
+        setNarrativeBuffer([]);
+        if (onNarrativeComplete) {
+          onNarrativeComplete(fullNarrative);
+        }
+      }
+    },
+    [isNarrativeMode, narrativeBuffer, onNarrativeComplete, setContent]
+  );
+
   const { isRecording, startRecording, stopRecording, transcription, error: voiceError } = useAudioRecorder();
 
   // Handle voice transcription updates

@@ -1,0 +1,15 @@
+{
+  "$schema": "./evidence-bundle.schema.json",
+  "bundle_id": null,
+  "purpose": null,
+  "created_at": null,
+  "updated_at": null,
+  "exhibits": [],
+  "metadata": {
+    "total_exhibits": 0,
+    "total_pages": 0,
+    "filing_deadline": null,
+    "notes": null
+  }
+}
+

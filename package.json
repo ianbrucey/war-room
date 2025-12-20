@@ -33,6 +33,7 @@
     "test:coverage": "jest --coverage",
     "test:contract": "jest tests/contract",
     "test:integration": "jest tests/integration",
+    "backfill-file-search": "npx tsx scripts/backfill-file-search.ts",
     "prepare": "husky",
     "postinstall": "node scripts/postinstall.js"
   },

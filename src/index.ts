@@ -134,9 +134,38 @@ app.on('activate', () => {
   }
 });
 
-app.on('before-quit', () => {
-  // 在应用退出前清理工作进程
+// Cleanup handlers for various exit scenarios
+const cleanup = () => {
+  console.log('[App] Cleaning up worker processes...');
   WorkerManage.clear();
+};
+
+app.on('before-quit', cleanup);
+
+// Handle process termination signals
+process.on('SIGTERM', () => {
+  console.log('[App] Received SIGTERM, cleaning up...');
+  cleanup();
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('[App] Received SIGINT, cleaning up...');
+  cleanup();
+  process.exit(0);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('[App] Uncaught exception:', error);
+  cleanup();
+  process.exit(1);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[App] Unhandled rejection at:', promise, 'reason:', reason);
+  // Don't exit on unhandled rejection, just log it
 });
 
 // In this file you can include the rest of your app's specific main process

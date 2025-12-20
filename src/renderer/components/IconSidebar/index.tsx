@@ -10,17 +10,15 @@
  */
 
 import { useAuth } from '@/renderer/context/AuthContext';
-import { iconColors } from '@/renderer/theme/colors';
 import { emitter } from '@/renderer/utils/emitter';
 import { Tooltip } from '@arco-design/web-react';
-import { FileAddition, Logout, Message, SettingTwo, Upload } from '@icon-park/react';
 import classNames from 'classnames';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import JQLogo from '../../../../public/en/JQ.png';
 
-export type PanelId = 'conversations' | 'explorer' | 'preview' | null;
+export type PanelId = 'conversations' | 'explorer' | 'preview' | 'evidence' | null;
 
 interface IconSidebarProps {
   activePanel: PanelId;
@@ -68,8 +66,12 @@ const IconSidebar: React.FC<IconSidebarProps> = ({ activePanel, onPanelToggle })
     emitter.emit('codex.workspace.upload.trigger' as any);
   };
 
-  // Darker color for inactive icons - use a visible gray
-  const inactiveIconColor = '#666666';
+  const handleUploadTemplatesClick = () => {
+    // Emit template upload trigger event
+    emitter.emit('gemini.workspace.upload-templates.trigger' as any);
+    emitter.emit('acp.workspace.upload-templates.trigger' as any);
+    emitter.emit('codex.workspace.upload-templates.trigger' as any);
+  };
 
   return (
     <div className='size-full flex flex-col items-center py-12px gap-8px bg-2'>
@@ -95,7 +97,7 @@ const IconSidebar: React.FC<IconSidebarProps> = ({ activePanel, onPanelToggle })
           })}
           onClick={() => onPanelToggle(activePanel === 'conversations' ? null : 'conversations')}
         >
-          <Message theme='outline' size='26' fill={activePanel === 'conversations' ? iconColors.primary : inactiveIconColor} strokeWidth={3} />
+          <span style={{ fontSize: '26px' }}>💬</span>
         </div>
       </Tooltip>
 
@@ -107,7 +109,7 @@ const IconSidebar: React.FC<IconSidebarProps> = ({ activePanel, onPanelToggle })
           })}
           onClick={() => onPanelToggle(activePanel === 'explorer' ? null : 'explorer')}
         >
-          <FileAddition theme='outline' size='26' fill={activePanel === 'explorer' ? iconColors.primary : inactiveIconColor} strokeWidth={3} />
+          <span style={{ fontSize: '26px' }}>📁</span>
         </div>
       </Tooltip>
 
@@ -118,7 +120,45 @@ const IconSidebar: React.FC<IconSidebarProps> = ({ activePanel, onPanelToggle })
             className={classNames('w-48px h-48px flex items-center justify-center rd-8px cursor-pointer transition-all', 'hover:bg-hover')}
             onClick={handleUploadClick}
           >
-            <Upload theme='outline' size='26' fill={inactiveIconColor} strokeWidth={3} />
+            <span style={{ fontSize: '26px' }}>📤</span>
+          </div>
+        </Tooltip>
+      )}
+
+      {/* Upload Templates Icon - only show if caseFileId exists */}
+      {caseFileId && (
+        <Tooltip content='Upload Template Samples' position='right'>
+          <div
+            className={classNames('w-48px h-48px flex items-center justify-center rd-8px cursor-pointer transition-all', 'hover:bg-hover')}
+            onClick={handleUploadTemplatesClick}
+          >
+            <span style={{ fontSize: '26px' }}>📋</span>
+          </div>
+        </Tooltip>
+      )}
+
+      {/* Research Icon - only show if caseFileId exists */}
+      {caseFileId && (
+        <Tooltip content='Research' position='right'>
+          <div
+            className={classNames('w-48px h-48px flex items-center justify-center rd-8px cursor-pointer transition-all', 'hover:bg-hover')}
+          >
+            <span style={{ fontSize: '26px' }}>📚</span>
+          </div>
+        </Tooltip>
+      )}
+
+      {/* Evidence Bundles Icon - only show if caseFileId exists */}
+      {caseFileId && (
+        <Tooltip content='Evidence Bundles' position='right'>
+          <div
+            className={classNames('w-48px h-48px flex items-center justify-center rd-8px cursor-pointer transition-all', {
+              'bg-active': activePanel === 'evidence',
+              'hover:bg-hover': activePanel !== 'evidence',
+            })}
+            onClick={() => onPanelToggle('evidence')}
+          >
+            <span style={{ fontSize: '26px' }}>🗂️</span>
           </div>
         </Tooltip>
       )}
@@ -129,7 +169,7 @@ const IconSidebar: React.FC<IconSidebarProps> = ({ activePanel, onPanelToggle })
       {/* Settings Icon */}
       <Tooltip content={isSettings ? t('common.back') : t('common.settings')} position='right'>
         <div className={classNames('w-48px h-48px flex items-center justify-center rd-8px cursor-pointer transition-all', 'hover:bg-hover')} onClick={handleSettingsClick}>
-          <SettingTwo theme='outline' size='26' fill={inactiveIconColor} strokeWidth={3} />
+          <span style={{ fontSize: '26px' }}>⚙️</span>
         </div>
       </Tooltip>
 
@@ -144,10 +184,7 @@ const IconSidebar: React.FC<IconSidebarProps> = ({ activePanel, onPanelToggle })
               });
             }}
           >
-            <svg width='26' height='26' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
-              <path d='M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12Z' stroke={inactiveIconColor} strokeWidth='2' strokeLinecap='round' strokeLinejoin='round' />
-              <path d='M3 20C3 16.13 7.03 13 12 13C16.97 13 21 16.13 21 20' stroke={inactiveIconColor} strokeWidth='2' strokeLinecap='round' strokeLinejoin='round' />
-            </svg>
+            <span style={{ fontSize: '26px' }}>👥</span>
           </div>
         </Tooltip>
       )}
@@ -156,7 +193,7 @@ const IconSidebar: React.FC<IconSidebarProps> = ({ activePanel, onPanelToggle })
       {user && (
         <Tooltip content={t('common.logout')} position='right'>
           <div className={classNames('w-48px h-48px flex items-center justify-center rd-8px cursor-pointer transition-all', 'hover:bg-hover')} onClick={handleLogout}>
-            <Logout theme='outline' size='26' fill={inactiveIconColor} strokeWidth={3} />
+            <span style={{ fontSize: '26px' }}>🚪</span>
           </div>
         </Tooltip>
       )}

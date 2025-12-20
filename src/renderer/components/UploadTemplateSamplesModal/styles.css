@@ -1,0 +1,95 @@
+.upload-template-samples-modal {
+  padding: 16px 0;
+}
+
+.modal-description {
+  margin-bottom: 24px;
+  color: var(--color-text-2);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.dropzone {
+  border: 2px dashed var(--color-border-2);
+  border-radius: 8px;
+  padding: 48px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: var(--color-fill-1);
+}
+
+.dropzone:hover {
+  border-color: var(--color-primary-6);
+  background: var(--color-primary-light-1);
+}
+
+.dropzone.dragging {
+  border-color: var(--color-primary-6);
+  background: var(--color-primary-light-2);
+  transform: scale(1.02);
+}
+
+.dropzone h3 {
+  margin: 16px 0 8px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--color-text-1);
+}
+
+.dropzone p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: var(--color-text-3);
+}
+
+.supported-formats {
+  margin-top: 12px !important;
+  font-size: 12px !important;
+  color: var(--color-text-4) !important;
+}
+
+.samples-list {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--color-border-2);
+}
+
+.samples-list h4 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-2);
+}
+
+.sample-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  background: var(--color-fill-2);
+  font-size: 13px;
+}
+
+.sample-item.uploading {
+  opacity: 0.6;
+}
+
+.sample-item.success {
+  background: var(--color-success-light-1);
+  color: var(--color-success-6);
+}
+
+.sample-item.error {
+  background: var(--color-danger-light-1);
+  color: var(--color-danger-6);
+}
+
+.sample-item .status {
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+

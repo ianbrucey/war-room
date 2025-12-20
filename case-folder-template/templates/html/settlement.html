@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>{{ document_title }}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  /* --- Page + Typography (print-authentic) --- */
+  @page {
+    size: letter;
+    margin: 1in;
+    @bottom-right {
+      content: counter(page);
+      font-family: "Times New Roman", serif;
+      font-size: 12pt;
+    }
+  }
+
+  html, body {
+    background: #f5f5f5;
+  }
+  body {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 12pt;
+    line-height: 1.8;
+    color: #000;
+    margin: 0;
+  }
+
+  .document {
+    max-width: 8.5in;
+    margin: 0 auto;
+    padding: 1in;
+    background: white;
+    border: 1px solid #d3d3d3;
+    box-shadow: 3px 3px 20px rgba(0,0,0,0.1);
+    overflow-wrap: break-word;
+  }
+
+  /* CSS counters for automatic paragraph numbering */
+  body { counter-reset: para footnote; }
+  p.numbered::before {
+    counter-increment: para;
+    content: counter(para) ". ";
+    font-weight: bold;
+  }
+
+  /* Footnotes (endnotes) */
+  sup.fn-ref { font-size: 0.7em; vertical-align: super; cursor: pointer; }
+  sup.fn-ref::after { counter-increment: footnote; content: counter(footnote); }
+  .footnotes { border-top: 1px solid #000; margin-top: 0.3in; padding-top: 0.15in; }
+  .footnotes .fn-title { font-weight: bold; margin: 0.5em 0; text-decoration: none; text-align: left; }
+  .footnotes ol { margin: 0.5em 0 0; padding-left: 1.2em; }
+  .footnotes li { margin: 0.4em 0; }
+
+  /* Lists inside content (do not affect main paragraph counter) */
+  ul.disc { list-style: disc; padding-left: 1.5em; margin: 0.5em 0; }
+  ol.alpha { list-style: lower-alpha; padding-left: 1.5em; margin: 0.5em 0; }
+  ol.decimal { list-style: decimal; padding-left: 1.5em; margin: 0.5em 0; }
+
+  /* Toolbar (ContentEditable interface) */
+  .toolbar { position: sticky; top: 0; background: #fff; border: 1px solid #ddd; padding: 6px 8px; margin: -0.5in -0.5in 0.5in -0.5in; z-index: 10; }
+  .toolbar button { font-size: 12pt; margin-right: 8px; }
+
+  /* Editable region visual cue */
+  .editable:focus { outline: 2px solid #cde7ff; }
+  p.numbered:hover { background-color: #fffacd; }
+
+  /* --- Header --- */
+  .document-header {
+    text-align: center;
+    margin-bottom: 0.5in;
+  }
+  
+  .document-title {
+    font-size: 16pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-bottom: 0.3in;
+  }
+  
+  .case-info {
+    font-size: 12pt;
+    margin-bottom: 0.2in;
+  }
+
+  /* --- Party Information --- */
+  .parties-section {
+    margin: 0.4in 0;
+  }
+  
+  .party-block {
+    margin-bottom: 0.25in;
+  }
+  
+  .party-label {
+    font-weight: bold;
+  }
+  
+  .party-details {
+    margin-left: 0.3in;
+    margin-top: 0.05in;
+  }
+
+  /* --- Settlement Terms --- */
+  .settlement-section {
+    margin: 0.3in 0;
+  }
+  
+  .section-title {
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-top: 0.4in;
+    margin-bottom: 0.2in;
+    text-align: center;
+  }
+  
+  .subsection-title {
+    font-weight: bold;
+    margin-top: 0.3in;
+    margin-bottom: 0.15in;
+  }
+  
+  p {
+    margin: 0 0 0.15in;
+    text-align: justify;
+    line-height: 1.8;
+  }
+  
+  .numbered-paragraph {
+    text-indent: -0.3in;
+    padding-left: 0.3in;
+    margin-bottom: 0.15in;
+  }
+  
+  .paragraph-number {
+    font-weight: bold;
+  }
+  
+  .payment-amount {
+    font-weight: bold;
+    font-size: 13pt;
+  }
+  
+  .deadline {
+    font-weight: bold;
+    text-decoration: underline;
+  }
+  
+  .confidential {
+    font-style: italic;
+    background-color: #f9f9f9;
+    padding: 0.1in;
+    border-left: 3px solid #ccc;
+    margin: 0.2in 0;
+  }
+
+  /* --- Lists --- */
+  .settlement-list {
+    margin: 0.15in 0 0.15in 0.3in;
+  }
+  
+  .settlement-list li {
+    margin-bottom: 0.1in;
+    text-align: justify;
+  }
+
+  /* --- Release Language --- */
+  .release-section {
+    margin: 0.4in 0;
+    padding: 0.2in;
+    border: 1px solid #000;
+  }
+  
+  .release-header {
+    font-weight: bold;
+    text-transform: uppercase;
+    text-align: center;
+    margin-bottom: 0.2in;
+  }
+
+  /* --- Payment Schedule Table --- */
+  .payment-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.2in 0;
+  }
+  
+  .payment-table th,
+  .payment-table td {
+    border: 1px solid #000;
+    padding: 0.1in;
+    text-align: left;
+    vertical-align: top;
+  }
+  
+  .payment-table th {
+    font-weight: bold;
+    background-color: #f5f5f5;
+    text-align: center;
+  }
+  
+  .payment-table .amount {
+    text-align: right;
+    font-weight: bold;
+  }
+
+  /* --- Signature Block --- */
+  .signature-section {
+    margin-top: 0.6in;
+    page-break-inside: avoid;
+  }
+  
+  .signature-header {
+    text-align: center;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-bottom: 0.4in;
+  }
+  
+  .signature-block {
+    margin-bottom: 0.5in;
+  }
+  
+  .signature-line {
+    width: 3in;
+    border-top: 1px solid #000;
+    margin-top: 0.8in;
+    margin-bottom: 0.1in;
+  }
+  
+  .signature-name {
+    font-weight: bold;
+  }
+  
+  .signature-title {
+    margin-top: 0.05in;
+  }
+  
+  .signature-date {
+    margin-top: 0.2in;
+  }
+  
+  .signature-grid {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+  }
+  
+  .signature-column {
+    display: table-cell;
+    width: 50%;
+    vertical-align: top;
+    padding-right: 0.2in;
+  }
+
+  /* --- Attorney Block --- */
+  .attorney-block {
+    margin-top: 0.3in;
+    font-size: 11pt;
+  }
+  
+  .attorney-approval {
+    margin-top: 0.2in;
+    font-style: italic;
+  }
+
+  /* --- Footer page numbering for print --- */
+  @media print {
+    body {
+      counter-reset: page;
+    }
+    .footer {
+      position: fixed;
+      bottom: 0.5in;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 10pt;
+    }
+    .footer:after {
+      content: "Page " counter(page);
+    }
+    .document {
+      padding: 0;
+      margin: 0;
+      max-width: none;
+      border: none;
+      box-shadow: none;
+    }
+    .toolbar { display: none; }
+    p.numbered:hover { background: none; }
+  }
+
+  /* --- Screen-only footer preview --- */
+  @media screen {
+    .footer {
+      display: none;
+    }
+  }
+
+  /* --- Page break utility --- */
+  .page-break {
+    page-break-before: always;
+    break-before: page;
+  }
+  
+  /* --- Emphasis styles --- */
+  .emphasis {
+    font-weight: bold;
+  }
+  
+  .important {
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <!-- Toolbar for ContentEditable interface -->
+    <div class="toolbar" aria-label="Editing toolbar">
+      <button type="button" onclick="document.execCommand('bold')">Bold</button>
+      <button type="button" onclick="document.execCommand('italic')">Italic</button>
+      <button type="button" onclick="document.execCommand('insertUnorderedList')">Bulleted list</button>
+      <button type="button" onclick="document.execCommand('insertOrderedList')">Numbered list</button>
+      <button type="button" onclick="insertFootnote()">Insert footnote</button>
+      <button type="button" onclick="clearFormatting()">Clear formatting</button>
+    </div>
+
+    <!-- Editable Content Region -->
+    <div id="editable" class="editable" contenteditable="true">
+      <!-- Document Header -->
+      <div class="document-header">
+        <div class="document-title">{{ document_title }}</div>
+        {% if case_number %}
+        <div class="case-info">Case No. {{ case_number }}</div>
+        {% endif %}
+        {% if court_name %}
+        <div class="case-info">{{ court_name }}</div>
+        {% endif %}
+      </div>
+
+    <!-- Parties Section -->
+    <div class="parties-section">
+      {% if parties %}
+      {% for party in parties %}
+      <div class="party-block">
+        <span class="party-label">{{ party.label }}:</span>
+        <div class="party-details">
+          {{ party.name }}
+          {% if party.address %}
+          <br/>{{ party.address | replace('\n', '<br/>') | safe }}
+          {% endif %}
+          {% if party.represented_by %}
+          <br/><em>Represented by: {{ party.represented_by }}</em>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+      {% endif %}
+    </div>
+
+    <!-- Settlement Terms -->
+    {% for section in settlement_sections %}
+    <div class="settlement-section">
+      {% if section.title %}
+      <div class="section-title">{{ section.title }}</div>
+      {% endif %}
+      
+      {% for paragraph in section.paragraphs %}
+      <p class="numbered-paragraph">
+        <span class="paragraph-number">{{ paragraph.number }}.</span> {{ paragraph.content | safe }}
+      </p>
+      {% endfor %}
+      
+      {% if section.payment_schedule %}
+      <table class="payment-table">
+        <thead>
+          <tr>
+            <th>Payment Date</th>
+            <th>Amount</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for payment in section.payment_schedule %}
+          <tr>
+            <td>{{ payment.date }}</td>
+            <td class="amount">${{ payment.amount }}</td>
+            <td>{{ payment.description }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      
+      {% if section.list_items %}
+      <ul class="settlement-list">
+        {% for item in section.list_items %}
+        <li>{{ item | safe }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+    {% endfor %}
+
+    <!-- Release Section -->
+    {% if release_language %}
+    <div class="release-section">
+      <div class="release-header">Release and Discharge</div>
+      {% for paragraph in release_language %}
+      <p>{{ paragraph | safe }}</p>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Confidentiality -->
+    {% if confidentiality_clause %}
+    <div class="confidential">
+      <strong>CONFIDENTIALITY:</strong> {{ confidentiality_clause | safe }}
+    </div>
+    {% endif %}
+
+    <!-- Signature Section -->
+    <div class="signature-section">
+      <div class="signature-header">Agreement and Execution</div>
+      
+      {% if execution_date %}
+      <p>This Settlement Agreement is executed on {{ execution_date }}.</p>
+      {% endif %}
+      
+      <div class="signature-grid">
+        {% for signatory in signatories %}
+        <div class="signature-column">
+          <div class="signature-block">
+            <div class="signature-line"></div>
+            <div class="signature-name">{{ signatory.name }}</div>
+            {% if signatory.title %}
+            <div class="signature-title">{{ signatory.title }}</div>
+            {% endif %}
+            <div class="signature-date">Date: _________________</div>
+            
+            {% if signatory.attorney %}
+            <div class="attorney-block">
+              <div class="signature-line"></div>
+              <div class="signature-name">{{ signatory.attorney.name }}</div>
+              <div class="signature-title">Attorney for {{ signatory.name }}</div>
+              {% if signatory.attorney.bar_number %}
+              <div>State Bar No. {{ signatory.attorney.bar_number }}</div>
+              {% endif %}
+              <div class="signature-date">Date: _________________</div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      
+      {% if court_approval_required %}
+      <div class="attorney-approval">
+        <p><strong>COURT APPROVAL:</strong> This settlement is subject to court approval.</p>
+        <div style="margin-top: 0.4in;">
+          <div class="signature-line" style="width: 4in;"></div>
+          <div><strong>Honorable {{ judge_name }}</strong></div>
+          <div>{{ court_name }}</div>
+          <div>Date: _________________</div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Endnotes Section -->
+    <div id="endnotes" class="footnotes">
+      <div class="fn-title">FOOTNOTES</div>
+      <ol id="footnotes-list" contenteditable="true"></ol>
+    </div>
+  </div>
+  </div>
+
+  <div class="footer"></div>
+
+<script>
+  // Paste sanitation: force plain text to preserve margins/format
+  const editable = document.getElementById('editable');
+  if (editable) {
+    editable.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+      document.execCommand('insertText', false, text);
+    });
+
+    // Ensure new paragraphs are auto-numbered (outside of lists)
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        m.addedNodes && m.addedNodes.forEach((node) => {
+          if (node.nodeType !== 1) return; // element only
+          if (node.closest && node.closest('ol, ul')) return; // lists excluded
+
+          // Convert stray DIVs to P.numbered for consistent numbering
+          if (node.tagName === 'DIV') {
+            const p = document.createElement('p');
+            p.className = 'numbered';
+            p.innerHTML = node.innerHTML;
+            node.replaceWith(p);
+          }
+          // Add numbering class to plain <p>
+          if (node.tagName === 'P' && !node.classList.contains('numbered')) {
+            node.classList.add('numbered');
+          }
+        });
+      }
+    });
+    observer.observe(editable, { childList: true, subtree: true });
+  }
+
+  // Clear formatting helper (keeps plain text and numbering class)
+  function clearFormatting() {
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    const text = range.toString();
+    if (!text) return;
+    document.execCommand('insertText', false, text);
+  }
+
+  // Footnotes logic (endnotes with auto-renumbering)
+  const footnotesListEl = document.getElementById('footnotes-list');
+
+  function insertFootnote() {
+    const text = prompt('Footnote text:');
+    if (text === null) return;
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    // Insert an empty reference; number is provided by CSS counter
+    const sup = document.createElement('sup');
+    sup.className = 'fn-ref';
+    sup.setAttribute('data-fnid', '');
+    range.insertNode(sup);
+    // Move caret after the inserted ref
+    range.setStartAfter(sup);
+    range.setEndAfter(sup);
+    sel.removeAllRanges();
+    sel.addRange(range);
+
+    reindexFootnotes();
+
+    // Set initial text on the corresponding endnote item
+    const refs = Array.from(document.querySelectorAll('#editable sup.fn-ref'));
+    const idx = refs.indexOf(sup);
+    const id = String(idx + 1);
+    const li = document.querySelector('#footnotes-list li[data-fnid="' + id + '"]');
+    if (li && (!li.textContent || li.textContent.startsWith('Footnote '))) {
+      li.textContent = text;
+    }
+  }
+
+  function reindexFootnotes() {
+    const list = document.getElementById('footnotes-list');
+    if (!list) return;
+    const refs = Array.from(document.querySelectorAll('#editable sup.fn-ref'));
+    const existing = new Map(Array.from(list.children).map(li => [li.getAttribute('data-fnid'), li]));
+    const frag = document.createDocumentFragment();
+
+    refs.forEach((ref, i) => {
+      const oldId = ref.getAttribute('data-fnid') || '';
+      const newId = String(i + 1);
+      ref.setAttribute('data-fnid', newId);
+      let li = existing.get(oldId) || existing.get(newId);
+      if (!li) {
+        li = document.createElement('li');
+        li.contentEditable = 'true';
+        li.setAttribute('data-fnid', newId);
+        li.textContent = 'Footnote ' + newId;
+      } else {
+        li.setAttribute('data-fnid', newId);
+      }
+      frag.appendChild(li);
+    });
+
+    list.innerHTML = '';
+    list.appendChild(frag);
+  }
+
+  // Reindex on edits (debounced)
+  let fnTimer;
+  if (editable) {
+    editable.addEventListener('input', () => {
+      clearTimeout(fnTimer);
+      fnTimer = setTimeout(reindexFootnotes, 300);
+    });
+
+    // Click-through navigation
+    editable.addEventListener('click', (e) => {
+      const ref = e.target.closest && e.target.closest('sup.fn-ref');
+      if (!ref) return;
+      const id = ref.getAttribute('data-fnid');
+      const li = document.querySelector('#footnotes-list li[data-fnid="' + id + '"]');
+      if (li) li.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }
+
+  if (footnotesListEl) {
+    footnotesListEl.addEventListener('click', (e) => {
+      const li = e.target.closest && e.target.closest('li[data-fnid]');
+      if (!li) return;
+      const id = li.getAttribute('data-fnid');
+      const ref = document.querySelector('#editable sup.fn-ref[data-fnid="' + id + '"]');
+      if (ref) ref.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
+    // Initialize footnotes on load
+    reindexFootnotes();
+  }
+</script>
+
+</body>
+</html>

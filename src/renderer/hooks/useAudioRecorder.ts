@@ -4,26 +4,30 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface UseAudioRecorderReturn {
   isRecording: boolean;
-  isProcessing: boolean; // NEW: true while waiting for transcription
+  isProcessing: boolean; // true while waiting for transcription
   startRecording: () => Promise<void>;
   stopRecording: () => void;
   transcription: string; // The latest transcription result
   error: string | null;
   volume: number; // For visualization 0-1
+  duration: number; // Recording duration in seconds
 }
 
 export const useAudioRecorder = (): UseAudioRecorderReturn => {
   const [isRecording, setIsRecording] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false); // NEW: processing state
+  const [isProcessing, setIsProcessing] = useState(false);
   const [transcription, setTranscription] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [volume, setVolume] = useState(0);
+  const [duration, setDuration] = useState(0);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number>(0);
+  const durationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -73,6 +77,10 @@ export const useAudioRecorder = (): UseAudioRecorderReturn => {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
     }
+    if (durationIntervalRef.current) {
+      clearInterval(durationIntervalRef.current);
+      durationIntervalRef.current = null;
+    }
     mediaRecorderRef.current = null;
   };
 
@@ -102,6 +110,7 @@ export const useAudioRecorder = (): UseAudioRecorderReturn => {
     try {
       setError(null);
       setTranscription('');
+      setDuration(0);
 
       console.log('[useAudioRecorder] Requesting microphone access...');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -118,47 +127,81 @@ export const useAudioRecorder = (): UseAudioRecorderReturn => {
       analyser.fftSize = 256;
       console.log('[useAudioRecorder] Audio visualizer setup complete');
 
-      // Setup Recorder
-      // Request 500ms chunks for streaming to backend
-      // Note: All chunks are accumulated into a single buffer and transcribed once when recording stops
-      // This gives Whisper the full context for better punctuation and accuracy
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      // Determine best supported audio format for Whisper API
+      // Whisper supports: flac, m4a, mp3, mp4, mpeg, mpga, oga, ogg, wav, webm
+      let mimeType = 'audio/webm';
+      let fileExtension = 'webm';
+
+      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        mimeType = 'audio/webm;codecs=opus';
+        fileExtension = 'webm';
+      } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+        mimeType = 'audio/webm';
+        fileExtension = 'webm';
+      } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+        mimeType = 'audio/mp4';
+        fileExtension = 'mp4';
+      } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
+        mimeType = 'audio/ogg;codecs=opus';
+        fileExtension = 'ogg';
+      } else {
+        console.warn('[useAudioRecorder] No supported audio format found, using default');
+      }
+
+      console.log('[useAudioRecorder] Using audio format:', mimeType);
+
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = mediaRecorder;
 
-      mediaRecorder.ondataavailable = async (event) => {
-        console.log('[useAudioRecorder] Audio chunk received, size:', event.data.size);
+      // Collect all chunks into a single array, then combine at the end
+      const chunks: Blob[] = [];
+
+      mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          const buffer = await event.data.arrayBuffer();
-          // Convert ArrayBuffer to regular array for JSON serialization
-          // Note: This is inefficient for large data but fits current bridge
-          const data = Array.from(new Uint8Array(buffer));
-          console.log('[useAudioRecorder] Sending chunk to backend, length:', data.length);
-          voice.chunk.invoke({ data }).catch((err) => {
-            console.error('[useAudioRecorder] Failed to send chunk:', err);
-          });
+          chunks.push(event.data);
+          console.log('[useAudioRecorder] Chunk collected, total chunks:', chunks.length);
         }
       };
 
-      mediaRecorder.onstop = () => {
-        console.log('[useAudioRecorder] MediaRecorder stopped, requesting transcription');
+      mediaRecorder.onstop = async () => {
+        console.log('[useAudioRecorder] MediaRecorder stopped, processing audio...');
         setIsRecording(false);
-        setIsProcessing(true); // Start processing spinner
-        voice.end.invoke().catch((err) => {
-          console.error('[useAudioRecorder] Failed to end recording:', err);
-          setIsProcessing(false); // Stop spinner on error
-        });
+        setIsProcessing(true);
+
+        try {
+          // Combine all chunks into a single blob - this creates a valid audio file
+          const audioBlob = new Blob(chunks, { type: mimeType });
+          console.log('[useAudioRecorder] Combined blob size:', audioBlob.size, 'type:', audioBlob.type);
+
+          // Convert to array for JSON transport
+          const buffer = await audioBlob.arrayBuffer();
+          const data = Array.from(new Uint8Array(buffer));
+
+          console.log('[useAudioRecorder] Sending complete audio to backend, size:', data.length);
+
+          // Send the complete audio file to backend
+          await voice.transcribe.invoke({ data, fileExtension });
+        } catch (err) {
+          console.error('[useAudioRecorder] Failed to process audio:', err);
+          setError('Failed to process audio');
+          setIsProcessing(false);
+        }
+
         cleanup();
       };
 
-      // Notify server we are starting
-      console.log('[useAudioRecorder] Notifying backend to start session...');
-      await voice.start.invoke();
-      console.log('[useAudioRecorder] Backend session started');
-
-      // Start recording with 500ms timeslices
-      mediaRecorder.start(500);
+      // Start recording - no timeslice means we get one blob at the end
+      // But we use a timeslice to collect chunks that we'll combine into a valid file
+      mediaRecorder.start(1000); // Collect every 1 second
       setIsRecording(true);
-      console.log('[useAudioRecorder] Recording started with 500ms chunks');
+      startTimeRef.current = Date.now();
+
+      // Track duration
+      durationIntervalRef.current = setInterval(() => {
+        setDuration(Math.floor((Date.now() - startTimeRef.current) / 1000));
+      }, 1000);
+
+      console.log('[useAudioRecorder] Recording started');
 
       // Start visualizer loop
       analyzeVolume();
@@ -177,11 +220,12 @@ export const useAudioRecorder = (): UseAudioRecorderReturn => {
 
   return {
     isRecording,
-    isProcessing, // NEW: expose processing state
+    isProcessing,
     startRecording,
     stopRecording,
     transcription,
     error,
     volume,
+    duration,
   };
 };

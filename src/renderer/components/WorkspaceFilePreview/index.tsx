@@ -53,8 +53,15 @@ export const WorkspaceFilePreview: React.FC<WorkspaceFilePreviewProps> = ({ file
         setError(null);
 
         const result = await ipcBridge.fs.readFileContent.invoke({ filePath });
-        setContent(result.content);
-        setMimeType(result.mimeType);
+
+        // Check if the backend returned an error
+        if (result.error) {
+          console.error('[WorkspaceFilePreview] Backend returned error:', result.error);
+          setError(result.error);
+        } else {
+          setContent(result.content);
+          setMimeType(result.mimeType);
+        }
       } catch (err) {
         console.error('[WorkspaceFilePreview] Failed to load file:', err);
         setError(err instanceof Error ? err.message : 'Failed to load file');

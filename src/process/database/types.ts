@@ -92,6 +92,8 @@ export interface ICaseFileRow {
   // Case Grounding Fields
   narrative_updated_at?: number | null;
   grounding_status?: string | null;
+  // File Search (RAG) Fields
+  file_search_store_id?: string | null;
 }
 
 /**
@@ -178,6 +180,7 @@ export function rowToCaseFile(row: ICaseFileRow): ICaseFile {
     case_summary_document_count: row.case_summary_document_count,
     narrative_updated_at: row.narrative_updated_at,
     grounding_status: row.grounding_status as 'ungrounded' | 'narrative_only' | 'docs_only' | 'grounded' | undefined,
+    file_search_store_id: row.file_search_store_id,
   };
 }
 
@@ -278,8 +281,9 @@ export function rowToMessage(row: IMessageRow): TMessage {
  */
 
 export type {
-  IConfigStorageRefer,
-  // 复用的业务类型
-  TChatConversation,
-  TMessage,
+    IConfigStorageRefer,
+    // 复用的业务类型
+    TChatConversation,
+    TMessage
 };
+

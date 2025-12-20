@@ -10,7 +10,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-export type PanelId = 'conversations' | 'explorer' | 'preview' | null;
+export type PanelId = 'conversations' | 'explorer' | 'preview' | 'evidence' | null;
 
 interface PanelState {
   activePanel: PanelId;

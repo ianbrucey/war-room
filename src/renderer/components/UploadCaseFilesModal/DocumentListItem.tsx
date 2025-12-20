@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { Badge, Button } from '@arco-design/web-react';
+import { DeleteOne, Download, Eyes } from '@icon-park/react';
 import type { ICaseDocument, ProcessingStatus } from '@process/documents/types';
 import React from 'react';
-import { Badge, Button } from '@arco-design/web-react';
-import { Eyes, Download, DeleteOne } from '@icon-park/react';
 import { ProgressIndicator } from './ProgressIndicator';
 
 interface DocumentListItemProps {
@@ -87,6 +87,7 @@ const formatTimestamp = (timestamp: number): string => {
 export const DocumentListItem: React.FC<DocumentListItemProps> = ({ document, onPreview, onDownload, onDelete }) => {
   const isComplete = document.processing_status === 'complete';
   const isFailed = document.processing_status === 'failed';
+  const hasFileSearch = document.rag_indexed === 1 && document.gemini_file_uri;
 
   return (
     <div className='document-list-item'>
@@ -94,7 +95,20 @@ export const DocumentListItem: React.FC<DocumentListItemProps> = ({ document, on
 
       <div className='file-info'>
         <div className='file-name'>{document.filename}</div>
-        <div className='file-meta'>{formatTimestamp(document.uploaded_at)}</div>
+        <div className='file-meta'>
+          {formatTimestamp(document.uploaded_at)}
+          {hasFileSearch && (
+            <span className='file-search-indicator' title={`File Search: ${document.gemini_file_uri}`}>
+              {' • '}
+              <span className='file-search-icon'>🔍</span> Indexed
+            </span>
+          )}
+        </div>
+        {hasFileSearch && document.gemini_file_uri && (
+          <div className='file-search-path' title={document.gemini_file_uri}>
+            {document.gemini_file_uri}
+          </div>
+        )}
       </div>
 
       <div className='progress-section'>

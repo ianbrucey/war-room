@@ -263,9 +263,11 @@ export function initFsBridge(): void {
       const content = await fs.readFile(filePath, 'utf-8');
 
       return { content, mimeType };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to read file content:', error);
-      throw error;
+      // Return error response instead of throwing to prevent unhandled promise rejection
+      // Frontend will check for error in the response
+      return { content: '', mimeType: 'text/plain', error: error?.message || 'Failed to read file' };
     }
   });
 }

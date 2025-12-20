@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ document_title }} – {{ court_name }}</title>
+<style>
+  @page {
+    margin: 1in;
+    size: letter;
+    @bottom-right {
+      content: counter(page);
+      font-family: "Times New Roman", serif;
+      font-size: 12pt;
+    }
+  }
+
+  body {
+    font-family: "Times New Roman", serif;
+    font-size: 14pt;
+    line-height: 2.0;
+    margin: 0;
+    padding: 0;
+    color: black;
+    background: #f5f5f5;
+  }
+
+  .document {
+    max-width: 8.5in;
+    margin: 0 auto;
+    padding: 1in;
+    background: white;
+    border: 1px solid #d3d3d3;
+    box-shadow: 3px 3px 20px rgba(0,0,0,0.1);
+    overflow-wrap: break-word;
+  }
+
+  .court-caption {
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 2em;
+  }
+
+  .case-caption {
+    width: 100%;
+    margin-bottom: 2em;
+    border-collapse: collapse;
+  }
+
+  .case-caption td {
+    vertical-align: top;
+    padding: 0.5em;
+  }
+
+  .case-left {
+    width: 50%;
+  }
+
+  .case-right {
+    width: 50%;
+    text-align: center;
+    border-left: 1px solid black;
+    padding-left: 1em;
+  }
+
+  .motion-title {
+    text-align: center;
+    font-weight: bold;
+    margin: 2em 0;
+    text-decoration: underline;
+  }
+
+  .section-header {
+    font-weight: bold;
+    margin: 1.5em 0 1em 0;
+    text-align: center;
+    text-decoration: underline;
+  }
+
+  .argument-header {
+    font-weight: bold;
+    margin: 1em 0 0.5em 0;
+  }
+
+  .signature-block {
+    margin-top: 3em;
+    text-align: left;
+  }
+
+  p {
+    margin: 1em 0;
+    text-align: justify;
+  }
+
+  /* CSS counters for automatic paragraph numbering */
+  body { counter-reset: para footnote; }
+  p.numbered::before {
+    counter-increment: para;
+    content: counter(para) ". ";
+    font-weight: bold;
+  }
+
+  /* Footnotes (endnotes) */
+  sup.fn-ref { font-size: 0.7em; vertical-align: super; cursor: pointer; }
+  sup.fn-ref::after { counter-increment: footnote; content: counter(footnote); }
+  .footnotes { border-top: 1px solid #000; margin-top: 0.3in; padding-top: 0.15in; }
+  .footnotes .fn-title { font-weight: bold; margin: 0.5em 0; text-decoration: none; text-align: left; }
+  .footnotes ol { margin: 0.5em 0 0; padding-left: 1.2em; }
+  .footnotes li { margin: 0.4em 0; }
+
+  /* Lists inside content (do not affect main paragraph counter) */
+  ul.disc { list-style: disc; padding-left: 1.5em; margin: 0.5em 0; }
+  ol.alpha { list-style: lower-alpha; padding-left: 1.5em; margin: 0.5em 0; }
+  ol.decimal { list-style: decimal; padding-left: 1.5em; margin: 0.5em 0; }
+
+  /* Clamp media widths */
+  img, table { max-width: 100%; height: auto; }
+  table { table-layout: fixed; word-break: break-word; }
+
+  /* Toolbar (ContentEditable interface) */
+  .toolbar { position: sticky; top: 0; background: #fff; border: 1px solid #ddd; padding: 6px 8px; margin: -0.5in -0.5in 0.5in -0.5in; z-index: 10; }
+  .toolbar button { font-size: 12pt; margin-right: 8px; }
+
+  /* Editable region visual cue */
+  .editable:focus { outline: 2px solid #cde7ff; }
+  p.numbered:hover { background-color: #fffacd; }
+
+  /* Force page break before element - maximum browser compatibility */
+  .page-break-before {
+    page-break-before: always;  /* Legacy browsers (IE, older Chrome/Firefox) */
+    break-before: page;         /* Modern CSS Fragmentation Module Level 3 */
+  }
+
+  @media print {
+    .document {
+      padding: 0;
+      margin: 0;
+      max-width: none;
+      border: none;
+      box-shadow: none;
+    }
+    .toolbar { display: none; }
+    p.numbered:hover { background: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="document">
+  <div class="court-caption">
+    {{ court_name }}<br>
+    {{ court_division }}
+  </div>
+
+  <table class="case-caption">
+    <tr>
+      <td class="case-left">
+        {{ plaintiff_name }},<br><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Plaintiff,<br><br>
+        v.<br><br>
+        {{ defendant_name }},<br><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Defendant.
+      </td>
+      <td class="case-right">
+        <br><br><br><br>
+        Civil Action File No.<br>
+        {{ case_number }}
+      </td>
+    </tr>
+  </table>
+
+  <div class="motion-title">
+    {{ document_title }}
+  </div>
+
+  <!-- Toolbar for ContentEditable interface -->
+  <div class="toolbar" aria-label="Editing toolbar">
+    <button type="button" onclick="document.execCommand('bold')">Bold</button>
+    <button type="button" onclick="document.execCommand('italic')">Italic</button>
+    <button type="button" onclick="document.execCommand('insertUnorderedList')">Bulleted list</button>
+    <button type="button" onclick="document.execCommand('insertOrderedList')">Numbered list</button>
+    <button type="button" onclick="insertFootnote()">Insert footnote</button>
+    <button type="button" onclick="clearFormatting()">Clear formatting</button>
+  </div>
+
+  <!-- Editable Content Region -->
+  <div id="editable" class="editable" contenteditable="true">
+    {{ document_content }}
+
+    <div class="signature-block">
+      <p>Respectfully submitted, this {{ date }}.</p>
+
+      <p>/s/ {{ attorney_name }}</p>
+
+      <p><strong>{{ attorney_name }}</strong><br>
+      {{ attorney_address }}<br>
+      {{ attorney_contact }}</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Paste sanitation: force plain text to preserve margins/format
+  const editable = document.getElementById('editable');
+  editable.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    document.execCommand('insertText', false, text);
+  });
+
+  // Ensure new paragraphs are auto-numbered (outside of lists)
+  const observer = new MutationObserver((mutations) => {
+    for (const m of mutations) {
+      m.addedNodes && m.addedNodes.forEach((node) => {
+        if (node.nodeType !== 1) return; // element only
+        if (node.closest && node.closest('ol, ul')) return; // lists excluded
+
+        // Convert stray DIVs to P.numbered for consistent numbering
+        if (node.tagName === 'DIV') {
+          const p = document.createElement('p');
+          p.className = 'numbered';
+          p.innerHTML = node.innerHTML;
+          node.replaceWith(p);
+        }
+        // Add numbering class to plain <p>
+        if (node.tagName === 'P' && !node.classList.contains('numbered')) {
+          node.classList.add('numbered');
+        }
+      });
+    }
+  });
+  observer.observe(editable, { childList: true, subtree: true });
+
+  // Clear formatting helper (keeps plain text and numbering class)
+  function clearFormatting() {
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    const text = range.toString();
+    if (!text) return;
+    document.execCommand('insertText', false, text);
+  }
+
+  // Footnotes logic (endnotes with auto-renumbering)
+  const footnotesListEl = document.getElementById('footnotes-list');
+
+  function insertFootnote() {
+    const text = prompt('Footnote text:');
+    if (text === null) return;
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    // Insert an empty reference; number is provided by CSS counter
+    const sup = document.createElement('sup');
+    sup.className = 'fn-ref';
+    sup.setAttribute('data-fnid', '');
+    range.insertNode(sup);
+    // Move caret after the inserted ref
+    range.setStartAfter(sup);
+    range.setEndAfter(sup);
+    sel.removeAllRanges();
+    sel.addRange(range);
+
+    reindexFootnotes();
+
+    // Set initial text on the corresponding endnote item
+    const refs = Array.from(document.querySelectorAll('#editable sup.fn-ref'));
+    const idx = refs.indexOf(sup);
+    const id = String(idx + 1);
+    const li = document.querySelector('#footnotes-list li[data-fnid="' + id + '"]');
+    if (li && (!li.textContent || li.textContent.startsWith('Footnote '))) {
+      li.textContent = text;
+    }
+  }
+
+  function reindexFootnotes() {
+    const list = document.getElementById('footnotes-list');
+    if (!list) return;
+    const refs = Array.from(document.querySelectorAll('#editable sup.fn-ref'));
+    const existing = new Map(Array.from(list.children).map(li => [li.getAttribute('data-fnid'), li]));
+    const frag = document.createDocumentFragment();
+
+    refs.forEach((ref, i) => {
+      const oldId = ref.getAttribute('data-fnid') || '';
+      const newId = String(i + 1);
+      ref.setAttribute('data-fnid', newId);
+      let li = existing.get(oldId) || existing.get(newId);
+      if (!li) {
+        li = document.createElement('li');
+        li.contentEditable = 'true';
+        li.setAttribute('data-fnid', newId);
+        li.textContent = 'Footnote ' + newId;
+      } else {
+        li.setAttribute('data-fnid', newId);
+      }
+      frag.appendChild(li);
+    });
+
+    list.innerHTML = '';
+    list.appendChild(frag);
+  }
+
+  // Reindex on edits (debounced)
+  let fnTimer;
+  editable.addEventListener('input', () => {
+    clearTimeout(fnTimer);
+    fnTimer = setTimeout(reindexFootnotes, 300);
+  });
+
+  // Click-through navigation
+  editable.addEventListener('click', (e) => {
+    const ref = e.target.closest && e.target.closest('sup.fn-ref');
+    if (!ref) return;
+    const id = ref.getAttribute('data-fnid');
+    const li = document.querySelector('#footnotes-list li[data-fnid="' + id + '"]');
+    if (li) li.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+
+  footnotesListEl.addEventListener('click', (e) => {
+    const li = e.target.closest && e.target.closest('li[data-fnid]');
+    if (!li) return;
+    const id = li.getAttribute('data-fnid');
+    const ref = document.querySelector('#editable sup.fn-ref[data-fnid="' + id + '"]');
+    if (ref) ref.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+
+  // Initialize footnotes on load
+  reindexFootnotes();
+</script>
+
+</body>
+</html>

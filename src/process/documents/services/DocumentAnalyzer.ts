@@ -79,9 +79,9 @@ export class DocumentAnalyzer {
 
       console.log('[DocumentIntake] Document analysis complete:', documentId);
 
-      // Chain to FileSearchIndexer
+      // Chain to FileSearchIndexer - pass document folder path so it can select best file to upload
       const indexer = new FileSearchIndexer(this.geminiApiKey);
-      await indexer.indexDocument(documentId, caseFileId, extractedTextPath, metadata);
+      await indexer.indexDocument(documentId, caseFileId, docFolderPath, metadata);
 
       return metadata;
     } catch (error) {

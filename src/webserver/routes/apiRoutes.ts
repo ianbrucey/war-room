@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { Express, Request, Response } from 'express';
 import { TokenMiddleware } from '@/webserver/auth/middleware/TokenMiddleware';
+import type { Express, Request, Response } from 'express';
 import directoryApi from '../directoryApi';
 import { apiRateLimiter } from '../middleware/security';
 
@@ -24,9 +24,9 @@ export function registerApiRoutes(app: Express): void {
 
   /**
    * 通用 API 端点 - Generic API endpoint
-   * GET /api
+   * GET /api (exact match only)
    */
-  app.use('/api', apiRateLimiter, validateApiAccess, (_req: Request, res: Response) => {
+  app.get('/api', apiRateLimiter, validateApiAccess, (_req: Request, res: Response) => {
     res.json({ message: 'API endpoint - bridge integration working' });
   });
 }

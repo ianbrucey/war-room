@@ -4,9 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { emitter } from '@/renderer/utils/emitter';
 import type { AcpBackend } from '@/types/acpTypes';
-import { Tag } from '@arco-design/web-react';
-import { Edit } from '@icon-park/react';
+import { Button, Tag } from '@arco-design/web-react';
+import { CheckOne, Edit } from '@icon-park/react';
 import FlexFullContainer from '@renderer/components/FlexFullContainer';
 import MessageList from '@renderer/messages/MessageList';
 import { MessageListProvider, useMessageLstCache } from '@renderer/messages/hooks';
@@ -27,10 +28,13 @@ const AcpChat: React.FC<{
     <div className='flex-1 flex flex-col min-h-0 overflow-hidden'>
       {/* Narrative mode indicator */}
       {isNarrativeMode && (
-        <div className='px-16px py-8px bg-[var(--color-primary-light-1)] border-b border-[var(--color-border-2)]'>
+        <div className='px-16px py-8px bg-[var(--color-primary-light-1)] border-b border-[var(--color-border-2)] flex items-center justify-between'>
           <Tag color='orangered' icon={<Edit />}>
-            📝 Recording your story... Type "done" when finished
+            📝 Recording your story...
           </Tag>
+          <Button type='primary' size='small' icon={<CheckOne theme='outline' size='14' fill='white' />} onClick={() => emitter.emit('narrative.finish' as any)}>
+            Finish Story
+          </Button>
         </div>
       )}
 

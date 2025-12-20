@@ -139,31 +139,50 @@ export class WebSocketManager {
         const voiceService = VoiceService.getInstance();
         const sessionId = (ws as any)._socketId || 'default-session';
 
-        // Voice Handling - bridge invoke sends "subscribe-{key}" and expects "subscribe.callback-{key}{id}"
+        // Voice Handling - New simplified API (complete audio file)
+        if (name === 'subscribe-voice-transcribe') {
+          const requestId = data?.id || '';
+          const audioData = data?.data?.data; // Array of bytes
+          const fileExtension = data?.data?.fileExtension || 'webm';
+
+          console.log('[WebSocketManager] Voice transcription request, size:', audioData?.length, 'format:', fileExtension);
+
+          voiceService
+            .transcribeAudio(audioData, fileExtension)
+            .then((text) => {
+              console.log('[WebSocketManager] Transcription received:', text?.substring(0, 100) + '...');
+              ws.send(JSON.stringify({ name: 'voice-text', data: { text } }));
+              ws.send(JSON.stringify({ name: `subscribe.callback-voice-transcribe${requestId}`, data: undefined }));
+            })
+            .catch((err) => {
+              console.error('[WebSocketManager] Transcription error:', err.message);
+              ws.send(JSON.stringify({ name: 'voice-error', data: { message: err.message } }));
+              ws.send(JSON.stringify({ name: `subscribe.callback-voice-transcribe${requestId}`, data: undefined }));
+            });
+          return;
+        }
+
+        // Legacy Voice Handling (deprecated - kept for backwards compatibility)
         if (name === 'subscribe-voice-start') {
           const requestId = data?.id || '';
-          console.log('[WebSocketManager] Voice session starting for:', sessionId, 'requestId:', requestId);
+          console.log('[WebSocketManager] [LEGACY] Voice session starting for:', sessionId, 'requestId:', requestId);
           voiceService.startSession(sessionId);
-          // Send response using bridge callback pattern
           ws.send(JSON.stringify({ name: `subscribe.callback-voice-start${requestId}`, data: undefined }));
           return;
         } else if (name === 'subscribe-voice-chunk') {
           const requestId = data?.id || '';
           const chunkData = data?.data;
           voiceService.appendAudio(sessionId, chunkData);
-          // Send response using bridge callback pattern
           ws.send(JSON.stringify({ name: `subscribe.callback-voice-chunk${requestId}`, data: undefined }));
           return;
         } else if (name === 'subscribe-voice-end') {
           const requestId = data?.id || '';
-          console.log('[WebSocketManager] Voice session ending for:', sessionId, 'requestId:', requestId);
+          console.log('[WebSocketManager] [LEGACY] Voice session ending for:', sessionId, 'requestId:', requestId);
           voiceService
             .transcribeSession(sessionId)
             .then((text) => {
               console.log('[WebSocketManager] Transcription received:', text);
-              // Send the transcription as an event (for the voice-text listener)
               ws.send(JSON.stringify({ name: 'voice-text', data: { text } }));
-              // Also send response using bridge callback pattern so invoke() completes
               ws.send(JSON.stringify({ name: `subscribe.callback-voice-end${requestId}`, data: undefined }));
             })
             .catch((err) => {

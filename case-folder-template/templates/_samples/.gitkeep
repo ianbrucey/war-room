@@ -1,0 +1,18 @@
+# Template Samples Folder
+
+This folder stores original sample documents (PDF, Word) that are used to generate custom HTML templates.
+
+## Purpose
+- User uploads sample documents that represent their firm's formatting standards
+- Agent analyzes these samples using Gemini CLI
+- Generated HTML templates are saved to `templates/html/`
+
+## Workflow
+1. User uploads samples via the Upload Template Samples modal
+2. Files are saved here as `[document-type]-sample.[ext]`
+3. Agent calls Gemini CLI to analyze and generate HTML template
+4. User reviews generated template in browser
+5. If approved, template becomes active in `templates/html/`
+
+See `protocols/TEMPLATE_GENERATION.md` for complete workflow.
+

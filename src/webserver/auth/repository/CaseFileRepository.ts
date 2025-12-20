@@ -304,4 +304,35 @@ export const CaseFileRepository = {
       return null;
     }
   },
+
+  /**
+   * Update file search store ID for a case
+   * 更新案件的文件搜索存储ID
+   */
+  updateFileSearchStoreId(caseFileId: string, storeId: string): void {
+    const db = getDatabase();
+    try {
+      db.exec(
+        `UPDATE case_files
+         SET file_search_store_id = ?, updated_at = ?
+         WHERE id = ?`,
+        storeId,
+        Date.now(),
+        caseFileId
+      );
+      console.log(`[CaseFileRepository] Updated file_search_store_id to '${storeId}' for case ${caseFileId}`);
+    } catch (error) {
+      console.error('[CaseFileRepository] Failed to update file_search_store_id:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get file search store ID for a case
+   * 获取案件的文件搜索存储ID
+   */
+  getFileSearchStoreId(caseFileId: string): string | null {
+    const caseFile = this.findById(caseFileId);
+    return caseFile?.file_search_store_id ?? null;
+  },
 };

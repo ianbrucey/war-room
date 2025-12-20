@@ -213,6 +213,8 @@ export interface ICaseFile {
   // Case Grounding Fields
   narrative_updated_at?: number | null;
   grounding_status?: 'ungrounded' | 'narrative_only' | 'docs_only' | 'grounded';
+  // File Search (RAG) Fields
+  file_search_store_id?: string | null;
 }
 
 export interface IPaginatedResult<T> {

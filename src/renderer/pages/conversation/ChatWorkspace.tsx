@@ -8,7 +8,6 @@ import { ipcBridge } from '@/common';
 import type { IDirOrFile } from '@/common/ipcBridge';
 import { ConfigStorage } from '@/common/storage';
 import FlexFullContainer from '@/renderer/components/FlexFullContainer';
-import { UploadCaseFilesModal } from '@/renderer/components/UploadCaseFilesModal';
 import { WorkspaceFilePreview } from '@/renderer/components/WorkspaceFilePreview';
 import { usePasteService } from '@/renderer/hooks/usePasteService';
 import { iconColors } from '@/renderer/theme/colors';
@@ -19,7 +18,6 @@ import type { NodeInstance } from '@arco-design/web-react/es/Tree/interface';
 import { FileText, FolderOpen, Refresh, Search } from '@icon-park/react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams } from 'react-router-dom';
 import useDebounce from '../../hooks/useDebounce';
 interface WorkspaceProps {
   workspace: string;
@@ -52,7 +50,6 @@ const useLoading = () => {
 
 const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, eventPrefix = 'gemini', onFilePreview }) => {
   const { t } = useTranslation();
-  const { caseFileId } = useParams<{ caseFileId?: string }>();
   const [selected, setSelected] = useState<string[]>([]);
   const [files, setFiles] = useState<IDirOrFile[]>([]);
   const [loading, setLoading] = useLoading();
@@ -64,7 +61,6 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
   const [confirmFilesToPaste, setConfirmFilesToPaste] = useState<Array<{ path: string; name: string }>>([]);
   const [doNotAsk, setDoNotAsk] = useState(false);
   const [messageApi, messageContext] = Message.useMessage();
-  const [uploadModalVisible, setUploadModalVisible] = useState(false);
   const [pasteTargetFolder, setPasteTargetFolder] = useState<string | null>(null); // 跟踪粘贴目标文件夹 / Track paste target folder
   const selectedNodeRef = useRef<{ relativePath: string; fullPath: string } | null>(null); // 存储最后选中的文件夹节点 / Store the last selected folder node
   const selectedKeysRef = useRef<string[]>([]); // 存储选中的键供 renderTitle 访问 / Store selected keys for renderTitle to access
@@ -151,11 +147,11 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
 
   /**
    * Filter out excluded files and folders from the workspace tree
-   * Excludes: AGENTS.md, WARP.md, GEMINI.md, documents folder, and dotfiles
+   * Excludes: AGENTS.md, WARP.md, GEMINI.md, documents folder, dotfiles, and system folders (evidence, intake, protocols)
    */
   const filterExcludedFiles = useCallback((nodes: IDirOrFile[]): IDirOrFile[] => {
     const excludedFiles = ['AGENTS.md', 'WARP.md', 'GEMINI.md'];
-    const excludedFolders = ['documents'];
+    const excludedFolders = ['documents', 'evidence', 'intake', 'protocols'];
 
     const shouldExclude = (node: IDirOrFile): boolean => {
       const name = node.name;
@@ -807,18 +803,7 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
 
   useAddEventListener(`${eventPrefix}.workspace.refresh`, () => refreshWorkspace(), [refreshWorkspace]);
 
-  // Listen for upload trigger event from CaseGroundingCard
-  useAddEventListener(
-    `${eventPrefix}.workspace.upload.trigger` as any,
-    () => {
-      console.log('[ChatWorkspace] Received upload trigger event, caseFileId:', caseFileId);
-      if (caseFileId) {
-        console.log('[ChatWorkspace] Opening upload modal');
-        setUploadModalVisible(true);
-      }
-    },
-    [caseFileId]
-  );
+  // Note: Upload modal event listener moved to ChatLayout so it's always available regardless of active panel
 
   useEffect(() => {
     return ipcBridge.conversation.responseSearchWorkSpace.provider((data) => {
@@ -1235,7 +1220,8 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
           ></Tree>
         )}
       </FlexFullContainer>
-      {caseFileId && <UploadCaseFilesModal visible={uploadModalVisible} caseFileId={caseFileId} onClose={() => setUploadModalVisible(false)} />}
+
+      {/* Note: Upload modal moved to ChatLayout so it's always available regardless of active panel */}
 
       {/* Workspace File Preview Modal */}
       <WorkspaceFilePreview visible={filePreview.visible} filePath={filePreview.filePath} filename={filePreview.filename} onClose={closeFilePreview} />

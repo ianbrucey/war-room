@@ -24,6 +24,64 @@ const upload = multer({ dest: 'uploads/' });
 router.use(AuthMiddleware.authenticateToken);
 
 /**
+ * POST /api/cases/:caseFileId/templates/upload-sample
+ *
+ * Upload a sample document to templates/_samples/ folder for template generation.
+ * These are reference documents that will be analyzed to create HTML templates.
+ */
+router.post('/cases/:caseFileId/templates/upload-sample', upload.single('file'), async (req: Request, res: Response) => {
+  try {
+    const { caseFileId } = req.params;
+    const file = req.file;
+    const user = req.user;
+
+    if (!file) {
+      res.status(400).json({ error: 'No file uploaded' });
+      return;
+    }
+
+    if (!user) {
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
+    }
+
+    // Get workspace path from case file
+    const caseFile = CaseFileRepository.findById(caseFileId);
+    if (!caseFile) {
+      res.status(404).json({ error: 'Case file not found' });
+      return;
+    }
+
+    // Validate file type (only PDF and Word docs)
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!['.pdf', '.docx', '.doc'].includes(ext)) {
+      res.status(400).json({ error: 'Only PDF and Word documents are supported' });
+      return;
+    }
+
+    // Create templates/_samples/ directory
+    const workspacePath = caseFile.workspace_path;
+    const samplesPath = path.join(workspacePath, 'templates', '_samples');
+    fs.mkdirSync(samplesPath, { recursive: true });
+
+    // Move file to samples folder
+    const targetPath = path.join(samplesPath, file.originalname);
+    fs.renameSync(file.path, targetPath);
+
+    console.log(`[TemplateSample] Saved sample to ${targetPath}`);
+
+    res.json({
+      success: true,
+      filename: file.originalname,
+      path: `templates/_samples/${file.originalname}`,
+    });
+  } catch (error) {
+    console.error('[TemplateSample] Upload failed:', error);
+    res.status(500).json({ error: 'Failed to upload template sample' });
+  }
+});
+
+/**
  * POST /api/cases/:caseFileId/documents/upload
  *
  * Upload a document to a case file.

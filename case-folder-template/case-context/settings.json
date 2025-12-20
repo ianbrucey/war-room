@@ -1,1 +1,17 @@
-{"case_number": "24-CV-1234", "status": "active"}
+{
+  "case": {
+    "case_id": "unique_case_identifier",
+    "case_number": "24-CV-1234",
+    "status": "active",
+    "file_search_store_id": null
+  },
+  "active_workspace": null,
+  "protocols": {
+    "workspace_creation": "protocols/WORKSPACE_CREATION.md",
+    "strategy": "protocols/STRATEGY.md",
+    "evidence_planning": "protocols/EVIDENCE_PLANNING.md",
+    "outline_generation": "protocols/OUTLINE_GENERATION.md",
+    "research": "protocols/RESEARCH.md",
+    "drafting": "protocols/DRAFTING.md"
+  }
+}

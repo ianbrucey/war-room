@@ -280,7 +280,20 @@ const ChatConversation: React.FC<{
   return (
     <>
       {messageContextHolder}
-      <ChatLayout title={conversation?.name} backend={conversation?.type === 'acp' ? conversation?.extra?.backend : conversation?.type === 'codex' ? 'codex' : undefined} eventPrefix={eventPrefix} siderTitle={sliderTitle} sider={<ChatSider conversation={conversation} onFilePreview={handleFilePreview} />} preview={previewContent} onFilePreview={handleFilePreview} onStartNarrative={handleStartNarrative} onUploadDocuments={handleUploadDocuments} onGenerateSummary={handleGenerateSummary}>
+      <ChatLayout
+        title={conversation?.name}
+        backend={conversation?.type === 'acp' ? conversation?.extra?.backend : conversation?.type === 'codex' ? 'codex' : undefined}
+        eventPrefix={eventPrefix}
+        siderTitle={sliderTitle}
+        sider={<ChatSider conversation={conversation} onFilePreview={handleFilePreview} />}
+        preview={previewContent}
+        onFilePreview={handleFilePreview}
+        onStartNarrative={handleStartNarrative}
+        onUploadDocuments={handleUploadDocuments}
+        onGenerateSummary={handleGenerateSummary}
+        workspace={conversation?.extra?.workspace || ''}
+        conversation_id={conversation?.id || ''}
+      >
         {conversationNode}
       </ChatLayout>
     </>

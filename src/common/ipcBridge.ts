@@ -64,12 +64,15 @@ export const fs = {
   >('copy-files-to-workspace'), // 复制文件到工作空间 (Copy files into workspace)
   removeEntry: bridge.buildProvider<IBridgeResponse, { path: string }>('remove-entry'), // 删除文件或文件夹
   renameEntry: bridge.buildProvider<IBridgeResponse<{ newPath: string }>, { path: string; newName: string }>('rename-entry'), // 重命名文件或文件夹
-  readFileContent: bridge.buildProvider<{ content: string; mimeType: string }, { filePath: string }>('read-file-content'), // 读取文件内容用于预览 (Read file content for preview)
+  readFileContent: bridge.buildProvider<{ content: string; mimeType: string; error?: string }, { filePath: string }>('read-file-content'), // 读取文件内容用于预览 (Read file content for preview)
 };
 
 export const voice = {
+  // New simplified API - send complete audio file for transcription
+  transcribe: bridge.buildProvider<void, { data: number[]; fileExtension: string }>('voice-transcribe'),
+  // Legacy chunking API (deprecated)
   start: bridge.buildProvider<void, void>('voice-start'),
-  chunk: bridge.buildProvider<void, { data: number[] }>('voice-chunk'),
+  chunk: bridge.buildProvider<void, { data: number[]; fileExtension?: string }>('voice-chunk'),
   end: bridge.buildProvider<void, void>('voice-end'),
 };
 

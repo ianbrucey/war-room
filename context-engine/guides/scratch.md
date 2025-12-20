@@ -1,286 +1,171 @@
-### me
 
-All right, so here's what we have next on Justice Quest. We have to, um... We have to have, like, an agent orientation or an agent onboarding workflow. That's like Ground Zero. Um, we've already worked on document uploads and case summary generation based on that. But the missing piece is the nuance from the user. You know what I mean? Like, sometimes documents don't tell the whole story. Or sometimes a user narrative may fill in gaps that documents alone may not be able to fill. Um... So, with that said... Um... When a user opens a case... They should have some prompt, be it in the, like, file preview area, or be it, like, some space in the top bar in the chat layout... That prompts them to begin the agent onboarding. And their first step is to complete the user narrative. Now, this is optional. They don't have to. They don't even have to generate a summary, but it would be best, right? So the first thing they would be required to do is just tell their story. And they can do that via typing or speaking. And we already have, like, a microphone icon working on the chat input. So we would just need to transfer that functionality into whatever we use to capture the user's story. But then again, we could also use the chat panel to do this as well. So I'm not sure. I'm not sure if we should reuse the chat panel for this or repurpose. Not even repurpose, but just include it. Or if we should have a dedicated user narrative box. Now, once the user gives their narrative, this is going to be saved in the case context folder under a file, likely called usernarrative.md or something like that, or userstory.md. And then after that, they will be prompted to upload to step two, which is upload your evidence or your case files, which we already have a modal for this, although I'm not sure if we should, again, use the file preview section since it's a little bit more cleaner. And then they could do their case summary over there. So, yeah, this is just a reminder that I have to put this into my IDE when I get home to work it out.
+Yes, I remember it vividly. It was the breakthrough moment where we aligned your mental model with the software process.
 
-# Gpt
+Here is the **Legal Strategy Framework** you detailed:
 
-You’re thinking about this the *right* way already — what you’re really designing here is  **agent grounding** , not just onboarding. The nuance you’re describing is exactly the kind of thing documents alone can’t solve.
+1. **Intent:** Establish the strategic goal first (The "Why").
+2. **Legal Positions (Claims):** Identify the specific causes of action you will assert (The "What").
+3. **The Elements:** Break down each claim into its atomic components (e.g., "Breach of Contract" requires Offer + Acceptance + Consideration).
+4. **Fact Matching:** Map the evidence to those elements.
+5. **Viability Analysis (IRAC):** Apply the Rule to the Facts to see if the claim holds water.
+6. **Drafting:** Only write the brief once the structure above is proven.
 
-I’ll break this into  **decisions** ,  **recommendation** , and  **concrete structure you can drop into the IDE** .
+We successfully mapped this to the  **Zero Ambiguity Protocol** :
 
----
+* **Intent** **→** **Product Brief**
+* **Claims** **→** **Features/Epics**
+* **Elements** **→** **Functions/Interfaces**
+* **Fact Matching** **→** **Tests/Fixtures**
 
-## 1. What this workflow *actually* is
+**Why this matters right now:**
+The "Standards Enforcer" script we are about to build is essentially the **"Code of Civil Procedure"** or **"Case Law Repository."** It defines the *Rules* (Coding Standards) that you apply during the **Analysis** phase of your legal framework. Without it, you are arguing cases (writing code) without citing precedent.
 
-This is not:
+# me
 
-* A form
-* A wizard
-* A one-time setup
+ how can this framework work with figuring out how to approach discovery? 
 
-This is a **Case Grounding Phase** whose job is to:
+# gemini
 
-* Capture *human context*
-* Fill evidentiary gaps
-* Establish narrative intent
-* Anchor downstream AI reasoning
 
-Think of it as:
+This is a fascinating inversion. We spent the last hour applying legal rigor to software; now let’s apply software rigor to the actual legal discovery process.
 
-> “Teach the agent how to think about *this* case.”
+In litigation, **Discovery is often treated like a fishing expedition** ("Give me everything"). In our framework, we treat Discovery like  **Database Querying** . You shouldn't ask for "everything"; you should write precise queries to fetch specific "Elements" that prove your "Claims."
 
-That framing should guide everything.
+Here is how the **Zero Ambiguity Framework** revolutionizes your approach to Discovery.
 
----
+### The "Evidence Engineering" Framework
 
-## 2. Chat panel vs dedicated narrative box (key decision)
+We stop thinking of Discovery as "gathering docs" and start thinking of it as **validating your Architecture.**
 
-### Option A: Reuse the chat panel
-
-**Pros**
-
-* Zero new UI paradigm
-* Already supports typing + microphone
-* Feels conversational and low-pressure
-* Natural for “tell your story”
-
-**Cons**
-
-* Chat is ephemeral by default
-* Risk of narrative getting buried in messages
-* Less clear that this is a *foundational artifact*
+| **Software Concept** | **Legal Discovery Equivalent** | **The Strategy Shift**                                                                     |
+| -------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| **The PRD**          | **The Case Theory**            | Define the narrative*before*you ask for a single page.                                         |
+| **The Claims**       | **Causes of Action**           | The specific counts (e.g., Breach, Fraud) you must prove.                                        |
+| **The Elements**     | **Fact Targets**               | The atomic facts required to satisfy the Claim (e.g., "They knew it was broken").                |
+| **The Interface**    | **Discovery Requests**         | The specific Interrogatory/RFP designed to extract that Fact Target.                             |
+| **The Fixtures**     | **The "Smoking Gun" Profile**  | A description of exactly what the evidence*should*look like (e.g., "An email from June 2023"). |
+| **The Test**         | **The Deposition**             | Using the extracted evidence to "pass/fail" the witness on the record.                           |
 
 ---
 
-### Option B: Dedicated “User Narrative” panel
+### The Workflow: How to Execute This
 
-**Pros**
+Instead of writing generic Interrogatories, we run the **Council Script** for your case.
 
-* Signals importance
-* Clear ownership of the artifact
-* Easy to version, re-edit, and reference
-* Maps cleanly to `user_narrative.md`
+#### Phase 1: The Case Architecture (Strategy)
 
-**Cons**
+**Goal:** Map every Legal Element to a specific piece of Missing Information.
 
-* Slightly more UI work
-* Requires mic integration outside chat
+* **Step 1 (The Claim):** Identify the Count.
+  * *Example:* "Fraudulent Inducement."
+* **Step 2 (The Elements):** Break it down.
+  * *Element A:* Defendant made a false representation.
+  * *Element B:* Defendant *knew* it was false at the time.
+* **Step 3 (The Gap Analysis):** What do we not have?
+  * *Gap:* We have the contract (False Representation), but we don't have proof of their mindset (Knowledge).
 
----
+#### Phase 2: The "Fixture" Design (The Target)
 
-### ✅ Recommended: **Hybrid (best of both)**
+**Goal:** Define exactly what you are looking for *before* you write the RFP. This is the "Data Fixture."
 
-Use  **chat for capture** , but  **persist into a dedicated artifact** .
+* **The Target Profile:**
+  * *Format:* Internal Email or Slack message.
+  * *Sender:* CTO or Lead Engineer.
+  * *Date Range:* 3 months prior to signing.
+  * *Keywords:* "Risk," "bug," "undisclosed," "delay."
+  * *The "Perfect" Doc:* An email saying, "We can't tell them about the server load issues yet."
 
-This mirrors how good IDEs work:
+#### Phase 3: The Request Engineering (The Interface)
 
-* Input happens conversationally
-* Output becomes a first-class file
+**Goal:** Write the "Code" (Requests) to fetch the "Fixture."
 
----
+Instead of a generic "Produce all communications," you write a targeted query:
 
-## 3. Recommended UX flow (clean and intentional)
+* **RFP No. 12:** "Produce all internal communications between Engineering and Sales regarding server stability limitations created between Jan 1 and signing date."
 
-### When a case is opened for the first time
+#### Phase 4: The Validation (The Test)
 
-**Soft, non-blocking prompt** (important):
+**Goal:** Verify the production against the Fixture.
 
-> **“Ground this case for your agent (optional but recommended)”**
-
-Not a modal that blocks work.
-This should feel like guidance, not friction.
-
-Placement options (ranked):
-
-1. **File preview / workspace panel (top card)**
-2. Subtle banner above chat
-3. Empty-state card inside the case workspace
+* **The Check:** You compare what they produced against your "Target Profile."
+* **The Bug Report:** If the production is missing the "CTO Email" you suspected existed, you file a Motion to Compel (The "Bug Report"). You argue: *"The architecture (logic) dictates this document must exist. Its absence implies spoliation or negligence."*
 
 ---
 
-### Step 1: User Narrative (Ground Zero)
+### The "Discovery Engine" Prompt
 
-**Interaction**
+Here is a prompt for your agent. It forces the AI to act as a  **Discovery Strategist** , breaking down your case into atomic "Evidence Targets" and drafting the specific requests to find them.
 
-* User clicks “Tell Your Story”
-* Chat panel switches into **Narrative Capture Mode**
-* Mic + typing enabled
-* Agent prompts lightly, not interrogatively
-
-Example agent prompt:
-
-> “Tell me what happened in your own words. Include anything you think matters — even if it’s not in the documents.”
-
-Key rule:
-
-* **No structured questions yet**
-* Let them speak freely first
+**Copy/Paste this into your main agent:**
 
 ---
 
-### Persistence model (important)
+# Role: Legal Discovery Architect
 
-Once the narrative capture ends:
+We are applying the "Evidence Engineering" Protocol to this litigation.
 
-* Chat messages are summarized or lightly edited
-* Saved as:
-  ```
-  /case_context/
-    user_narrative.md
-  ```
+Your goal is not to "write discovery." Your goal is to design queries that extract the specific facts needed to prove our Claims.
 
-With metadata:
+### Phase 1: The Claims Analysis
 
-```md
----
-source: user
-input_mode: voice|text|mixed
-created_at: timestamp
-last_updated: timestamp
-confidence: self-reported
----
-```
+I will provide the **Complaint** or  **Case Summary** . You must:
 
-This file becomes:
+1. Identify every **Cause of Action** (The Claim).
+2. Break each Cause of Action into its **Legal Elements** (The Checklist).
+3. Identify which Elements are already proven (Facts in hand) vs. which are **Unproven** (Discovery Targets).
 
-* Readable by the agent
-* Editable by the user later
-* Versionable
+### Phase 2: The Target Profiling ("Fixtures")
 
----
+For every  **Unproven Element** , you must design a "Target Profile" of the evidence we hope to find.
 
-### Step 2: Evidence / Document Upload
+* *Sender/Recipient:* Who would know this?
+* *Format:* (Email, Text, Memo, Bank Record).
+* *Timeframe:* When did the "bug" happen?
+* *Content Hypothesis:* What does the document explicitly say? (e.g., "They admitted the delay").
 
-You already have this — just  **sequence it after narrative** .
+### Phase 3: Request Engineering
 
-Recommendation:
+Draft specific **Requests for Production (RFPs)** and **Interrogatories** tailored to hit those Targets.
 
-* Use the  **file preview section** , not a modal
-* Modal = transactional
-* File preview = contextual
+* **Do not use boilerplate.**
+* Draft the request narrowly enough to be enforceable, but broad enough to catch the Target Profile.
+* **Linkage:** Explicitly state which *Element* this Request is designed to prove.
 
-Label it as:
+**Output Format:**
 
-> **“Attach supporting documents (optional)”**
+| **Claim / Element**   | **The Missing Fact**               | **Target Evidence Profile**                                     | **Drafted Request (RFP/Rrog)**                                   |
+| --------------------------- | ---------------------------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| **Fraud / Knowledge** | Did they know the product was defective? | Internal email b/w Engineers citing "critical failure" before launch. | **RFP 14:**All internal comms re: "Product X stability" dated Q1 2024. |
 
 ---
 
-### Step 3: Case Summary (derived, not authored)
+Initialize:
 
-Important distinction:
-
-* User does **not** write the summary
-* The agent *derives* it from:
-  * User narrative
-  * Documents
-  * Metadata
-
-This reinforces trust:
-
-> “The system understands  *me* , not just my files.”
+"The Discovery Engine is online. Please provide the Case Summary or Complaint."
 
 ---
 
-## 4. Why chat should not be the permanent home
+### Why this works
 
-Even if you *capture* via chat, do **not** leave the narrative trapped there.
+By linking every Request back to a specific  **Element** , you prevent "objectionable" fishing expeditions. When opposing counsel says "This is overly broad," you can reply: *"This request targets Element 3 of Count II (Knowledge). It is narrowly tailored to prove that specific legal requirement."*
 
-Reasons:
+You are essentially showing them the source code of your legal argument.
 
-* Agents need deterministic grounding
-* Chat history is noisy
-* You’ll want to:
-  * Re-run summaries
-  * Compare narratives vs evidence
-  * Detect inconsistencies later
 
-`user_narrative.md` becomes a  **pillar file** , like:
 
-* `strategy.md`
-* `claims.md`
-* `facts.md`
+In your legal framework, this translates to:
 
----
+> *"We cannot win the Claim until we uncover the specific documents (Evidence) that satisfy the Unproven Elements."*
 
-## 5. Naming matters (internally + UX)
+### The Paradigm Shift: "The Evidence Fixture"
 
-Avoid:
+Most lawyers draft Discovery requests based on **Topics** ("Tell me about the merger").
+You will draft Discovery requests based on **Missing Elements** ("I need to prove *Scienter* (Knowledge). Therefore, I need an internal communication dated pre-merger that mentions 'risk'.").
 
-* “Onboarding”
-* “Setup”
-* “Wizard”
+By defining the **"Evidence Fixture"** (what the perfect document looks like) *before* you write the Request, you stop fishing and start hunting.
 
-Use language like:
+### Why this is powerful
 
-* **Case Grounding**
-* **Agent Context**
-* **Narrative Intake**
-* **Tell Your Story**
-
-This signals depth, not bureaucracy.
-
----
-
-## 6. Minimal engineering note (so this doesn’t balloon)
-
-You do **not** need:
-
-* A new chat system
-* A complex form
-* Speech-specific UI
-
-You need:
-
-* A chat *mode flag*
-* A persistence hook
-* A file writer
-
-Pseudo-logic:
-
-```text
-if chat_mode === "narrative_capture":
-  buffer messages
-on complete:
-  compile → user_narrative.md
-  attach to case context
-```
-
----
-
-## 7. Strategic insight (why this is a big deal)
-
-What you’re designing is the difference between:
-
-* “AI that reads documents”
-* **AI that understands cases**
-
-Most legal tools stop at ingestion.
-
-This step:
-
-* Gives JusticeQuest defensibility
-* Makes War Room dramatically stronger
-* Enables later features like:
-  * Narrative vs evidence conflict detection
-  * Credibility scoring
-  * Timeline reconstruction
-  * Strategy divergence analysis
-
----
-
-### Bottom line
-
-Use  **chat for capture** , but  **files for truth** .
-
-Make the user narrative:
-
-* Optional
-* Easy
-* Respected
-* Persistent
-
-If you want, next we can:
-
-* Design the exact agent prompts
-* Define the narrative-to-summary transformation
-* Or map how this context flows into War Room inference without leakage
+1. **It eliminates waste:** You don't ask for "all emails." You ask for "emails between X and Y regarding Z."
+2. **It traps the opposition:** If they say "No documents found," but you established logically that such a document *must* exist to satisfy their own business processes, you catch them in spoliation or negligence.
+3. **It creates the "Verdict":** Just like a software test passes or fails, your Discovery process now has a binary outcome. Did we get the document that proves Element #3? Yes/No.

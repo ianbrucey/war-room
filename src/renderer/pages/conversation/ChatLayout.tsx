@@ -1,17 +1,16 @@
 import { CaseGroundingCard } from '@/renderer/components/CaseGroundingCard';
 import ConversationHeader from '@/renderer/components/ConversationHeader';
 import ConversationPanel from '@/renderer/components/ConversationPanel';
+import EvidenceBundlePanel from '@/renderer/components/EvidenceBundlePanel';
 import LeftPanel from '@/renderer/components/LeftPanel';
+import { UploadCaseFilesModal } from '@/renderer/components/UploadCaseFilesModal';
+import UploadTemplateSamplesModal from '@/renderer/components/UploadTemplateSamplesModal/index';
 import WorkspacePanel from '@/renderer/components/WorkspacePanel';
 import { usePanelContext } from '@/renderer/context/PanelContext';
+import { useAddEventListener } from '@/renderer/utils/emitter';
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
-import ClaudeLogo from '@/renderer/assets/logos/claude.svg';
-import CodexLogo from '@/renderer/assets/logos/codex.svg';
-import GeminiLogo from '@/renderer/assets/logos/gemini.svg';
-import IflowLogo from '@/renderer/assets/logos/iflow.svg';
-import QwenLogo from '@/renderer/assets/logos/qwen.svg';
 
 const CHAT_PANEL_WIDTH_KEY = 'chatPanelWidth';
 const DEFAULT_CHAT_WIDTH = 380;
@@ -34,8 +33,12 @@ const ChatLayout: React.FC<{
   onStartNarrative?: () => void;
   onUploadDocuments?: () => void;
   onGenerateSummary?: () => void;
+  /** Workspace path for panels that need it */
+  workspace?: string;
+  /** Conversation ID for panels that need it */
+  conversation_id?: string;
 }> = (props) => {
-  const { backend } = props;
+  const { workspace = '', conversation_id = '' } = props;
   const { caseFileId } = useParams<{ caseFileId?: string }>();
 
   // Panel state from context (for left panel)
@@ -52,6 +55,36 @@ const ChatLayout: React.FC<{
     if (!caseFileId) return false;
     return sessionStorage.getItem(`grounding-dismissed-${caseFileId}`) === 'true';
   });
+
+  // Upload modal state - moved here so it's always available regardless of active panel
+  const [uploadModalVisible, setUploadModalVisible] = useState(false);
+  const [uploadTemplatesModalVisible, setUploadTemplatesModalVisible] = useState(false);
+
+  // Listen for upload trigger events from IconSidebar (all event prefixes)
+  useAddEventListener(
+    `${props.eventPrefix || 'gemini'}.workspace.upload.trigger` as any,
+    () => {
+      console.log('[ChatLayout] Received upload trigger event, caseFileId:', caseFileId);
+      if (caseFileId) {
+        console.log('[ChatLayout] Opening upload modal');
+        setUploadModalVisible(true);
+      }
+    },
+    [caseFileId]
+  );
+
+  // Listen for template upload trigger events from IconSidebar
+  useAddEventListener(
+    `${props.eventPrefix || 'gemini'}.workspace.upload-templates.trigger` as any,
+    () => {
+      console.log('[ChatLayout] Received upload templates trigger event, caseFileId:', caseFileId);
+      if (caseFileId) {
+        console.log('[ChatLayout] Opening upload templates modal');
+        setUploadTemplatesModalVisible(true);
+      }
+    },
+    [caseFileId]
+  );
 
   useEffect(() => {
     localStorage.setItem(CHAT_PANEL_WIDTH_KEY, chatWidth.toString());
@@ -102,28 +135,7 @@ const ChatLayout: React.FC<{
     }
   };
 
-  // Get conversation_id and workspace from props.sider (ChatSider component)
-  // This is a temporary solution - ideally we'd pass these as props
-  const conversation_id = (props.sider as any)?.props?.conversation?.id || '';
-  const workspace = (props.sider as any)?.props?.conversation?.extra?.workspace || '';
 
-  // Backend logo helper
-  const getBackendLogo = () => {
-    switch (backend) {
-      case 'claude':
-        return ClaudeLogo;
-      case 'gemini':
-        return GeminiLogo;
-      case 'qwen':
-        return QwenLogo;
-      case 'iflow':
-        return IflowLogo;
-      case 'codex':
-        return CodexLogo;
-      default:
-        return '';
-    }
-  };
 
   // Render panel content based on active panel
   const renderPanelContent = () => {
@@ -134,6 +146,8 @@ const ChatLayout: React.FC<{
         return <WorkspacePanel conversation_id={conversation_id} workspace={workspace} eventPrefix={props.eventPrefix} onFilePreview={props.onFilePreview} />;
       case 'preview':
         return <div className='p-16px'>File Preview (Coming Soon)</div>;
+      case 'evidence':
+        return <EvidenceBundlePanel workspace={workspace} />;
       default:
         return null;
     }
@@ -207,6 +221,12 @@ const ChatLayout: React.FC<{
           </div>
         </div>
       </div>
+
+      {/* Upload Modal - always available regardless of active panel */}
+      {caseFileId && <UploadCaseFilesModal visible={uploadModalVisible} caseFileId={caseFileId} onClose={() => setUploadModalVisible(false)} />}
+
+      {/* Upload Template Samples Modal */}
+      {caseFileId && <UploadTemplateSamplesModal visible={uploadTemplatesModalVisible} caseFileId={caseFileId} workspace={workspace} onClose={() => setUploadTemplatesModalVisible(false)} />}
     </div>
   );
 };
