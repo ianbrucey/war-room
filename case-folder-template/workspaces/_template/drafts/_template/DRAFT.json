@@ -1,0 +1,32 @@
+{
+  "document_type": "complaint",
+  "metadata": {
+    "title": "Complaint for Damages",
+    "created_at": null,
+    "last_modified": null,
+    "status": "drafting",
+    "linked_outline": null,
+    "linked_strategy": null
+  },
+  "caption": {
+    "court_name": "",
+    "court_division": null,
+    "plaintiff": "",
+    "defendant": "",
+    "case_number": "To be assigned",
+    "document_title": "COMPLAINT"
+  },
+  "body": [],
+  "signature_block": {
+    "respectfully_submitted_date": "",
+    "attorney_name": "",
+    "bar_number": null,
+    "firm_name": null,
+    "address": "",
+    "phone": null,
+    "email": null,
+    "representing": "Plaintiff"
+  },
+  "footnotes": []
+}
+

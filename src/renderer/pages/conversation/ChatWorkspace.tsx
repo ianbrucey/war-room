@@ -116,6 +116,10 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
 
   // Check if a file can be previewed in-app (检查文件是否可在应用内预览)
   const isPreviewableFile = useCallback((filePath: string): boolean => {
+    // Draft JSON files are previewable
+    if (filePath.endsWith('DRAFT.json')) {
+      return true;
+    }
     const ext = filePath.split('.').pop()?.toLowerCase();
     return ['md', 'markdown', 'html', 'htm'].includes(ext || '');
   }, []);

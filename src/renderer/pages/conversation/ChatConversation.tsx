@@ -7,6 +7,7 @@
 import { ipcBridge } from '@/common';
 import type { TChatConversation } from '@/common/storage';
 import { uuid } from '@/common/utils';
+import DraftPreviewPanel, { isDraftFile } from '@/renderer/components/DraftPreviewPanel';
 import type { PreviewTab } from '@/renderer/components/FilePreviewPanel';
 import FilePreviewPanel from '@/renderer/components/FilePreviewPanel';
 import { iconColors } from '@/renderer/theme/colors';
@@ -271,8 +272,18 @@ const ChatConversation: React.FC<{
     setActiveTabIndex(0);
   }, [conversation?.id]);
 
-  // Only show file preview panel when there are tabs - otherwise show grounding card
-  const previewContent = previewTabs.length > 0 ? <FilePreviewPanel tabs={previewTabs} activeTab={activeTabIndex} onTabSelect={handleTabSelect} onTabClose={handleTabClose} /> : undefined;
+  // Determine which preview panel to show based on active tab type
+  const previewContent = useMemo(() => {
+    if (previewTabs.length === 0) return undefined;
+
+    const activeFile = previewTabs[activeTabIndex];
+    if (activeFile && isDraftFile(activeFile.filePath)) {
+      // Show draft preview panel for DRAFT.json files
+      return <DraftPreviewPanel tabs={previewTabs} activeTab={activeTabIndex} onTabSelect={handleTabSelect} onTabClose={handleTabClose} />;
+    }
+    // Show regular file preview panel for markdown/HTML files
+    return <FilePreviewPanel tabs={previewTabs} activeTab={activeTabIndex} onTabSelect={handleTabSelect} onTabClose={handleTabClose} />;
+  }, [previewTabs, activeTabIndex, handleTabSelect, handleTabClose]);
 
   // Determine event prefix based on conversation type
   const eventPrefix = conversation?.type === 'acp' ? 'acp' : conversation?.type === 'codex' ? 'codex' : 'gemini';

@@ -1,0 +1,96 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Draft Document",
+  "description": "Schema for legal document drafts - stores content as blocks that render to court-formatted HTML",
+  "type": "object",
+  "required": ["document_type", "caption", "body"],
+  "properties": {
+    "document_type": {
+      "type": "string",
+      "enum": ["complaint", "motion", "opposition", "reply", "letter", "settlement", "contract"],
+      "description": "Type of legal document"
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Document title (e.g., 'Complaint for Damages')" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "last_modified": { "type": "string", "format": "date-time" },
+        "status": { 
+          "type": "string", 
+          "enum": ["drafting", "review", "final"],
+          "default": "drafting"
+        },
+        "linked_outline": { "type": ["string", "null"], "description": "Path to source outline if any" },
+        "linked_strategy": { "type": ["string", "null"], "description": "Path to source strategy if any" }
+      }
+    },
+    "caption": {
+      "type": "object",
+      "description": "Case caption information - rendered at top of court filings",
+      "properties": {
+        "court_name": { "type": "string", "description": "Full court name" },
+        "court_division": { "type": ["string", "null"], "description": "Court division/department if applicable" },
+        "plaintiff": { "type": "string", "description": "Plaintiff name(s)" },
+        "defendant": { "type": "string", "description": "Defendant name(s)" },
+        "case_number": { "type": "string", "description": "Case number or 'To be assigned'" },
+        "document_title": { "type": "string", "description": "Title shown in caption (e.g., 'COMPLAINT FOR DAMAGES')" }
+      }
+    },
+    "body": {
+      "type": "array",
+      "description": "Ordered array of content blocks. Paragraph numbers are computed from position, not stored.",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "content"],
+        "properties": {
+          "id": { 
+            "type": "string", 
+            "description": "Unique block identifier (e.g., 'intro-1', 'facts-5', 'cod1-3')" 
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "section_heading",
+              "numbered_paragraph",
+              "unnumbered_paragraph",
+              "block_quote"
+            ],
+            "description": "Block type determines rendering and whether it gets a paragraph number"
+          },
+          "content": {
+            "type": "string",
+            "description": "The actual text content of this block"
+          }
+        }
+      }
+    },
+    "signature_block": {
+      "type": "object",
+      "description": "Attorney/party signature information",
+      "properties": {
+        "respectfully_submitted_date": { "type": "string", "description": "Date for 'Respectfully submitted' line" },
+        "attorney_name": { "type": "string" },
+        "bar_number": { "type": ["string", "null"] },
+        "firm_name": { "type": ["string", "null"] },
+        "address": { "type": "string" },
+        "phone": { "type": ["string", "null"] },
+        "email": { "type": ["string", "null"] },
+        "representing": { "type": ["string", "null"], "description": "Party represented (e.g., 'Plaintiff')" }
+      }
+    },
+    "footnotes": {
+      "type": "array",
+      "description": "Footnotes referenced in body content",
+      "items": {
+        "type": "object",
+        "required": ["id", "content"],
+        "properties": {
+          "id": { "type": "string", "description": "Footnote identifier (referenced in body text)" },
+          "content": { "type": "string", "description": "Footnote text" }
+        }
+      }
+    }
+  }
+}
+
