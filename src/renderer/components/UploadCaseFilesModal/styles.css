@@ -136,6 +136,15 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.has-notes-indicator {
+  font-size: 12px;
+  flex-shrink: 0;
+  opacity: 0.8;
 }
 
 .file-meta {

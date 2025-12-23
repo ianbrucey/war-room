@@ -513,4 +513,114 @@ router.get('/cases/:caseFileId/documents/stats', async (req: Request, res: Respo
   }
 });
 
+/**
+ * GET /api/documents/:documentId/user-notes
+ *
+ * Get user notes for a document from metadata.json.
+ */
+router.get('/documents/:documentId/user-notes', async (req: Request, res: Response) => {
+  try {
+    const { documentId } = req.params;
+    const document = DocumentRepository.findById(documentId);
+
+    if (!document) {
+      res.status(404).json({ error: 'Document not found' });
+      return;
+    }
+
+    // Get case file to find workspace path
+    const caseFile = CaseFileRepository.findById(document.case_file_id);
+    if (!caseFile) {
+      res.status(404).json({ error: 'Case file not found' });
+      return;
+    }
+
+    // Read metadata.json from document folder
+    const metadataPath = path.join(caseFile.workspace_path, 'documents', document.folder_name, 'metadata.json');
+
+    let userNotes = '';
+    if (fs.existsSync(metadataPath)) {
+      try {
+        const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
+        userNotes = metadata.user_notes || '';
+      } catch (parseError) {
+        console.warn('[DocumentIntake] Failed to parse metadata.json:', parseError);
+      }
+    }
+
+    res.json({ user_notes: userNotes });
+  } catch (error) {
+    console.error('[DocumentIntake] Get user notes error:', error);
+    res.status(500).json({ error: 'Failed to get user notes' });
+  }
+});
+
+/**
+ * PUT /api/documents/:documentId/user-notes
+ *
+ * Update user notes for a document in metadata.json.
+ * Creates metadata.json if it doesn't exist.
+ */
+router.put('/documents/:documentId/user-notes', async (req: Request, res: Response) => {
+  try {
+    const { documentId } = req.params;
+    const { user_notes } = req.body;
+
+    if (typeof user_notes !== 'string') {
+      res.status(400).json({ error: 'user_notes must be a string' });
+      return;
+    }
+
+    const document = DocumentRepository.findById(documentId);
+    if (!document) {
+      res.status(404).json({ error: 'Document not found' });
+      return;
+    }
+
+    // Get case file to find workspace path
+    const caseFile = CaseFileRepository.findById(document.case_file_id);
+    if (!caseFile) {
+      res.status(404).json({ error: 'Case file not found' });
+      return;
+    }
+
+    // Ensure document folder exists
+    const docFolderPath = path.join(caseFile.workspace_path, 'documents', document.folder_name);
+    fs.mkdirSync(docFolderPath, { recursive: true });
+
+    const metadataPath = path.join(docFolderPath, 'metadata.json');
+
+    // Read existing metadata or create new
+    let metadata: Record<string, unknown> = {};
+    if (fs.existsSync(metadataPath)) {
+      try {
+        metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
+      } catch (parseError) {
+        console.warn('[DocumentIntake] Failed to parse existing metadata.json, creating new:', parseError);
+      }
+    } else {
+      // Create minimal metadata structure if file doesn't exist
+      metadata = {
+        schema_version: '1.0',
+        document_id: documentId,
+        original_filename: document.filename,
+        file_type: document.file_type,
+      };
+    }
+
+    // Update user_notes
+    metadata.user_notes = user_notes;
+    metadata.user_notes_updated_at = new Date().toISOString();
+
+    // Write back to file
+    fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
+
+    console.log(`[DocumentIntake] Updated user notes for document ${documentId}`);
+    res.json({ success: true, user_notes });
+  } catch (error) {
+    console.error('[DocumentIntake] Update user notes error:', error);
+    res.status(500).json({ error: 'Failed to update user notes' });
+  }
+});
+
 export default router;

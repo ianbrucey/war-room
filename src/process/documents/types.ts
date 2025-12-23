@@ -168,6 +168,9 @@ export interface IDocumentMetadata {
 
   /** Agent annotations (for manual notes) */
   agent_notes?: string;
+
+  /** User-provided notes/context about the document */
+  user_notes?: string;
 }
 
 /**
