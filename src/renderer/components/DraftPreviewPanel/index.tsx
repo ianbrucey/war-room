@@ -5,10 +5,11 @@
 
 import { ipcBridge } from '@/common';
 import { Empty, Message, Spin } from '@arco-design/web-react';
-import { Close } from '@icon-park/react';
+import { Close, Download } from '@icon-park/react';
 import classNames from 'classnames';
 import React, { useEffect, useState } from 'react';
 import { RichTextEditor } from './RichTextEditor';
+import { exportDraftToPdf, printDraft } from './printUtils';
 import type { DraftBlock, DraftDocument } from './types';
 
 export interface DraftPreviewTab {
@@ -35,6 +36,7 @@ const DraftPreviewPanel: React.FC<DraftPreviewPanelProps> = ({ tabs, activeTab, 
   const [message, messageContextHolder] = Message.useMessage();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [draft, setDraft] = useState<DraftDocument | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
@@ -43,6 +45,32 @@ const DraftPreviewPanel: React.FC<DraftPreviewPanelProps> = ({ tabs, activeTab, 
 
   const currentTab = tabs[activeTab];
   const filePath = currentTab?.filePath;
+
+  // Handle print
+  const handlePrint = () => {
+    if (!draft) return;
+    printDraft(draft);
+  };
+
+  // Handle PDF export
+  const handleExportPdf = async () => {
+    if (!draft || !currentTab) return;
+
+    try {
+      setExporting(true);
+      // Generate filename from the draft title or tab filename
+      const baseFilename = currentTab.filename.replace('DRAFT.json', '').replace(/[^a-zA-Z0-9-_]/g, '_');
+      const filename = `${baseFilename || 'document'}-${new Date().toISOString().split('T')[0]}.pdf`;
+
+      await exportDraftToPdf(draft, filename);
+      message.success('PDF saved successfully');
+    } catch (err) {
+      console.error('[DraftPreviewPanel] Failed to export PDF:', err);
+      message.error('Failed to export PDF');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   // Load and parse draft JSON
   useEffect(() => {
@@ -313,6 +341,29 @@ const DraftPreviewPanel: React.FC<DraftPreviewPanelProps> = ({ tabs, activeTab, 
           </div>
         ))}
       </div>
+
+      {/* Toolbar */}
+      {draft && !loading && !error && (
+        <div className='flex items-center gap-8px px-12px py-8px border-b border-[var(--bg-3)] bg-1 flex-shrink-0'>
+          <button
+            className='flex items-center gap-6px px-12px py-6px rounded-4px border border-[var(--bg-4)] bg-white hover:bg-[var(--bg-2)] cursor-pointer text-13px text-t-primary transition-colors'
+            onClick={handlePrint}
+            title='Print document'
+          >
+            <span style={{ fontSize: '16px' }}>🖨️</span>
+            Print
+          </button>
+          <button
+            className='flex items-center gap-6px px-12px py-6px rounded-4px border border-[var(--bg-4)] bg-white hover:bg-[var(--bg-2)] cursor-pointer text-13px text-t-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+            onClick={() => void handleExportPdf()}
+            disabled={exporting}
+            title='Save as PDF'
+          >
+            <Download theme='outline' size='16' />
+            {exporting ? 'Saving...' : 'Save as PDF'}
+          </button>
+        </div>
+      )}
 
       {/* Content Area */}
       <div className='flex-1 overflow-auto min-h-0 bg-[#f5f5f5]'>
