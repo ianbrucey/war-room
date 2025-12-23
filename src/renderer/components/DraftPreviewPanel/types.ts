@@ -4,8 +4,10 @@
 
 export interface DraftBlock {
   id: string;
-  type: 'section_heading' | 'numbered_paragraph' | 'unnumbered_paragraph' | 'block_quote';
+  type: 'section_heading' | 'numbered_paragraph' | 'unnumbered_paragraph' | 'block_quote' | 'list_item';
   content: string;
+  /** For list_item: 'letter' (a,b,c), 'roman' (i,ii,iii), or 'bullet' */
+  list_style?: 'letter' | 'roman' | 'bullet';
 }
 
 export interface DraftCaption {
