@@ -7,7 +7,8 @@ import { ipcBridge } from '@/common';
 import { Empty, Message, Spin } from '@arco-design/web-react';
 import { Close } from '@icon-park/react';
 import classNames from 'classnames';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { RichTextEditor } from './RichTextEditor';
 import type { DraftBlock, DraftDocument } from './types';
 
 export interface DraftPreviewTab {
@@ -39,7 +40,6 @@ const DraftPreviewPanel: React.FC<DraftPreviewPanelProps> = ({ tabs, activeTab, 
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   const [insertMenuIndex, setInsertMenuIndex] = useState<number | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const currentTab = tabs[activeTab];
   const filePath = currentTab?.filePath;
@@ -89,14 +89,6 @@ const DraftPreviewPanel: React.FC<DraftPreviewPanelProps> = ({ tabs, activeTab, 
     setEditingBlockId(null);
     setEditText('');
   }, [filePath]);
-
-  // Focus textarea when editing starts
-  useEffect(() => {
-    if (editingBlockId && textareaRef.current) {
-      textareaRef.current.focus();
-      textareaRef.current.select();
-    }
-  }, [editingBlockId]);
 
   // Start editing a block
   const handleBlockClick = (block: DraftBlock) => {
@@ -182,13 +174,12 @@ const DraftPreviewPanel: React.FC<DraftPreviewPanelProps> = ({ tabs, activeTab, 
     }
   };
 
-  // Handle keyboard shortcuts in textarea
+  // Handle keyboard shortcuts in edit mode
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       handleCancel();
-    } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-      void handleSave();
     }
+    // Note: ⌘+Enter is handled by the Save button now (TipTap uses ⌘+Enter for other things)
   };
 
   // Generate unique ID for new blocks
@@ -445,18 +436,18 @@ const DraftPreviewPanel: React.FC<DraftPreviewPanelProps> = ({ tabs, activeTab, 
               if (isEditing) {
                 return (
                   <React.Fragment key={block.id}>
-                    <div className={`edit-block ${block.type === 'section_heading' ? 'edit-block-heading' : ''} ${block.type === 'list_item' ? 'edit-block-list' : ''}`}>
+                    <div
+                      className={`edit-block ${block.type === 'section_heading' ? 'edit-block-heading' : ''} ${block.type === 'list_item' ? 'edit-block-list' : ''}`}
+                      onKeyDown={handleKeyDown}
+                    >
                       {block.type === 'section_heading' && <span className='edit-label'>Section Heading</span>}
                       {block.type === 'numbered_paragraph' && <span className='para-num'>{paraNum}.</span>}
                       {block.type === 'list_item' && <span className='list-label'>{listLabel}</span>}
                       {block.type === 'block_quote' && <span className='edit-label'>Block Quote</span>}
-                      <textarea
-                        ref={textareaRef}
-                        value={editText}
-                        onChange={(e) => setEditText(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        className={`edit-textarea ${block.type === 'section_heading' ? 'edit-textarea-heading' : ''}`}
-                        rows={block.type === 'section_heading' ? 1 : 4}
+                      <RichTextEditor
+                        content={editText}
+                        onChange={setEditText}
+                        autoFocus={true}
                       />
                       <div className='edit-actions'>
                         <button onClick={handleCancel} className='btn-cancel'>
@@ -468,7 +459,7 @@ const DraftPreviewPanel: React.FC<DraftPreviewPanelProps> = ({ tabs, activeTab, 
                         <button onClick={() => void handleDelete()} disabled={saving} className='btn-delete'>
                           Delete
                         </button>
-                        <span className='edit-hint'>⌘+Enter to save, Esc to cancel</span>
+                        <span className='edit-hint'>Esc to cancel</span>
                       </div>
                     </div>
                     {renderInsertRow(index)}
@@ -480,9 +471,12 @@ const DraftPreviewPanel: React.FC<DraftPreviewPanelProps> = ({ tabs, activeTab, 
               if (block.type === 'section_heading') {
                 return (
                   <React.Fragment key={block.id}>
-                    <div className='section-header' onClick={() => handleBlockClick(block)} title='Click to edit'>
-                      {block.content}
-                    </div>
+                    <div
+                      className='section-header'
+                      onClick={() => handleBlockClick(block)}
+                      title='Click to edit'
+                      dangerouslySetInnerHTML={{ __html: block.content }}
+                    />
                     {renderInsertRow(index)}
                   </React.Fragment>
                 );
@@ -493,7 +487,8 @@ const DraftPreviewPanel: React.FC<DraftPreviewPanelProps> = ({ tabs, activeTab, 
                 return (
                   <React.Fragment key={block.id}>
                     <p className='numbered' onClick={() => handleBlockClick(block)} title='Click to edit'>
-                      <span className='para-num'>{paraNum}.</span> {block.content}
+                      <span className='para-num'>{paraNum}.</span>{' '}
+                      <span dangerouslySetInnerHTML={{ __html: block.content }} />
                     </p>
                     {renderInsertRow(index)}
                   </React.Fragment>
@@ -505,7 +500,8 @@ const DraftPreviewPanel: React.FC<DraftPreviewPanelProps> = ({ tabs, activeTab, 
                 return (
                   <React.Fragment key={block.id}>
                     <p className='list-item' onClick={() => handleBlockClick(block)} title='Click to edit'>
-                      <span className='list-label'>{listLabel}</span> {block.content}
+                      <span className='list-label'>{listLabel}</span>{' '}
+                      <span dangerouslySetInnerHTML={{ __html: block.content }} />
                     </p>
                     {renderInsertRow(index)}
                   </React.Fragment>
@@ -517,7 +513,7 @@ const DraftPreviewPanel: React.FC<DraftPreviewPanelProps> = ({ tabs, activeTab, 
                 return (
                   <React.Fragment key={block.id}>
                     <blockquote onClick={() => handleBlockClick(block)} title='Click to edit'>
-                      {block.content}
+                      <span dangerouslySetInnerHTML={{ __html: block.content }} />
                     </blockquote>
                     {renderInsertRow(index)}
                   </React.Fragment>
@@ -528,7 +524,7 @@ const DraftPreviewPanel: React.FC<DraftPreviewPanelProps> = ({ tabs, activeTab, 
               return (
                 <React.Fragment key={block.id}>
                   <p onClick={() => handleBlockClick(block)} title='Click to edit'>
-                    {block.content}
+                    <span dangerouslySetInnerHTML={{ __html: block.content }} />
                   </p>
                   {renderInsertRow(index)}
                 </React.Fragment>
@@ -698,6 +694,66 @@ const DraftPreviewPanel: React.FC<DraftPreviewPanelProps> = ({ tabs, activeTab, 
           border-radius: 4px;
           resize: vertical;
           min-height: 80px;
+        }
+        /* Rich Text Editor Styles */
+        .rich-text-editor {
+          width: 100%;
+        }
+        .rte-toolbar {
+          display: flex;
+          gap: 4px;
+          margin-bottom: 8px;
+          padding: 4px;
+          background: #f5f5f5;
+          border-radius: 4px;
+          border: 1px solid #ddd;
+        }
+        .rte-btn {
+          width: 28px;
+          height: 28px;
+          border: 1px solid #ccc;
+          background: white;
+          border-radius: 4px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 14px;
+        }
+        .rte-btn:hover {
+          background: #e8e8e8;
+        }
+        .rte-btn.active {
+          background: #1890ff;
+          color: white;
+          border-color: #1890ff;
+        }
+        .rte-content {
+          border: 1px solid #ccc;
+          border-radius: 4px;
+          min-height: 80px;
+        }
+        .rte-content .tiptap {
+          padding: 8px;
+          font-family: "Times New Roman", serif;
+          font-size: 14pt;
+          line-height: 1.6;
+          outline: none;
+          min-height: 60px;
+          list-style: none; /* Remove any list bullets */
+        }
+        .rte-content .tiptap p {
+          margin: 0;
+          list-style: none; /* Remove any list bullets */
+        }
+        .rte-content .tiptap:focus {
+          outline: none;
+        }
+        .rte-content .tiptap ul,
+        .rte-content .tiptap ol {
+          list-style: none;
+          margin: 0;
+          padding: 0;
         }
         .edit-actions {
           margin-top: 8px;

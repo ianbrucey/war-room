@@ -1144,6 +1144,19 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
               // 检测点击的节点，实现取消选中功能
               // Detect clicked node to implement deselection feature
               const clickedKey = extractNodeKey(extra?.node);
+              const nodeData = extra?.node ? extractNodeData(extra.node) : null;
+
+              // Toggle folder expand/collapse when clicking on folder (VS Code-like behavior)
+              // 点击文件夹时切换展开/收起（类似 VS Code 的行为）
+              if (clickedKey && nodeData && !nodeData.isFile) {
+                setExpandedKeys((prevKeys) => {
+                  if (prevKeys.includes(clickedKey)) {
+                    return prevKeys.filter((k) => k !== clickedKey);
+                  } else {
+                    return [...prevKeys, clickedKey];
+                  }
+                });
+              }
 
               let newKeys: string[];
 
@@ -1170,43 +1183,20 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
 
               // 更新 selectedNodeRef：找到最后选中的文件夹节点
               // Update selectedNodeRef: find the last selected folder node
-              if (extra && extra.node) {
-                // 尝试不同的方式访问节点数据
-                // Try different ways to access node data
-                const nodeData = extractNodeData(extra.node);
-
-                if (nodeData) {
-                  if (!nodeData.isFile && nodeData.fullPath && nodeData.relativePath) {
-                    selectedNodeRef.current = {
-                      relativePath: nodeData.relativePath,
-                      fullPath: nodeData.fullPath,
-                    };
-                  } else if (nodeData.isFile) {
-                    selectedNodeRef.current = null;
-                  }
+              if (nodeData) {
+                if (!nodeData.isFile && nodeData.fullPath && nodeData.relativePath) {
+                  selectedNodeRef.current = {
+                    relativePath: nodeData.relativePath,
+                    fullPath: nodeData.fullPath,
+                  };
+                } else if (nodeData.isFile) {
+                  selectedNodeRef.current = null;
                 }
               }
 
-              // 向 SendBox 发送文件和文件夹对象
-              // 使用 fullPath（绝对路径）而不是 relativePath，以便 FilePreview 组件能正确显示图片预览
-              // Emit both file and folder objects to SendBox
-              // Use fullPath (absolute path) instead of relativePath so FilePreview can display image previews correctly
-              const items: Array<{ path: string; name: string; isFile: boolean }> = [];
-
-              // 遍历选中的节点，收集文件和文件夹的完整信息（使用工具函数 findNodeByKey）
-              // Iterate through selected nodes and collect full info of files and folders (using utility function findNodeByKey)
-              for (const k of newKeys) {
-                const node = findNodeByKey(files, k);
-                if (node && node.fullPath) {
-                  items.push({
-                    path: node.fullPath,
-                    name: node.name,
-                    isFile: node.isFile,
-                  });
-                }
-              }
-
-              emitter.emit(`${eventPrefix}.selected.file`, items);
+              // NOTE: Removed emitter.emit for selected files - this was causing files
+              // to be appended to the chat box on every click, which was confusing.
+              // Files can be added to chat via context menu "Add to Chat" instead.
             }}
             onExpand={(keys) => {
               // eslint-disable-next-line no-console
