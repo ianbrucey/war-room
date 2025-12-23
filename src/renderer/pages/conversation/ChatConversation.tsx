@@ -13,7 +13,7 @@ import FilePreviewPanel from '@/renderer/components/FilePreviewPanel';
 import { iconColors } from '@/renderer/theme/colors';
 import { Dropdown, Menu, Message, Tooltip, Typography } from '@arco-design/web-react';
 import { History, Plus } from '@icon-park/react';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import useSWR from 'swr';
@@ -88,6 +88,27 @@ const AddNewConversation: React.FC<{ conversation: TChatConversation }> = ({ con
   );
 };
 
+// LocalStorage keys for persisting preview tabs state
+const getPreviewTabsStorageKey = (conversationId: string) => `preview-tabs-${conversationId}`;
+const getActiveTabStorageKey = (conversationId: string) => `preview-active-tab-${conversationId}`;
+
+// Helper to load preview tabs from localStorage
+const loadPreviewTabs = (conversationId: string): { tabs: PreviewTab[]; activeTab: number } => {
+  try {
+    const tabsJson = localStorage.getItem(getPreviewTabsStorageKey(conversationId));
+    const activeTabJson = localStorage.getItem(getActiveTabStorageKey(conversationId));
+    const tabs = tabsJson ? (JSON.parse(tabsJson) as PreviewTab[]) : [];
+    const activeTab = activeTabJson ? parseInt(activeTabJson, 10) : 0;
+    if (Array.isArray(tabs) && tabs.length > 0) {
+      console.log('[PreviewTabs] Loaded from localStorage:', tabs.length, 'tabs, activeTab:', activeTab);
+      return { tabs, activeTab: Math.min(activeTab, tabs.length - 1) };
+    }
+  } catch (e) {
+    console.warn('[PreviewTabs] Failed to load from localStorage:', e);
+  }
+  return { tabs: [], activeTab: 0 };
+};
+
 const ChatConversation: React.FC<{
   conversation?: TChatConversation;
 }> = ({ conversation }) => {
@@ -95,9 +116,10 @@ const ChatConversation: React.FC<{
   const { caseFileId } = useParams<{ caseFileId?: string }>();
   const [message, messageContextHolder] = Message.useMessage();
 
-  // Tabbed file preview state
+  // Tabbed file preview state - initialize empty, load from localStorage via useEffect
   const [previewTabs, setPreviewTabs] = useState<PreviewTab[]>([]);
   const [activeTabIndex, setActiveTabIndex] = useState(0);
+  const isInitialLoadRef = useRef(true);
 
   // Narrative mode state
   const [isNarrativeMode, setIsNarrativeMode] = useState(false);
@@ -266,11 +288,40 @@ const ChatConversation: React.FC<{
     );
   }, [conversation, t]);
 
+  // Load preview tabs from localStorage when conversation changes
   useEffect(() => {
-    // Reset preview tabs when switching conversations
-    setPreviewTabs([]);
-    setActiveTabIndex(0);
+    // Reset initial load flag when conversation changes
+    isInitialLoadRef.current = true;
+
+    if (conversation?.id) {
+      const { tabs, activeTab } = loadPreviewTabs(conversation.id);
+      setPreviewTabs(tabs);
+      setActiveTabIndex(activeTab);
+      // Mark initial load as complete after a short delay
+      setTimeout(() => {
+        isInitialLoadRef.current = false;
+      }, 100);
+    } else {
+      // No conversation, reset to empty
+      setPreviewTabs([]);
+      setActiveTabIndex(0);
+      isInitialLoadRef.current = false;
+    }
   }, [conversation?.id]);
+
+  // Save preview tabs to localStorage when they change (but not on initial load)
+  useEffect(() => {
+    if (isInitialLoadRef.current || !conversation?.id) {
+      return;
+    }
+    try {
+      localStorage.setItem(getPreviewTabsStorageKey(conversation.id), JSON.stringify(previewTabs));
+      localStorage.setItem(getActiveTabStorageKey(conversation.id), activeTabIndex.toString());
+      console.log('[PreviewTabs] Saved to localStorage:', previewTabs.length, 'tabs, activeTab:', activeTabIndex);
+    } catch (e) {
+      console.warn('[PreviewTabs] Failed to save to localStorage:', e);
+    }
+  }, [previewTabs, activeTabIndex, conversation?.id]);
 
   // Determine which preview panel to show based on active tab type
   const previewContent = useMemo(() => {

@@ -48,12 +48,35 @@ const useLoading = () => {
   return [loading, setLoadingHandler] as const;
 };
 
+// LocalStorage key for persisting explorer expanded state
+const getExplorerStorageKey = (conversationId: string, ws: string) => `explorer-expanded-${conversationId}-${ws}`;
+
+// Helper to load expanded keys from localStorage
+const loadExpandedKeys = (conversationId: string, ws: string): string[] => {
+  try {
+    const storageKey = getExplorerStorageKey(conversationId, ws);
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      const parsed = JSON.parse(saved) as string[];
+      if (Array.isArray(parsed)) {
+        console.log('[Explorer] Loaded expanded keys from localStorage:', parsed.length, 'keys');
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.warn('[Explorer] Failed to load state from localStorage:', e);
+  }
+  return [];
+};
+
 const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, eventPrefix = 'gemini', onFilePreview }) => {
   const { t } = useTranslation();
   const [selected, setSelected] = useState<string[]>([]);
   const [files, setFiles] = useState<IDirOrFile[]>([]);
   const [loading, setLoading] = useLoading();
   const [treeKey, setTreeKey] = useState(Math.random());
+
+  // Initialize expandedKeys - will be populated from localStorage via useEffect
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
   const [showSearch, setShowSearch] = useState(false);
   const [confirmVisible, setConfirmVisible] = useState(false);
@@ -114,6 +137,59 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
     return targetPath.includes('\\') ? '\\' : '/';
   }, []);
 
+  // Track if this is the initial load to avoid overwriting localStorage with empty array
+  const isInitialLoadRef = useRef(true);
+  // Store loaded keys in a ref so loadWorkspace can access them synchronously
+  const loadedKeysRef = useRef<string[]>([]);
+
+  // Load expanded keys from localStorage when conversation_id/workspace are available
+  // 当 conversation_id/workspace 可用时从 localStorage 加载展开状态
+  useEffect(() => {
+    // Reset initial load flag when conversation changes
+    isInitialLoadRef.current = true;
+    loadedKeysRef.current = [];
+
+    console.log('[Explorer] useEffect triggered - conversation_id:', conversation_id, 'workspace:', workspace);
+
+    if (conversation_id && workspace) {
+      const storageKey = getExplorerStorageKey(conversation_id, workspace);
+      console.log('[Explorer] Storage key:', storageKey);
+      console.log('[Explorer] Raw localStorage value:', localStorage.getItem(storageKey));
+
+      const savedKeys = loadExpandedKeys(conversation_id, workspace);
+      console.log('[Explorer] Loaded savedKeys:', savedKeys);
+
+      // Store in ref for synchronous access by loadWorkspace
+      loadedKeysRef.current = savedKeys;
+      setExpandedKeys(savedKeys); // Set even if empty to reset state
+
+      // Mark initial load as complete after a short delay
+      setTimeout(() => {
+        isInitialLoadRef.current = false;
+        console.log('[Explorer] Initial load complete, saving enabled');
+      }, 100);
+    }
+  }, [conversation_id, workspace]);
+
+  // Persist expanded keys to localStorage when they change (but not on initial empty load)
+  // 当展开状态改变时保存到 localStorage（初始空加载时不保存）
+  useEffect(() => {
+    // Skip saving during initial load to avoid overwriting saved state with empty array
+    if (isInitialLoadRef.current) {
+      return;
+    }
+    if (!conversation_id || !workspace) {
+      return;
+    }
+    try {
+      const storageKey = getExplorerStorageKey(conversation_id, workspace);
+      localStorage.setItem(storageKey, JSON.stringify(expandedKeys));
+      console.log('[Explorer] Saved expanded keys to localStorage:', expandedKeys.length, 'keys');
+    } catch (e) {
+      console.warn('[Explorer] Failed to save state to localStorage:', e);
+    }
+  }, [expandedKeys, conversation_id, workspace]);
+
   // Check if a file can be previewed in-app (检查文件是否可在应用内预览)
   const isPreviewableFile = useCallback((filePath: string): boolean => {
     // Draft JSON files are previewable
@@ -121,7 +197,8 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
       return true;
     }
     const ext = filePath.split('.').pop()?.toLowerCase();
-    return ['md', 'markdown', 'html', 'htm'].includes(ext || '');
+    // Include JSON and text files as previewable
+    return ['md', 'markdown', 'html', 'htm', 'json', 'txt'].includes(ext || '');
   }, []);
 
   // Open file preview either via inline panel (when callback provided) or modal fallback
@@ -284,12 +361,59 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
   // Note: No longer listen to `${eventPrefix}.selected.file` event for reverse synchronization
   // Workspace selection state should only be managed by workspace itself, avoiding SendBox's absolute paths polluting selected state
 
+  // Helper to find a node in the tree by its relativePath
+  const findNodeInTree = useCallback((nodes: IDirOrFile[], relativePath: string): IDirOrFile | null => {
+    for (const node of nodes) {
+      if (node.relativePath === relativePath) {
+        return node;
+      }
+      if (node.children) {
+        const found = findNodeInTree(node.children, relativePath);
+        if (found) return found;
+      }
+    }
+    return null;
+  }, []);
+
+  // Load children for expanded folders that don't have children loaded yet
+  const loadExpandedFolderChildren = useCallback(
+    async (treeData: IDirOrFile[], expandedKeys: string[]) => {
+      console.log('[Explorer] Loading children for expanded folders:', expandedKeys);
+
+      // Skip root key ""
+      const foldersToLoad = expandedKeys.filter((key) => key !== '');
+
+      for (const folderKey of foldersToLoad) {
+        const node = findNodeInTree(treeData, folderKey);
+        if (node && !node.isFile && (!node.children || node.children.length === 0)) {
+          console.log('[Explorer] Loading children for:', folderKey);
+          try {
+            const res = await ipcBridge.conversation.getWorkspace.invoke({
+              conversation_id,
+              workspace,
+              path: node.fullPath,
+            });
+            if (res[0]?.children) {
+              node.children = filterExcludedFiles(res[0].children);
+            }
+          } catch (e) {
+            console.warn('[Explorer] Failed to load children for:', folderKey, e);
+          }
+        }
+      }
+
+      // Trigger re-render with updated tree data
+      setFiles([...treeData]);
+    },
+    [conversation_id, workspace, filterExcludedFiles, findNodeInTree]
+  );
+
   const loadWorkspace = useCallback(
     (path: string, search?: string) => {
       setLoading(true);
       return ipcBridge.conversation.getWorkspace
         .invoke({ path, workspace, conversation_id, search: search || '' })
-        .then((res) => {
+        .then(async (res) => {
           // Filter out excluded files and folders
           const filteredFiles = filterExcludedFiles(res);
           setFiles(filteredFiles);
@@ -299,23 +423,33 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
             setTreeKey(Math.random());
           }
 
-          // 只展开第一层文件夹（根节点）
-          const getFirstLevelKeys = (nodes: IDirOrFile[]): string[] => {
-            if (nodes.length > 0 && nodes[0].relativePath === '') {
-              // 如果第一个节点是根节点（relativePath 为空），展开它
-              return [''];
-            }
-            return [];
-          };
+          // Check ref for loaded keys (synchronous access, avoids race condition)
+          // 使用 ref 同步访问已加载的键，避免竞态条件
+          const savedKeys = loadedKeysRef.current;
+          console.log('[Explorer] loadWorkspace - savedKeys from ref:', savedKeys);
 
-          setExpandedKeys(getFirstLevelKeys(filteredFiles));
+          if (savedKeys.length > 0) {
+            // Use saved keys from localStorage
+            console.log('[Explorer] Using saved expanded keys:', savedKeys.length);
+            // Load children for expanded folders before setting expandedKeys
+            await loadExpandedFolderChildren(filteredFiles, savedKeys);
+            setExpandedKeys(savedKeys);
+          } else {
+            // No saved keys, expand first level (root node) only
+            if (filteredFiles.length > 0 && filteredFiles[0].relativePath === '') {
+              setExpandedKeys(['']);
+            } else {
+              setExpandedKeys([]);
+            }
+          }
+
           return filteredFiles;
         })
         .finally(() => {
           setLoading(false);
         });
     },
-    [conversation_id, workspace, filterExcludedFiles]
+    [conversation_id, workspace, filterExcludedFiles, loadExpandedFolderChildren]
   );
 
   const refreshWorkspace = useCallback(() => {
@@ -1101,6 +1235,7 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
               key: 'relativePath',
               isLeaf: 'isFile',
             }}
+            actionOnClick='expand'
             multiple
             renderTitle={(node) => {
               const path = node.dataRef.fullPath;
@@ -1115,13 +1250,13 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
                   className='flex items-center gap-4px'
                   style={{ color: 'inherit' }}
                   onDoubleClick={() => {
-                    // Preview markdown/HTML files in-app, open others externally
-                    // 预览 markdown/HTML 文件在应用内，其他文件用外部程序打开
+                    // Double-click only opens previewable files in-app
+                    // Non-previewable files can be opened via context menu "Open"
+                    // 双击只在应用内打开可预览的文件，其他文件可通过右键菜单"打开"
                     if (isFile && isPreviewableFile(path)) {
                       openFilePreview(path, node.dataRef.name);
-                    } else {
-                      void ipcBridge.shell.openFile.invoke(path);
                     }
+                    // Do nothing for non-previewable files (no external open)
                   }}
                   onContextMenu={(event) => {
                     event.preventDefault();
@@ -1146,17 +1281,7 @@ const ChatWorkspace: React.FC<WorkspaceProps> = ({ conversation_id, workspace, e
               const clickedKey = extractNodeKey(extra?.node);
               const nodeData = extra?.node ? extractNodeData(extra.node) : null;
 
-              // Toggle folder expand/collapse when clicking on folder (VS Code-like behavior)
-              // 点击文件夹时切换展开/收起（类似 VS Code 的行为）
-              if (clickedKey && nodeData && !nodeData.isFile) {
-                setExpandedKeys((prevKeys) => {
-                  if (prevKeys.includes(clickedKey)) {
-                    return prevKeys.filter((k) => k !== clickedKey);
-                  } else {
-                    return [...prevKeys, clickedKey];
-                  }
-                });
-              }
+              // Note: Folder expand/collapse on click is handled by actionOnClick='expand' prop
 
               let newKeys: string[];
 
